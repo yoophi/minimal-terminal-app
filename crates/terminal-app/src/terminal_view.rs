@@ -5,9 +5,9 @@ use objc2::rc::{autoreleasepool, Retained};
 use objc2::runtime::{AnyObject, Sel};
 use objc2::{define_class, msg_send, sel, ClassType, DefinedClass, MainThreadOnly};
 use objc2_app_kit::{
-    NSBackgroundColorAttributeName, NSColor, NSEvent, NSFont, NSFontAttributeName,
-    NSForegroundColorAttributeName, NSPasteboard, NSPasteboardTypeString, NSRectFill, NSResponder,
-    NSTextInputClient, NSUnderlineStyleAttributeName, NSView, NSWindow,
+    NSBackgroundColorAttributeName, NSColor, NSEvent, NSEventModifierFlags, NSFont,
+    NSFontAttributeName, NSForegroundColorAttributeName, NSPasteboard, NSPasteboardTypeString,
+    NSRectFill, NSResponder, NSTextInputClient, NSUnderlineStyleAttributeName, NSView, NSWindow,
 };
 use objc2_foundation::{
     MainThreadMarker, NSArray, NSAttributedString, NSAttributedStringKey, NSMutableDictionary,
@@ -267,7 +267,7 @@ define_class!(
         #[unsafe(method(mouseDown:))]
         fn mouse_down(&self, event: &NSEvent) {
             let point = self.grid_point_for_event(event);
-            if self.write_mouse_report(mouse::LEFT_BUTTON, point, false) {
+            if self.write_mouse_report(event, mouse::LEFT_BUTTON, point, false) {
                 self.ivars().selection.borrow_mut().clear();
                 self.ivars().scrollback_offset.set(0);
                 return;
@@ -280,7 +280,7 @@ define_class!(
         #[unsafe(method(mouseDragged:))]
         fn mouse_dragged(&self, event: &NSEvent) {
             let point = self.grid_point_for_event(event);
-            if self.write_mouse_report(mouse::LEFT_DRAG, point, false) {
+            if self.write_mouse_report(event, mouse::LEFT_DRAG, point, false) {
                 return;
             }
 
@@ -303,7 +303,7 @@ define_class!(
         #[unsafe(method(mouseUp:))]
         fn mouse_up(&self, event: &NSEvent) {
             let point = self.grid_point_for_event(event);
-            if self.write_mouse_report(mouse::LEFT_BUTTON, point, true) {
+            if self.write_mouse_report(event, mouse::LEFT_BUTTON, point, true) {
                 return;
             }
 
@@ -315,12 +315,12 @@ define_class!(
         fn scroll_wheel(&self, event: &NSEvent) {
             let point = self.grid_point_for_event(event);
             if event.scrollingDeltaY() > 0.0
-                && self.write_mouse_report(mouse::WHEEL_UP, point, false)
+                && self.write_mouse_report(event, mouse::WHEEL_UP, point, false)
             {
                 return;
             }
             if event.scrollingDeltaY() < 0.0
-                && self.write_mouse_report(mouse::WHEEL_DOWN, point, false)
+                && self.write_mouse_report(event, mouse::WHEEL_DOWN, point, false)
             {
                 return;
             }
@@ -519,16 +519,23 @@ impl TerminalView {
             .unwrap_or_default()
     }
 
-    fn write_mouse_report(&self, code: u16, point: GridPoint, release: bool) -> bool {
+    fn write_mouse_report(
+        &self,
+        event: &NSEvent,
+        code: u16,
+        point: GridPoint,
+        release: bool,
+    ) -> bool {
         let modes = self.current_modes();
         if !modes.mouse_reporting {
             return false;
         }
 
+        let modifiers = mouse_modifier_mask(event.modifierFlags());
         let bytes = if modes.sgr_mouse {
-            mouse::sgr_mouse_report(code, point.row, point.col, release)
+            mouse::sgr_mouse_report(code, modifiers, point.row, point.col, release)
         } else {
-            mouse::legacy_mouse_report(code, point.row, point.col, release)
+            mouse::legacy_mouse_report(code, modifiers, point.row, point.col, release)
         };
         if let Err(error) = self.ivars().writer.write_all(&bytes) {
             logging::pty_error(&format!("pty write failed from mouse report: {error}"));
@@ -677,6 +684,20 @@ fn selection_drag_autoscroll_delta(y: f64, rows: usize) -> isize {
     } else {
         0
     }
+}
+
+fn mouse_modifier_mask(flags: NSEventModifierFlags) -> u16 {
+    let mut mask = 0;
+    if flags.contains(NSEventModifierFlags::Shift) {
+        mask |= mouse::SHIFT_MODIFIER;
+    }
+    if flags.contains(NSEventModifierFlags::Option) {
+        mask |= mouse::META_MODIFIER;
+    }
+    if flags.contains(NSEventModifierFlags::Control) {
+        mask |= mouse::CONTROL_MODIFIER;
+    }
+    mask
 }
 
 fn draw_background(rect: NSRect) {
@@ -1048,10 +1069,21 @@ fn text_from_input_object(
 
 #[cfg(test)]
 mod tests {
+    use objc2_app_kit::NSEventModifierFlags;
+
     #[test]
     fn selection_drag_autoscrolls_outside_vertical_bounds() {
         assert_eq!(super::selection_drag_autoscroll_delta(0.0, 10), 1);
         assert_eq!(super::selection_drag_autoscroll_delta(20.0, 10), 0);
         assert_eq!(super::selection_drag_autoscroll_delta(220.0, 10), -1);
+    }
+
+    #[test]
+    fn mouse_modifier_mask_tracks_xterm_bits() {
+        assert_eq!(
+            super::mouse_modifier_mask(NSEventModifierFlags::Shift | NSEventModifierFlags::Control),
+            20
+        );
+        assert_eq!(super::mouse_modifier_mask(NSEventModifierFlags::Option), 8);
     }
 }
