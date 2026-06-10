@@ -141,6 +141,80 @@ git log --oneline --graph --decorate
 - 종료 후 shell 화면이 복원된다.
 - 실패하면 `known-gaps.md`의 미확인 app smoke target을 구체적인 gap으로 승격한다.
 
+## Representative App Certification Smoke
+
+대표 CLI/TUI 앱은 단순 실행 여부가 아니라 workflow 단위로 확인한다.
+
+### vim
+
+```sh
+vim /tmp/minimal-terminal-smoke.txt
+```
+
+확인 항목:
+
+- insert/normal mode 전환
+- text 입력과 cursor 이동
+- search highlight
+- paste
+- `:q!` 종료 후 main screen 복원
+
+### emacs -nw
+
+```sh
+emacs -nw
+```
+
+확인 항목:
+
+- PATH에 설치되어 있는지
+- text 입력과 cursor 이동
+- Meta/Option key
+- `C-x C-c` 종료 후 main screen 복원
+
+### tmux
+
+```sh
+tmux new -s minimal-terminal-smoke
+```
+
+확인 항목:
+
+- session 생성
+- pane split
+- pane 이동
+- resize 후 redraw
+- detach/exit
+
+### tmux 안의 vim
+
+```sh
+tmux new -s minimal-terminal-nested 'vim /tmp/minimal-terminal-smoke.txt'
+```
+
+확인 항목:
+
+- nested alternate screen
+- cursor mode restore
+- tmux 종료 후 shell 복원
+
+### claude / codex-cli
+
+```sh
+claude --version
+codex --version
+```
+
+확인 항목:
+
+- version command 실행
+- interactive prompt 진입
+- multiline paste
+- resize 중 redraw
+- interrupt
+
+인증, 네트워크, 계정 상태는 terminal compatibility 결과와 분리해 기록한다.
+
 ## vttest Smoke
 
 로컬에 `vttest`가 설치된 경우 실행한다.

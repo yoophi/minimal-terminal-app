@@ -135,9 +135,42 @@ Phase 019에서 다룰 작업:
 
 ## Acceptance Criteria
 
-- `docs/compatibility/app-readiness.md`의 판단 기준이 Phase 019 결과와 맞게 갱신되어 있다.
-- `docs/compatibility/smoke-tests.md`에 대표 앱별 workflow가 있다.
-- `docs/compatibility/matrix.md`에 대표 앱별 row와 evidence가 있다.
-- 실패 target은 `docs/compatibility/known-gaps.md`에 구체 gap으로 연결되어 있다.
-- 자동화 가능한 smoke는 script, Rust test, 또는 replay fixture로 고정되어 있다.
-- `scripts/run-compatibility-core.sh`와 `cargo test`가 통과한다.
+- `docs/compatibility/app-readiness.md`의 판단 기준이 Phase 019 결과와 맞게 갱신되어 있다. `done`
+- `docs/compatibility/smoke-tests.md`에 대표 앱별 workflow가 있다. `done`
+- `docs/compatibility/matrix.md`에 대표 앱별 row와 evidence가 있다. `done`
+- 실패 target은 `docs/compatibility/known-gaps.md`에 구체 gap으로 연결되어 있다. `done`
+- 자동화 가능한 smoke는 script, Rust test, 또는 replay fixture로 고정되어 있다. `done`
+- `scripts/run-compatibility-core.sh`와 `cargo test`가 통과한다. `done`
+
+## Implementation Update - 2026-06-10
+
+Status: implementation complete for the first representative app certification pass.
+
+확인 결과:
+
+- `vim`: `/usr/bin/vim`, `VIM - Vi IMproved 9.1`
+- `emacs -nw`: local PATH에서 `emacs` 미확인
+- `tmux`: `/opt/homebrew/bin/tmux`, `tmux 3.6b`
+- `claude`: `/Users/yoophi/.local/bin/claude`, `2.1.170 (Claude Code)`
+- `codex-cli`: `codex-cli 0.139.0`
+- `fzf`: `/opt/homebrew/bin/fzf`, `0.73.1 (Homebrew)`
+- `htop`: `/opt/homebrew/bin/htop`, `htop 3.5.1`
+
+구현된 내용:
+
+- app-readiness 문서를 Phase 019 결과 기준으로 갱신했다.
+- smoke-tests 문서에 대표 앱별 workflow를 추가했다.
+- matrix에 `emacs -nw`, `tmux`, `tmux` 안의 `vim`, `claude`/`claude-code`, `codex-cli` row를 추가했다.
+- `htop` 상태를 version smoke 근거가 있는 `partially supported`로 갱신했다.
+- interactive workflow 미확인 항목을 known gaps에 연결했다.
+
+검증:
+
+- `vim --version`
+- `tmux -V`
+- `claude --version`
+- `codex --version`
+- `fzf --version`
+- `htop --version`
+- `scripts/run-compatibility-core.sh`
+- `cargo test`

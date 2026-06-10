@@ -20,13 +20,13 @@ Phase 009-018은 1-5번의 많은 부분을 구현하거나 검증 대상으로 
 
 ## 애플리케이션별 예상 상태
 
-| 대상 | Phase 009-018 완료 후 예상 | 남는 리스크 |
+| 대상 | Phase 019 확인 결과 | 남는 리스크 |
 | --- | --- | --- |
-| `vim` | 기본 편집은 가능할 가능성이 높다. | function key, modifier key, cursor style, mouse, DSR, edge-case redraw |
-| `emacs -nw` | 터미널 모드 기본 조작은 가능할 가능성이 있다. | Meta/Option key, 복잡한 key chord, mouse, bracketed paste, cursor report |
-| `tmux` | 실행 가능성은 올라가지만 대표 앱 중 가장 위험하다. | terminal capability query, pane redraw, mouse mode, alternate screen nesting, resize, DSR/DA류 응답 |
-| `claude` / `claude-code` | 기본 CLI 대화는 가능할 가능성이 높다. | raw input, paste, resize, spinner/redraw, Ctrl/Alt 조합, terminal feature detection |
-| `codex-cli` | 기본 CLI 사용은 가능할 가능성이 높다. | raw input, paste, resize, redraw, Ctrl/Alt 조합 |
+| `vim` | replay evidence와 기존 smoke target이 있어 `partially supported`. | function key, modifier key, mouse, edge-case redraw |
+| `emacs -nw` | local PATH에서 `emacs` 미확인, `not supported`. | 설치 후 Meta/Option key, 복잡한 key chord, mouse 확인 필요 |
+| `tmux` | `tmux 3.6b` version smoke 통과, `partially supported`. | pane redraw, mouse mode, alternate screen nesting, resize, secondary DA |
+| `claude` / `claude-code` | `2.1.170 (Claude Code)` version smoke 통과, `partially supported`. | raw input, paste, resize, spinner/redraw, Ctrl/Alt 조합, 인증/네트워크 분리 |
+| `codex-cli` | `codex-cli 0.139.0` version smoke 통과, `partially supported`. | raw input, paste, resize, redraw, Ctrl/Alt 조합, 인증/네트워크 분리 |
 
 ## 왜 별도 보증 단계가 필요한가
 
@@ -46,7 +46,7 @@ Phase 009-018은 1-5번의 많은 부분을 구현하거나 검증 대상으로 
 
 ## Phase 018 이후 권장 작업
 
-Phase 018 이후에는 별도 phase에서 대표 CLI/TUI application certification을 진행한다.
+Phase 019에서는 대표 CLI/TUI application certification의 첫 기준을 마련했다.
 
 권장 smoke target:
 
@@ -60,7 +60,7 @@ Phase 018 이후에는 별도 phase에서 대표 CLI/TUI application certificati
 - `htop`
 - `git log --oneline --graph --decorate`
 
-각 target은 단순 실행 여부가 아니라 최소 workflow를 가져야 한다.
+각 target은 단순 실행 여부가 아니라 최소 workflow를 가져야 한다. 현재 version 또는 replay evidence만 있는 target은 `partially supported`로 둔다.
 
 예시 workflow:
 

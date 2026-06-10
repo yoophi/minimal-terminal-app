@@ -50,19 +50,18 @@
 
 대상:
 
-- `htop`: local verification environment에 설치되어 있지 않다.
+- `htop`: `htop 3.5.1` version smoke는 통과했다.
 - `fzf`: `fzf 0.73.1` non-interactive filter smoke는 통과했다.
 - `git log --oneline --graph --decorate`: 현재 repo에서 command output smoke는 통과했다.
 
 중요한 이유:
 
 - app 내부 interactive smoke는 로컬 설치, focus, 입력 조작에 따라 확인 가능성이 달라진다.
-- `htop`은 설치 후 별도 확인이 필요하다.
-- `fzf`와 `git log`는 command-level smoke를 통과했지만 app 내부 TUI interaction evidence는 아직 없다.
+- `htop`, `fzf`, `git log`는 command-level smoke를 통과했지만 app 내부 TUI interaction evidence는 아직 없다.
 
 권장 다음 작업:
 
-- `htop` 설치 환경에서 runtime smoke를 수행한다.
+- `htop` redraw, function key 또는 quit key workflow를 앱 내부에서 수행한다.
 - `fzf` interactive navigation smoke를 앱 내부에서 수행한다.
 - `git log` pager 진입, scroll, quit workflow를 앱 내부에서 수행한다.
 
@@ -109,11 +108,11 @@
 대상:
 
 - `vim`
-- `emacs -nw`
-- `tmux`
+- `emacs -nw`: local verification environment의 PATH에서 `emacs`를 찾지 못했다.
+- `tmux`: `tmux 3.6b` version smoke는 통과했다.
 - `tmux` 안의 `vim`
-- `claude` 또는 `claude-code`
-- `codex-cli`
+- `claude` 또는 `claude-code`: `2.1.170 (Claude Code)` version smoke는 통과했다.
+- `codex-cli`: `codex-cli 0.139.0` version smoke는 통과했다.
 
 중요한 이유:
 
