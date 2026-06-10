@@ -277,6 +277,32 @@ mod tests {
         super::encode_key(key_code, flags, input)
     }
 
+    fn modifier_cases() -> Vec<(NSEventModifierFlags, u8)> {
+        vec![
+            (NSEventModifierFlags::Shift, 2),
+            (NSEventModifierFlags::Option, 3),
+            (
+                NSEventModifierFlags::Shift | NSEventModifierFlags::Option,
+                4,
+            ),
+            (NSEventModifierFlags::Control, 5),
+            (
+                NSEventModifierFlags::Shift | NSEventModifierFlags::Control,
+                6,
+            ),
+            (
+                NSEventModifierFlags::Option | NSEventModifierFlags::Control,
+                7,
+            ),
+            (
+                NSEventModifierFlags::Shift
+                    | NSEventModifierFlags::Option
+                    | NSEventModifierFlags::Control,
+                8,
+            ),
+        ]
+    }
+
     #[test]
     fn encodes_return_as_carriage_return() {
         assert_eq!(encode_key_code(KEY_RETURN, ""), Some(b"\r".to_vec()));
@@ -372,6 +398,24 @@ mod tests {
     }
 
     #[test]
+    fn encodes_all_shift_option_control_navigation_combinations() {
+        for (flags, parameter) in modifier_cases() {
+            assert_eq!(
+                encode_modified_key(KEY_UP, flags, ""),
+                Some(format!("\x1b[1;{parameter}A").into_bytes())
+            );
+            assert_eq!(
+                encode_modified_key(KEY_HOME, flags, ""),
+                Some(format!("\x1b[1;{parameter}H").into_bytes())
+            );
+            assert_eq!(
+                encode_modified_key(KEY_FORWARD_DELETE, flags, ""),
+                Some(format!("\x1b[3;{parameter}~").into_bytes())
+            );
+        }
+    }
+
+    #[test]
     fn encodes_modified_function_keys() {
         assert_eq!(
             encode_modified_key(KEY_F1, NSEventModifierFlags::Shift, ""),
@@ -381,6 +425,20 @@ mod tests {
             encode_modified_key(KEY_F12, NSEventModifierFlags::Control, ""),
             Some(b"\x1b[24;5~".to_vec())
         );
+    }
+
+    #[test]
+    fn encodes_all_shift_option_control_function_key_combinations() {
+        for (flags, parameter) in modifier_cases() {
+            assert_eq!(
+                encode_modified_key(KEY_F1, flags, ""),
+                Some(format!("\x1b[1;{parameter}P").into_bytes())
+            );
+            assert_eq!(
+                encode_modified_key(KEY_F12, flags, ""),
+                Some(format!("\x1b[24;{parameter}~").into_bytes())
+            );
+        }
     }
 
     #[test]
