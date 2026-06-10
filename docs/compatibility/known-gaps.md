@@ -77,7 +77,6 @@
 
 권장 다음 작업:
 
-- Secondary device attributes `CSI > c` 응답을 검토한다.
 - function key, application keypad, modifier key variants를 확장한다.
 - OSC 52 clipboard는 보안 정책과 함께 별도 설계한다.
 - legacy mouse encoding이 필요한지 app smoke로 판단한다.
@@ -145,4 +144,10 @@ Phase 012에서 `CSI Ps SP q` parser action, cursor style mode, AppKit cursor sh
 
 상태: `supported`
 
-Phase 018에서 `CSI c`, `CSI 0 c` parser action과 core response queue를 구현했다. 현재 VT100 계열 `ESC[?1;2c` 응답을 보낸다. Secondary DA는 full xterm gap으로 남긴다.
+Phase 018에서 `CSI c`, `CSI 0 c` parser action과 core response queue를 구현했다. 현재 VT100 계열 `ESC[?1;2c` 응답을 보낸다.
+
+### Secondary Device Attributes
+
+상태: `supported`
+
+Phase 020에서 `CSI > c`, `CSI > 0 c` parser action과 core response queue를 구현했다. 현재 xterm 계열 secondary DA 형식 `ESC[>0;0;0c` 응답을 보낸다.

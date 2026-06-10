@@ -220,6 +220,9 @@ impl TerminalState {
             Action::PrimaryDeviceAttributes => {
                 self.pending_responses.extend_from_slice(b"\x1b[?1;2c")
             }
+            Action::SecondaryDeviceAttributes => {
+                self.pending_responses.extend_from_slice(b"\x1b[>0;0;0c")
+            }
             Action::DeviceStatusReport => self.pending_responses.extend_from_slice(b"\x1b[0n"),
             Action::CursorPositionReport => {
                 self.pending_responses.extend_from_slice(
@@ -557,6 +560,15 @@ mod tests {
         terminal.append_bytes(b"\x1b[c");
 
         assert_eq!(terminal.take_pending_responses(), b"\x1b[?1;2c".to_vec());
+    }
+
+    #[test]
+    fn queues_secondary_device_attributes_response() {
+        let mut terminal = TerminalState::new(4, 10);
+
+        terminal.append_bytes(b"\x1b[>0c");
+
+        assert_eq!(terminal.take_pending_responses(), b"\x1b[>0;0;0c".to_vec());
     }
 
     #[test]

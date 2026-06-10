@@ -26,6 +26,7 @@ pub(crate) enum Action {
     SetMouseReporting(bool),
     SetSgrMouse(bool),
     PrimaryDeviceAttributes,
+    SecondaryDeviceAttributes,
     DeviceStatusReport,
     CursorPositionReport,
     CursorPosition { row: usize, col: usize },
@@ -135,6 +136,10 @@ impl vte::Perform for ActionCollector {
 fn parse_csi(numbers: &[usize], intermediates: &[u8], final_byte: char) -> Action {
     if intermediates == b"?" {
         return parse_private_csi(numbers, final_byte);
+    }
+
+    if intermediates == b">" && final_byte == 'c' {
+        return Action::SecondaryDeviceAttributes;
     }
 
     if intermediates == b" " && final_byte == 'q' {
@@ -508,6 +513,19 @@ mod tests {
         assert_eq!(
             parser.advance_bytes(b"\x1b[0c"),
             vec![Action::PrimaryDeviceAttributes]
+        );
+    }
+
+    #[test]
+    fn parses_secondary_device_attributes() {
+        let mut parser = Parser::default();
+        assert_eq!(
+            parser.advance_bytes(b"\x1b[>c"),
+            vec![Action::SecondaryDeviceAttributes]
+        );
+        assert_eq!(
+            parser.advance_bytes(b"\x1b[>0c"),
+            vec![Action::SecondaryDeviceAttributes]
         );
     }
 
