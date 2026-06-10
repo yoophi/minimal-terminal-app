@@ -23,6 +23,7 @@ Phase 009-018은 1-5번의 많은 부분을 구현하거나 검증 대상으로 
 | 대상 | Phase 019 확인 결과 | 남는 리스크 |
 | --- | --- | --- |
 | `vim` | replay evidence와 app-internal edit/write/quit smoke가 있어 `partially supported`. | remaining modifier key variants, mouse, resize, complex key chord, plugin redraw |
+| `less` | replay evidence와 app-internal basic quit smoke가 있어 `partially supported`. | mouse wheel, follow mode, edge-case search workflow |
 | `emacs -nw` | local PATH에서 `emacs` 미확인, `not supported`. | 설치 후 Meta/Option key, 복잡한 key chord, mouse 확인 필요 |
 | `tmux` | `tmux 3.6b` version smoke, attached session workflow smoke, split-pane workflow smoke, nested vim edit/write/quit smoke 통과, `partially supported`. | pane resize, mouse mode, split-pane 내부 nested TUI |
 | `claude` / `claude-code` | `2.1.170 (Claude Code)` version smoke 통과, `partially supported`. | raw input, paste, resize, spinner/redraw, Ctrl/Alt 조합, 인증/네트워크 분리 |

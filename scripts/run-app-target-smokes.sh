@@ -292,6 +292,20 @@ else
   echo "app target smoke skipped: vim not found"
 fi
 
+if command -v less >/dev/null 2>&1; then
+  less_path="$(command -v less)"
+  run_case_with_followup \
+    "less-basic-quit" \
+    "printf \"one\\ntwo\\nthree\\n\" | ${less_path}; printf \"less-basic-ok\\n\""$'\n' \
+    "q" \
+    "less-basic-ok" \
+    1500 \
+    1000
+  ran=1
+else
+  echo "app target smoke skipped: less not found"
+fi
+
 head_sha="$(git rev-parse --short HEAD)"
 run_case "git-log" $'git log --oneline -1 --no-color\n' "${head_sha}"
 run_case_with_followup \

@@ -56,6 +56,7 @@
 - Phase 050에서 app 내부 `git log ... | less` pager mark 뒤 quit workflow를 자동화했다.
 - Phase 058에서 app 내부 `vim --clean -Nu NONE -n` edit/write/quit workflow를 자동화했다.
 - Phase 059에서 app 내부 `tmux` 안의 clean `vim` edit/write/quit workflow를 자동화했다.
+- Phase 060에서 app 내부 direct `less` basic quit workflow를 자동화했다.
 - interactive key workflow는 아직 남아 있다.
 
 권장 다음 작업:
