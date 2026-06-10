@@ -109,6 +109,14 @@ else
   echo "app target smoke skipped: codex-cli not found"
 fi
 
+if command -v vttest >/dev/null 2>&1; then
+  vttest_path="$(command -v vttest)"
+  run_case "vttest-menu" "${vttest_path}"$'\n' "VT100 test program"
+  ran=1
+else
+  echo "app target smoke skipped: vttest not found"
+fi
+
 if [[ "${ran}" -eq 0 ]]; then
   echo "app target smoke skipped: no targets available"
 fi

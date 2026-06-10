@@ -165,6 +165,7 @@ scripts/run-app-target-smokes.sh
 - `htop-version`: `htop --version`
 - `claude-version`: `claude --version`
 - `codex-cli-version`: `codex-cli --version`이 설치된 경우만 실행
+- `vttest-menu`: `vttest` 시작 메뉴 snapshot
 
 범위:
 

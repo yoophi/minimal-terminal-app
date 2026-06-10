@@ -73,7 +73,8 @@
 - `vttest`는 terminal emulator 호환성을 검증하는 de facto 테스트 도구다.
 - 현재 local verification environment에서 `/opt/homebrew/bin/vttest`와 `vttest -V`는 확인했다.
 - Phase 028에서 vttest 시작 메뉴 출력 replay fixture를 추가했다.
-- 실제 menu 기반 runtime 결과는 아직 수집하지 못했다.
+- Phase 036에서 app 내부 PTY 시작 메뉴 snapshot smoke를 추가했다.
+- full interactive menu result는 아직 수집하지 못했다.
 
 권장 다음 작업:
 
@@ -202,3 +203,9 @@ Phase 034에서 `scripts/run-app-target-smokes.sh`에 `tmux -V`, `htop --version
 상태: `partially supported`
 
 Phase 035에서 `ESC ( 0`과 `ESC ( B` G0 charset switching을 구현했다. 대표 DEC Special Graphics line drawing 문자는 Unicode box drawing 문자로 매핑한다. G1/G2/G3 locking shift, single shift, locale-specific charset은 full xterm compatibility gap으로 남긴다.
+
+### vttest App Runtime Menu Smoke
+
+상태: `partially supported`
+
+Phase 036에서 `scripts/run-app-target-smokes.sh`에 `vttest-menu` target을 추가했다. local verification environment에서 app 내부 PTY로 `vttest`를 실행하고 시작 메뉴 snapshot marker `VT100 test program`을 확인했다. 전체 interactive menu suite 결과는 vttest Runtime Coverage gap으로 계속 추적한다.
