@@ -694,6 +694,15 @@ mod tests {
     }
 
     #[test]
+    fn renders_8_bit_c1_ss2_and_ss3_single_shift() {
+        let mut terminal = TerminalState::new(4, 20);
+
+        terminal.append_bytes(b"\x1b*0\x1b+0\x8elx \x8fmx");
+
+        assert_eq!(terminal.snapshot(4).lines[0], "┌x └x");
+    }
+
+    #[test]
     fn renders_right_side_g_sets_with_locking_shift() {
         let mut terminal = TerminalState::new(4, 20);
 

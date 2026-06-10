@@ -223,8 +223,8 @@ impl Parser {
             single_shift_charset: self.single_shift_charset,
         };
         let normalized_bytes;
-        let bytes = if bytes.contains(&C1_CSI) {
-            normalized_bytes = normalize_c1_csi(bytes);
+        let bytes = if contains_c1_shim_byte(bytes) {
+            normalized_bytes = normalize_c1_shim_bytes(bytes);
             normalized_bytes.as_slice()
         } else {
             bytes
@@ -242,15 +242,27 @@ impl Parser {
 }
 
 const C1_CSI: u8 = 0x9b;
+const C1_SS2: u8 = 0x8e;
+const C1_SS3: u8 = 0x8f;
 
-fn normalize_c1_csi(bytes: &[u8]) -> Vec<u8> {
-    let mut normalized =
-        Vec::with_capacity(bytes.len() + bytes.iter().filter(|&&b| b == C1_CSI).count());
+fn contains_c1_shim_byte(bytes: &[u8]) -> bool {
+    bytes
+        .iter()
+        .any(|&byte| matches!(byte, C1_CSI | C1_SS2 | C1_SS3))
+}
+
+fn normalize_c1_shim_bytes(bytes: &[u8]) -> Vec<u8> {
+    let extra_bytes = bytes
+        .iter()
+        .filter(|&&byte| matches!(byte, C1_CSI | C1_SS2 | C1_SS3))
+        .count();
+    let mut normalized = Vec::with_capacity(bytes.len() + extra_bytes);
     for &byte in bytes {
-        if byte == C1_CSI {
-            normalized.extend_from_slice(b"\x1b[");
-        } else {
-            normalized.push(byte);
+        match byte {
+            C1_CSI => normalized.extend_from_slice(b"\x1b["),
+            C1_SS2 => normalized.extend_from_slice(b"\x1bN"),
+            C1_SS3 => normalized.extend_from_slice(b"\x1bO"),
+            _ => normalized.push(byte),
         }
     }
     normalized
@@ -2405,6 +2417,20 @@ mod tests {
         );
         assert_eq!(
             parser.advance_bytes(b"\x1bOmx"),
+            vec![Action::Print('└'), Action::Print('x')]
+        );
+    }
+
+    #[test]
+    fn maps_8_bit_c1_ss2_and_ss3_single_shift() {
+        let mut parser = Parser::default();
+
+        assert_eq!(
+            parser.advance_bytes(b"\x1b*0\x1b+0\x8elx"),
+            vec![Action::Print('┌'), Action::Print('x')]
+        );
+        assert_eq!(
+            parser.advance_bytes(b"\x8fmx"),
             vec![Action::Print('└'), Action::Print('x')]
         );
     }

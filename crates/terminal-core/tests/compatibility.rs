@@ -36,6 +36,15 @@ fn dec_special_graphics_have_core_evidence() {
 }
 
 #[test]
+fn c1_single_shift_charset_sequences_have_core_evidence() {
+    let mut terminal = TerminalState::new(4, 20);
+
+    terminal.append_bytes(b"\x1b*0\x1b+0\x8elx \x8fmx");
+
+    assert_eq!(terminal.snapshot(4).lines[0], "┌x └x");
+}
+
+#[test]
 fn iso_latin1_supplemental_charset_has_core_evidence() {
     let mut terminal = TerminalState::new(4, 20);
 
