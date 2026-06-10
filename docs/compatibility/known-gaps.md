@@ -40,11 +40,12 @@
 - Phase 032에서 app 내부 PTY command output snapshot smoke를 자동화했다.
 - Phase 033에서 app 내부 `fzf --filter`와 non-pager `git log --oneline` snapshot smoke를 자동화했다.
 - Phase 034에서 설치된 `tmux`, `htop`, `claude`의 app-internal version snapshot smoke를 자동화했다. 현재 PATH에서 `codex-cli`는 찾지 못해 skip된다.
+- Phase 038에서 app 내부 `htop` full-screen redraw snapshot smoke를 자동화했다.
 - interactive key workflow는 아직 남아 있다.
 
 권장 다음 작업:
 
-- `htop` redraw, function key 또는 quit key workflow를 앱 내부에서 수행한다.
+- `htop` function key 또는 quit key workflow를 앱 내부에서 수행한다.
 - `fzf` interactive navigation smoke를 앱 내부에서 수행한다.
 - `git log` pager 진입, scroll, quit workflow를 앱 내부에서 수행한다.
 
@@ -211,3 +212,9 @@ Phase 035에서 `ESC ( 0`과 `ESC ( B` G0 charset switching을 구현했다. 대
 상태: `partially supported`
 
 Phase 036에서 `scripts/run-app-target-smokes.sh`에 `vttest-menu` target을 추가했다. local verification environment에서 app 내부 PTY로 `vttest`를 실행하고 시작 메뉴 snapshot marker `VT100 test program`을 확인했다. 전체 interactive menu suite 결과는 vttest Runtime Coverage gap으로 계속 추적한다.
+
+### htop App Runtime Snapshot Smoke
+
+상태: `partially supported`
+
+Phase 038에서 `scripts/run-app-target-smokes.sh`에 `htop-runtime` target을 추가했다. local verification environment에서 app 내부 PTY로 `htop`을 실행하고 full-screen redraw snapshot marker `Load average`를 확인했다. function key와 quit workflow는 Environment-dependent App Smoke Target gap으로 계속 추적한다.

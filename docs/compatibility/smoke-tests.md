@@ -163,6 +163,7 @@ scripts/run-app-target-smokes.sh
 - `git-log`: `git log --oneline -1 --no-color`
 - `tmux-version`: `tmux -V`
 - `htop-version`: `htop --version`
+- `htop-runtime`: `htop` full-screen redraw snapshot
 - `claude-version`: `claude --version`
 - `codex-cli-version`: `codex-cli --version`이 설치된 경우만 실행
 - `vttest-menu`: `vttest` 시작 메뉴 snapshot

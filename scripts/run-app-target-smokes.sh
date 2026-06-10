@@ -19,6 +19,7 @@ run_case() {
   local name="$1"
   local input="$2"
   local marker="$3"
+  local snapshot_delay_ms="${4:-2500}"
   local case_dir="${LOG_DIR}/${name}"
   local snapshot_path="${case_dir}/snapshot.txt"
   local stdout_path="${case_dir}/stdout.log"
@@ -30,7 +31,7 @@ run_case() {
   MINIMAL_TERMINAL_SMOKE_INPUT="${input}" \
   MINIMAL_TERMINAL_SMOKE_SNAPSHOT_PATH="${snapshot_path}" \
   MINIMAL_TERMINAL_SMOKE_INPUT_DELAY_MS=500 \
-  MINIMAL_TERMINAL_SMOKE_SNAPSHOT_DELAY_MS=2500 \
+  MINIMAL_TERMINAL_SMOKE_SNAPSHOT_DELAY_MS="${snapshot_delay_ms}" \
   MINIMAL_TERMINAL_SMOKE_EXIT=1 \
   "${APP_BINARY}" >"${stdout_path}" 2>"${stderr_path}" &
   local pid=$!
@@ -88,6 +89,7 @@ fi
 if command -v htop >/dev/null 2>&1; then
   htop_path="$(command -v htop)"
   run_case "htop-version" "${htop_path} --version"$'\n' "htop"
+  run_case "htop-runtime" "${htop_path}"$'\n' "Load average" 3000
   ran=1
 else
   echo "app target smoke skipped: htop not found"
