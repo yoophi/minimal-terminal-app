@@ -82,7 +82,7 @@
 권장 다음 작업:
 
 - code-level로 검증된 modifier key variants를 앱별 runtime smoke로 검증한다.
-- right-side G-set locking shift, 기타 NRCS/locale-specific charset 같은 charset 동작을 별도 검토한다.
+- 기타 NRCS/locale-specific charset 같은 charset 동작을 별도 검토한다.
 - 새로 지원하는 sequence마다 작은 parser/grid fixture를 우선 추가한다.
 
 ### vttest Runtime Coverage
@@ -231,7 +231,7 @@ Phase 034에서 `scripts/run-app-target-smokes.sh`에 `tmux -V`, `htop --version
 
 상태: `partially supported`
 
-Phase 035에서 `ESC ( 0`과 `ESC ( B` G0 charset switching을 구현했다. Phase 051에서 `ESC ) 0`, `ESC ) B`, `SO`, `SI` 기반 G1 DEC Special Graphics locking shift를 구현했다. Phase 052에서 `ESC * 0`, `ESC * B`, `ESC + 0`, `ESC + B`, `ESC n`, `ESC o` 기반 G2/G3 DEC Special Graphics locking shift를 구현했다. Phase 053에서 `ESC N`, `ESC O` 기반 G2/G3 single shift를 구현했다. Phase 054에서 `ESC ( A`, `ESC ) A`, `ESC * A`, `ESC + A` 기반 British NRCS `#` -> `£` mapping을 구현했다. 대표 DEC Special Graphics line drawing 문자는 Unicode box drawing 문자로 매핑한다. right-side G-set locking shift, 기타 NRCS/locale-specific charset은 full xterm compatibility gap으로 남긴다.
+Phase 035에서 `ESC ( 0`과 `ESC ( B` G0 charset switching을 구현했다. Phase 051에서 `ESC ) 0`, `ESC ) B`, `SO`, `SI` 기반 G1 DEC Special Graphics locking shift를 구현했다. Phase 052에서 `ESC * 0`, `ESC * B`, `ESC + 0`, `ESC + B`, `ESC n`, `ESC o` 기반 G2/G3 DEC Special Graphics locking shift를 구현했다. Phase 053에서 `ESC N`, `ESC O` 기반 G2/G3 single shift를 구현했다. Phase 054에서 `ESC ( A`, `ESC ) A`, `ESC * A`, `ESC + A` 기반 British NRCS `#` -> `£` mapping을 구현했다. Phase 065에서 `ESC ~`, `ESC }`, `ESC |` 기반 right-side G-set locking shift를 구현했다. 대표 DEC Special Graphics line drawing 문자는 Unicode box drawing 문자로 매핑한다. raw 8-bit non-UTF-8 byte stream과 기타 NRCS/locale-specific charset은 full xterm compatibility gap으로 남긴다.
 
 ### vttest App Runtime Menu Smoke
 

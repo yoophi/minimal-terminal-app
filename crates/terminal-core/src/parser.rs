@@ -71,6 +71,7 @@ pub(crate) struct Parser {
     g2_charset: Charset,
     g3_charset: Charset,
     active_charset: ActiveCharset,
+    active_right_charset: Option<ActiveCharset>,
     single_shift_charset: Option<ActiveCharset>,
 }
 
@@ -83,6 +84,7 @@ impl Default for Parser {
             g2_charset: Charset::Ascii,
             g3_charset: Charset::Ascii,
             active_charset: ActiveCharset::G0,
+            active_right_charset: None,
             single_shift_charset: None,
         }
     }
@@ -119,6 +121,7 @@ impl Parser {
             g2_charset: self.g2_charset,
             g3_charset: self.g3_charset,
             active_charset: self.active_charset,
+            active_right_charset: self.active_right_charset,
             single_shift_charset: self.single_shift_charset,
         };
         self.parser.advance(&mut performer, bytes);
@@ -127,6 +130,7 @@ impl Parser {
         self.g2_charset = performer.g2_charset;
         self.g3_charset = performer.g3_charset;
         self.active_charset = performer.active_charset;
+        self.active_right_charset = performer.active_right_charset;
         self.single_shift_charset = performer.single_shift_charset;
         performer.actions
     }
@@ -140,25 +144,38 @@ struct ActionCollector {
     g2_charset: Charset,
     g3_charset: Charset,
     active_charset: ActiveCharset,
+    active_right_charset: Option<ActiveCharset>,
     single_shift_charset: Option<ActiveCharset>,
 }
 
 impl vte::Perform for ActionCollector {
     fn print(&mut self, ch: char) {
-        let active_charset = self
-            .single_shift_charset
-            .take()
-            .unwrap_or(self.active_charset);
+        let single_shift_charset = self.single_shift_charset.take();
+        let is_right_side = single_shift_charset.is_none()
+            && self.active_right_charset.is_some()
+            && is_gr_printable(ch);
+        let active_charset = if let Some(active_charset) = single_shift_charset {
+            active_charset
+        } else if is_right_side {
+            self.active_right_charset.unwrap_or(self.active_charset)
+        } else {
+            self.active_charset
+        };
         let charset = match active_charset {
             ActiveCharset::G0 => self.g0_charset,
             ActiveCharset::G1 => self.g1_charset,
             ActiveCharset::G2 => self.g2_charset,
             ActiveCharset::G3 => self.g3_charset,
         };
+        let mapped_ch = if is_right_side {
+            gr_to_gl_printable(ch)
+        } else {
+            ch
+        };
         let action = match ch {
             '\u{08}' | '\u{7f}' => Action::Backspace,
             ch if ch.is_control() => Action::Ignore,
-            ch => Action::Print(map_printable_char(ch, charset)),
+            _ => Action::Print(map_printable_char(mapped_ch, charset)),
         };
         self.actions.push(action);
     }
@@ -215,6 +232,18 @@ impl vte::Perform for ActionCollector {
             }
             ([], b'o') => {
                 self.active_charset = ActiveCharset::G3;
+                return;
+            }
+            ([], b'~') => {
+                self.active_right_charset = Some(ActiveCharset::G1);
+                return;
+            }
+            ([], b'}') => {
+                self.active_right_charset = Some(ActiveCharset::G2);
+                return;
+            }
+            ([], b'|') => {
+                self.active_right_charset = Some(ActiveCharset::G3);
                 return;
             }
             ([], b'N') => {
@@ -326,6 +355,14 @@ fn map_printable_char(ch: char, charset: Charset) -> char {
     }
 
     ch
+}
+
+fn is_gr_printable(ch: char) -> bool {
+    matches!(ch as u32, 0xa0..=0xff)
+}
+
+fn gr_to_gl_printable(ch: char) -> char {
+    char::from_u32((ch as u32) - 0x80).unwrap_or(ch)
 }
 
 fn parse_osc(params: &[&[u8]]) -> Action {
@@ -681,6 +718,25 @@ mod tests {
         assert_eq!(
             parser.advance_bytes(b"\x1bOmx"),
             vec![Action::Print('└'), Action::Print('x')]
+        );
+    }
+
+    #[test]
+    fn maps_right_side_g_sets_with_locking_shift() {
+        let mut parser = Parser::default();
+
+        assert_eq!(parser.advance_bytes(b"\xc3\xb1"), vec![Action::Print('ñ')]);
+        assert_eq!(
+            parser.advance_bytes(b"\x1b)0\x1b~\xc3\xb1q"),
+            vec![Action::Print('─'), Action::Print('q')]
+        );
+        assert_eq!(
+            parser.advance_bytes(b"\x1b*0\x1b}\xc3\xac"),
+            vec![Action::Print('┌')]
+        );
+        assert_eq!(
+            parser.advance_bytes(b"\x1b+A\x1b|\xc2\xa3"),
+            vec![Action::Print('£')]
         );
     }
 
