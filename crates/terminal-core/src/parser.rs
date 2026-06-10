@@ -23,6 +23,8 @@ pub(crate) enum Action {
     SetBracketedPaste(bool),
     SetCursorVisible(bool),
     SetCursorStyle(CursorStyle),
+    SetMouseReporting(bool),
+    SetSgrMouse(bool),
     DeviceStatusReport,
     CursorPositionReport,
     CursorPosition { row: usize, col: usize },
@@ -211,6 +213,10 @@ fn parse_private_csi(numbers: &[usize], final_byte: char) -> Action {
         'l' if contains_any(&numbers, &[47, 1047, 1049]) => Action::ExitAlternateScreen,
         'h' if contains_any(&numbers, &[2004]) => Action::SetBracketedPaste(true),
         'l' if contains_any(&numbers, &[2004]) => Action::SetBracketedPaste(false),
+        'h' if contains_any(&numbers, &[1000, 1002, 1003]) => Action::SetMouseReporting(true),
+        'l' if contains_any(&numbers, &[1000, 1002, 1003]) => Action::SetMouseReporting(false),
+        'h' if contains_any(&numbers, &[1006]) => Action::SetSgrMouse(true),
+        'l' if contains_any(&numbers, &[1006]) => Action::SetSgrMouse(false),
         'h' | 'l' => Action::Ignore,
         _ => Action::Ignore,
     }
@@ -399,7 +405,7 @@ mod tests {
         assert_eq!(parser.advance('1'), None);
         assert_eq!(parser.advance('0'), None);
         assert_eq!(parser.advance('0'), None);
-        assert_eq!(parser.advance('0'), None);
+        assert_eq!(parser.advance('5'), None);
         assert_eq!(parser.advance('h'), Some(Action::Ignore));
     }
 
@@ -421,6 +427,14 @@ mod tests {
         assert_eq!(
             parser.advance_bytes(b"\x1b[?1h"),
             vec![Action::SetApplicationCursorKeys(true)]
+        );
+        assert_eq!(
+            parser.advance_bytes(b"\x1b[?1000h"),
+            vec![Action::SetMouseReporting(true)]
+        );
+        assert_eq!(
+            parser.advance_bytes(b"\x1b[?1006h"),
+            vec![Action::SetSgrMouse(true)]
         );
     }
 

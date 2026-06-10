@@ -19,6 +19,7 @@ use terminal_core::{Color, CursorStyle, Style, StyledLine, TerminalModes, Termin
 use crate::composition::{CompositionState, TextRange};
 use crate::input;
 use crate::logging;
+use crate::mouse;
 use crate::paste;
 use crate::pty::PtyWriter;
 use crate::selection::{selected_text, GridPoint, SelectionRange, SelectionState};
@@ -260,6 +261,12 @@ define_class!(
         #[unsafe(method(mouseDown:))]
         fn mouse_down(&self, event: &NSEvent) {
             let point = self.grid_point_for_event(event);
+            if self.write_sgr_mouse_report(mouse::LEFT_BUTTON, point, false) {
+                self.ivars().selection.borrow_mut().clear();
+                self.ivars().scrollback_offset.set(0);
+                return;
+            }
+
             self.ivars().selection.borrow_mut().begin(point);
             self.as_super().setNeedsDisplay(true);
         }
@@ -267,6 +274,10 @@ define_class!(
         #[unsafe(method(mouseDragged:))]
         fn mouse_dragged(&self, event: &NSEvent) {
             let point = self.grid_point_for_event(event);
+            if self.write_sgr_mouse_report(mouse::LEFT_DRAG, point, false) {
+                return;
+            }
+
             self.ivars().selection.borrow_mut().update(point);
             self.as_super().setNeedsDisplay(true);
         }
@@ -274,12 +285,28 @@ define_class!(
         #[unsafe(method(mouseUp:))]
         fn mouse_up(&self, event: &NSEvent) {
             let point = self.grid_point_for_event(event);
+            if self.write_sgr_mouse_report(mouse::LEFT_BUTTON, point, true) {
+                return;
+            }
+
             self.ivars().selection.borrow_mut().update(point);
             self.as_super().setNeedsDisplay(true);
         }
 
         #[unsafe(method(scrollWheel:))]
         fn scroll_wheel(&self, event: &NSEvent) {
+            let point = self.grid_point_for_event(event);
+            if event.scrollingDeltaY() > 0.0
+                && self.write_sgr_mouse_report(mouse::WHEEL_UP, point, false)
+            {
+                return;
+            }
+            if event.scrollingDeltaY() < 0.0
+                && self.write_sgr_mouse_report(mouse::WHEEL_DOWN, point, false)
+            {
+                return;
+            }
+
             let rows = (event.scrollingDeltaY().abs() / LINE_HEIGHT).ceil().max(1.0) as usize;
             if event.scrollingDeltaY() > 0.0 {
                 self.adjust_scrollback(rows as isize);
@@ -452,6 +479,19 @@ impl TerminalView {
             .lock()
             .map(|buffer| buffer.snapshot(self.ivars().rows.get().max(1)).modes)
             .unwrap_or_default()
+    }
+
+    fn write_sgr_mouse_report(&self, code: u16, point: GridPoint, release: bool) -> bool {
+        let modes = self.current_modes();
+        if !modes.mouse_reporting || !modes.sgr_mouse {
+            return false;
+        }
+
+        let bytes = mouse::sgr_mouse_report(code, point.row, point.col, release);
+        if let Err(error) = self.ivars().writer.write_all(&bytes) {
+            logging::pty_error(&format!("pty write failed from mouse report: {error}"));
+        }
+        true
     }
 
     fn grid_point_for_event(&self, event: &NSEvent) -> GridPoint {

@@ -78,10 +78,27 @@ mouse reporting이 native selection을 깨뜨릴 수 있다.
 
 ## Acceptance Criteria
 
-- mouse mode parser/state test가 있다.
-- mouse report encoding test가 있다.
-- AppKit mouse event가 active mouse mode에서 PTY로 전달된다.
-- native selection 기본 동작이 유지된다.
-- `vim` 또는 `less` mouse smoke 결과가 기록되어 있다.
-- matrix와 known gaps가 갱신되어 있다.
+- mouse mode parser/state test가 있다. `done`
+- mouse report encoding test가 있다. `done`
+- AppKit mouse event가 active mouse mode에서 PTY로 전달된다. `done`
+- native selection 기본 동작이 유지된다. `done`
+- `vim` 또는 `less` mouse smoke 결과가 기록되어 있다. `deferred`
+- matrix와 known gaps가 갱신되어 있다. `done`
 
+## Implementation Update - 2026-06-10
+
+Status: implementation complete for SGR mouse reporting. Runtime app smoke evidence remains tracked as a known gap.
+
+구현된 내용:
+
+- parser가 DEC private mouse mode `?1000`, `?1002`, `?1003`, `?1006` on/off를 인식한다.
+- `TerminalModes`에 mouse reporting과 SGR mouse 상태를 추가했다.
+- SGR mouse press, release, drag, wheel encoding helper와 unit test를 추가했다.
+- AppKit mouseDown, mouseDragged, mouseUp, scrollWheel이 active SGR mouse mode에서 PTY report를 보낸다.
+- SGR mouse reporting이 꺼져 있으면 기존 native selection/scrollback 동작을 유지한다.
+- matrix와 known gaps를 갱신했다.
+
+검증:
+
+- `scripts/run-compatibility-core.sh`
+- `cargo test`

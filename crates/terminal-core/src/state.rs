@@ -18,6 +18,8 @@ pub struct TerminalModes {
     pub cursor_style: CursorStyle,
     pub bracketed_paste: bool,
     pub application_cursor_keys: bool,
+    pub mouse_reporting: bool,
+    pub sgr_mouse: bool,
 }
 
 impl Default for TerminalModes {
@@ -27,6 +29,8 @@ impl Default for TerminalModes {
             cursor_style: CursorStyle::Block,
             bracketed_paste: false,
             application_cursor_keys: false,
+            mouse_reporting: false,
+            sgr_mouse: false,
         }
     }
 }
@@ -180,6 +184,8 @@ impl TerminalState {
             Action::SetBracketedPaste(enabled) => self.modes.bracketed_paste = enabled,
             Action::SetCursorVisible(visible) => self.modes.cursor_visible = visible,
             Action::SetCursorStyle(style) => self.modes.cursor_style = style,
+            Action::SetMouseReporting(enabled) => self.modes.mouse_reporting = enabled,
+            Action::SetSgrMouse(enabled) => self.modes.sgr_mouse = enabled,
             Action::DeviceStatusReport => self.pending_responses.extend_from_slice(b"\x1b[0n"),
             Action::CursorPositionReport => {
                 self.pending_responses.extend_from_slice(
@@ -230,6 +236,8 @@ impl TerminalState {
         self.modes.cursor_style = CursorStyle::Block;
         self.modes.bracketed_paste = false;
         self.modes.application_cursor_keys = false;
+        self.modes.mouse_reporting = false;
+        self.modes.sgr_mouse = false;
         self.scroll_region = None;
         self.main_screen = Some(main_screen);
     }
@@ -417,6 +425,11 @@ mod tests {
         assert!(snapshot.modes.cursor_visible);
         assert!(!snapshot.modes.bracketed_paste);
         assert!(!snapshot.modes.application_cursor_keys);
+
+        terminal.append_bytes(b"\x1b[?1000h\x1b[?1006h");
+        let snapshot = terminal.snapshot(3);
+        assert!(snapshot.modes.mouse_reporting);
+        assert!(snapshot.modes.sgr_mouse);
     }
 
     #[test]

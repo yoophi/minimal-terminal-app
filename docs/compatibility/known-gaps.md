@@ -6,13 +6,13 @@
 
 ### Mouse Reporting
 
-상태: `not supported`
+상태: `partially supported`
 
 예시:
 
-- DEC mouse mode enable/disable sequence
-- SGR mouse encoding
-- mouse press, drag, release, wheel report를 PTY로 전달
+- legacy mouse encoding
+- runtime `vim`/`less` mouse smoke evidence
+- modifier-aware mouse report
 
 중요한 이유:
 
@@ -21,9 +21,9 @@
 
 권장 다음 작업:
 
-- 지원할 mouse mode를 parse하고 `TerminalModes`에 저장한다.
-- native selection과 TUI mouse reporting 사이의 우선순위를 정한다.
-- mouse mode가 켜진 상태에서 AppKit mouse event를 terminal mouse report로 encode한다.
+- legacy mouse encoding이 필요한지 runtime smoke로 판단한다.
+- `vim` 또는 `less` mouse smoke 결과를 기록한다.
+- modifier key가 포함된 mouse report가 필요한지 확인한다.
 
 ## Priority 2
 

@@ -45,6 +45,11 @@ fn tui_private_modes_and_editing_sequences_have_core_evidence() {
     assert!(snapshot.modes.bracketed_paste);
     assert!(snapshot.modes.application_cursor_keys);
 
+    terminal.append_bytes(b"\x1b[?1000h\x1b[?1006h");
+    let snapshot = terminal.snapshot(5);
+    assert!(snapshot.modes.mouse_reporting);
+    assert!(snapshot.modes.sgr_mouse);
+
     terminal.append_bytes(b"abcdef\r\x1b[2C\x1b[2@\r\x1b[2C\x1b[3P");
     assert_eq!(terminal.snapshot(5).lines[0], "abdef");
 
