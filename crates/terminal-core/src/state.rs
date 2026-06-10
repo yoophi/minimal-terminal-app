@@ -18,6 +18,7 @@ pub struct TerminalModes {
     pub cursor_style: CursorStyle,
     pub bracketed_paste: bool,
     pub application_cursor_keys: bool,
+    pub application_keypad: bool,
     pub mouse_reporting: bool,
     pub sgr_mouse: bool,
 }
@@ -29,6 +30,7 @@ impl Default for TerminalModes {
             cursor_style: CursorStyle::Block,
             bracketed_paste: false,
             application_cursor_keys: false,
+            application_keypad: false,
             mouse_reporting: false,
             sgr_mouse: false,
         }
@@ -212,6 +214,7 @@ impl TerminalState {
             Action::SetApplicationCursorKeys(enabled) => {
                 self.modes.application_cursor_keys = enabled
             }
+            Action::SetApplicationKeypad(enabled) => self.modes.application_keypad = enabled,
             Action::SetBracketedPaste(enabled) => self.modes.bracketed_paste = enabled,
             Action::SetCursorVisible(visible) => self.modes.cursor_visible = visible,
             Action::SetCursorStyle(style) => self.modes.cursor_style = style,
@@ -273,6 +276,7 @@ impl TerminalState {
         self.modes.cursor_style = CursorStyle::Block;
         self.modes.bracketed_paste = false;
         self.modes.application_cursor_keys = false;
+        self.modes.application_keypad = false;
         self.modes.mouse_reporting = false;
         self.modes.sgr_mouse = false;
         self.scroll_region = None;
@@ -450,18 +454,20 @@ mod tests {
     #[test]
     fn tracks_tui_modes() {
         let mut terminal = TerminalState::new(3, 10);
-        terminal.append_bytes(b"\x1b[?25l\x1b[?2004h\x1b[?1h");
+        terminal.append_bytes(b"\x1b[?25l\x1b[?2004h\x1b[?1h\x1b=");
 
         let snapshot = terminal.snapshot(3);
         assert!(!snapshot.modes.cursor_visible);
         assert!(snapshot.modes.bracketed_paste);
         assert!(snapshot.modes.application_cursor_keys);
+        assert!(snapshot.modes.application_keypad);
 
-        terminal.append_bytes(b"\x1b[?25h\x1b[?2004l\x1b[?1l");
+        terminal.append_bytes(b"\x1b[?25h\x1b[?2004l\x1b[?1l\x1b>");
         let snapshot = terminal.snapshot(3);
         assert!(snapshot.modes.cursor_visible);
         assert!(!snapshot.modes.bracketed_paste);
         assert!(!snapshot.modes.application_cursor_keys);
+        assert!(!snapshot.modes.application_keypad);
 
         terminal.append_bytes(b"\x1b[?1000h\x1b[?1006h");
         let snapshot = terminal.snapshot(3);

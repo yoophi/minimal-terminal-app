@@ -232,12 +232,18 @@ define_class!(
                     return;
                 };
                 let input = unsafe { characters.to_str(pool) };
-                let bytes = if self.current_modes().application_cursor_keys {
-                    input::encode_application_cursor_key_event(event)
-                        .or_else(|| input::encode_key_event(event, input))
-                } else {
-                    input::encode_key_event(event, input)
-                };
+                let modes = self.current_modes();
+                let bytes = modes
+                    .application_keypad
+                    .then(|| input::encode_application_keypad_key_event(event))
+                    .flatten()
+                    .or_else(|| {
+                        modes
+                            .application_cursor_keys
+                            .then(|| input::encode_application_cursor_key_event(event))
+                            .flatten()
+                    })
+                    .or_else(|| input::encode_key_event(event, input));
                 let Some(bytes) = bytes else {
                     return;
                 };

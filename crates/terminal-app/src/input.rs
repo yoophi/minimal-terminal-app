@@ -2,6 +2,22 @@ use objc2_app_kit::{NSEvent, NSEventModifierFlags};
 
 const KEY_RETURN: u16 = 36;
 const KEY_KEYPAD_ENTER: u16 = 76;
+const KEY_KEYPAD_DECIMAL: u16 = 65;
+const KEY_KEYPAD_MULTIPLY: u16 = 67;
+const KEY_KEYPAD_PLUS: u16 = 69;
+const KEY_KEYPAD_DIVIDE: u16 = 75;
+const KEY_KEYPAD_MINUS: u16 = 78;
+const KEY_KEYPAD_EQUALS: u16 = 81;
+const KEY_KEYPAD_0: u16 = 82;
+const KEY_KEYPAD_1: u16 = 83;
+const KEY_KEYPAD_2: u16 = 84;
+const KEY_KEYPAD_3: u16 = 85;
+const KEY_KEYPAD_4: u16 = 86;
+const KEY_KEYPAD_5: u16 = 87;
+const KEY_KEYPAD_6: u16 = 88;
+const KEY_KEYPAD_7: u16 = 89;
+const KEY_KEYPAD_8: u16 = 91;
+const KEY_KEYPAD_9: u16 = 92;
 const KEY_BACKSPACE: u16 = 51;
 const KEY_FORWARD_DELETE: u16 = 117;
 const KEY_F1: u16 = 122;
@@ -37,12 +53,39 @@ pub fn encode_application_cursor_key_event(event: &NSEvent) -> Option<Vec<u8>> {
     encode_application_cursor_key(event.keyCode())
 }
 
+pub fn encode_application_keypad_key_event(event: &NSEvent) -> Option<Vec<u8>> {
+    encode_application_keypad_key(event.keyCode())
+}
+
 fn encode_application_cursor_key(key_code: u16) -> Option<Vec<u8>> {
     match key_code {
         KEY_UP => Some(b"\x1bOA".to_vec()),
         KEY_DOWN => Some(b"\x1bOB".to_vec()),
         KEY_RIGHT => Some(b"\x1bOC".to_vec()),
         KEY_LEFT => Some(b"\x1bOD".to_vec()),
+        _ => None,
+    }
+}
+
+fn encode_application_keypad_key(key_code: u16) -> Option<Vec<u8>> {
+    match key_code {
+        KEY_KEYPAD_0 => Some(b"\x1bOp".to_vec()),
+        KEY_KEYPAD_1 => Some(b"\x1bOq".to_vec()),
+        KEY_KEYPAD_2 => Some(b"\x1bOr".to_vec()),
+        KEY_KEYPAD_3 => Some(b"\x1bOs".to_vec()),
+        KEY_KEYPAD_4 => Some(b"\x1bOt".to_vec()),
+        KEY_KEYPAD_5 => Some(b"\x1bOu".to_vec()),
+        KEY_KEYPAD_6 => Some(b"\x1bOv".to_vec()),
+        KEY_KEYPAD_7 => Some(b"\x1bOw".to_vec()),
+        KEY_KEYPAD_8 => Some(b"\x1bOx".to_vec()),
+        KEY_KEYPAD_9 => Some(b"\x1bOy".to_vec()),
+        KEY_KEYPAD_DECIMAL => Some(b"\x1bOn".to_vec()),
+        KEY_KEYPAD_ENTER => Some(b"\x1bOM".to_vec()),
+        KEY_KEYPAD_PLUS => Some(b"\x1bOk".to_vec()),
+        KEY_KEYPAD_MINUS => Some(b"\x1bOm".to_vec()),
+        KEY_KEYPAD_MULTIPLY => Some(b"\x1bOj".to_vec()),
+        KEY_KEYPAD_DIVIDE => Some(b"\x1bOo".to_vec()),
+        KEY_KEYPAD_EQUALS => Some(b"\x1bOX".to_vec()),
         _ => None,
     }
 }
@@ -196,6 +239,11 @@ mod tests {
 
     const KEY_RETURN: u16 = 36;
     const KEY_KEYPAD_ENTER: u16 = 76;
+    const KEY_KEYPAD_DECIMAL: u16 = 65;
+    const KEY_KEYPAD_PLUS: u16 = 69;
+    const KEY_KEYPAD_0: u16 = 82;
+    const KEY_KEYPAD_5: u16 = 87;
+    const KEY_KEYPAD_9: u16 = 92;
     const KEY_BACKSPACE: u16 = 51;
     const KEY_FORWARD_DELETE: u16 = 117;
     const KEY_F1: u16 = 122;
@@ -373,6 +421,34 @@ mod tests {
         assert_eq!(
             super::encode_application_cursor_key(KEY_LEFT),
             Some(b"\x1bOD".to_vec())
+        );
+    }
+
+    #[test]
+    fn encodes_application_keypad_keys_for_tui_modes() {
+        assert_eq!(
+            super::encode_application_keypad_key(KEY_KEYPAD_0),
+            Some(b"\x1bOp".to_vec())
+        );
+        assert_eq!(
+            super::encode_application_keypad_key(KEY_KEYPAD_5),
+            Some(b"\x1bOu".to_vec())
+        );
+        assert_eq!(
+            super::encode_application_keypad_key(KEY_KEYPAD_9),
+            Some(b"\x1bOy".to_vec())
+        );
+        assert_eq!(
+            super::encode_application_keypad_key(KEY_KEYPAD_DECIMAL),
+            Some(b"\x1bOn".to_vec())
+        );
+        assert_eq!(
+            super::encode_application_keypad_key(KEY_KEYPAD_PLUS),
+            Some(b"\x1bOk".to_vec())
+        );
+        assert_eq!(
+            super::encode_application_keypad_key(KEY_KEYPAD_ENTER),
+            Some(b"\x1bOM".to_vec())
         );
     }
 }

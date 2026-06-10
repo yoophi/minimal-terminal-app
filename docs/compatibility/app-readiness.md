@@ -36,7 +36,7 @@ Phase 009-018은 1-5번의 많은 부분을 구현하거나 검증 대상으로 
 
 - DA/secondary DA, DSR 같은 terminal response sequence
 - Shift/Option/Control 조합 key encoding
-- application keypad와 remaining modifier key variants
+- remaining modifier key variants와 runtime key workflow
 - mouse reporting과 native selection 충돌
 - alternate screen 안에서 다시 다른 TUI를 실행하는 nested workflow
 - resize 후 cursor, pane, prompt redraw

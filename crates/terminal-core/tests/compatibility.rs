@@ -39,11 +39,12 @@ fn style_sequences_have_snapshot_evidence() {
 fn tui_private_modes_and_editing_sequences_have_core_evidence() {
     let mut terminal = TerminalState::new(5, 16);
 
-    terminal.append_bytes(b"\x1b[?25l\x1b[?2004h\x1b[?1h");
+    terminal.append_bytes(b"\x1b[?25l\x1b[?2004h\x1b[?1h\x1b=");
     let snapshot = terminal.snapshot(5);
     assert!(!snapshot.modes.cursor_visible);
     assert!(snapshot.modes.bracketed_paste);
     assert!(snapshot.modes.application_cursor_keys);
+    assert!(snapshot.modes.application_keypad);
 
     terminal.append_bytes(b"\x1b[?1000h\x1b[?1006h");
     let snapshot = terminal.snapshot(5);

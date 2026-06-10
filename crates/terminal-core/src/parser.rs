@@ -20,6 +20,7 @@ pub(crate) enum Action {
     EnterAlternateScreen,
     ExitAlternateScreen,
     SetApplicationCursorKeys(bool),
+    SetApplicationKeypad(bool),
     SetBracketedPaste(bool),
     SetCursorVisible(bool),
     SetCursorStyle(CursorStyle),
@@ -125,6 +126,8 @@ impl vte::Perform for ActionCollector {
         let action = match (intermediates, byte) {
             ([], b'7') => Action::SaveCursor,
             ([], b'8') => Action::RestoreCursor,
+            ([], b'=') => Action::SetApplicationKeypad(true),
+            ([], b'>') => Action::SetApplicationKeypad(false),
             // Character set designations are parsed but ignored for now.
             ([b'(' | b')' | b'*' | b'+'], _) => return,
             _ => Action::Ignore,
@@ -379,6 +382,19 @@ mod tests {
         assert_eq!(parser.advance('7'), Some(Action::SaveCursor));
         assert_eq!(parser.advance('\u{1b}'), None);
         assert_eq!(parser.advance('8'), Some(Action::RestoreCursor));
+    }
+
+    #[test]
+    fn parses_application_keypad_modes() {
+        let mut parser = Parser::default();
+        assert_eq!(
+            parser.advance_bytes(b"\x1b="),
+            vec![Action::SetApplicationKeypad(true)]
+        );
+        assert_eq!(
+            parser.advance_bytes(b"\x1b>"),
+            vec![Action::SetApplicationKeypad(false)]
+        );
     }
 
     #[test]
