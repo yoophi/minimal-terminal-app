@@ -96,9 +96,7 @@ impl TerminalState {
 
     fn apply(&mut self, action: Action) {
         match action {
-            Action::Print(ch) => self
-                .grid
-                .put_char(&mut self.cursor, ch, self.current_style),
+            Action::Print(ch) => self.grid.put_char(&mut self.cursor, ch, self.current_style),
             Action::CarriageReturn => self.grid.carriage_return(&mut self.cursor),
             Action::Newline => self.grid.newline(&mut self.cursor),
             Action::Backspace => self.grid.backspace(&mut self.cursor),
@@ -350,10 +348,7 @@ mod tests {
             }
         );
         assert_eq!(snapshot.styled_lines[0].spans[1].text, " plain");
-        assert_eq!(
-            snapshot.styled_lines[0].spans[1].style,
-            Style::default()
-        );
+        assert_eq!(snapshot.styled_lines[0].spans[1].style, Style::default());
     }
 
     #[test]

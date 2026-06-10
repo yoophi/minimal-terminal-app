@@ -5,13 +5,15 @@ use objc2::rc::{autoreleasepool, Retained};
 use objc2::runtime::AnyObject;
 use objc2::{define_class, msg_send, sel, ClassType, DefinedClass, MainThreadOnly};
 use objc2_app_kit::{
-    NSColor, NSEvent, NSFont, NSFontAttributeName, NSForegroundColorAttributeName, NSPasteboard,
-    NSPasteboardTypeString, NSRectFill, NSResponder, NSView, NSWindow,
+    NSBackgroundColorAttributeName, NSColor, NSEvent, NSFont, NSFontAttributeName,
+    NSForegroundColorAttributeName, NSPasteboard, NSPasteboardTypeString, NSRectFill, NSResponder,
+    NSUnderlineStyleAttributeName, NSView, NSWindow,
 };
 use objc2_foundation::{
-    MainThreadMarker, NSMutableDictionary, NSObjectProtocol, NSPoint, NSRect, NSString, NSTimer,
+    MainThreadMarker, NSMutableDictionary, NSNumber, NSObjectProtocol, NSPoint, NSRect, NSString,
+    NSTimer,
 };
-use terminal_core::TerminalSnapshot;
+use terminal_core::{Color, Style, StyledLine, TerminalSnapshot};
 
 use crate::input;
 use crate::logging;
@@ -285,19 +287,49 @@ fn draw_background(rect: NSRect) {
 }
 
 fn draw_terminal_text(snapshot: &TerminalSnapshot) {
-    let attributes = terminal_text_attributes();
-
-    for (index, line) in snapshot.lines.iter().enumerate() {
-        let string = NSString::from_str(line);
-        let y = PADDING_Y + (index as f64 * LINE_HEIGHT);
-        let _: () = unsafe {
-            msg_send![
-                &*string,
-                drawAtPoint: NSPoint::new(PADDING_X, y),
-                withAttributes: Some(&*attributes)
-            ]
-        };
+    if snapshot.styled_lines.is_empty() {
+        draw_plain_terminal_text(&snapshot.lines);
+        return;
     }
+
+    for (index, line) in snapshot.styled_lines.iter().enumerate() {
+        let y = PADDING_Y + (index as f64 * LINE_HEIGHT);
+        draw_styled_line(line, y);
+    }
+}
+
+fn draw_plain_terminal_text(lines: &[String]) {
+    let attributes = terminal_text_attributes(Style::default());
+
+    for (index, line) in lines.iter().enumerate() {
+        draw_text_at(
+            line,
+            PADDING_X,
+            PADDING_Y + (index as f64 * LINE_HEIGHT),
+            &attributes,
+        );
+    }
+}
+
+fn draw_styled_line(line: &StyledLine, y: f64) {
+    let mut x = PADDING_X;
+
+    for span in &line.spans {
+        let attributes = terminal_text_attributes(span.style);
+        draw_text_at(&span.text, x, y, &attributes);
+        x += display_width(&span.text) as f64 * CELL_WIDTH;
+    }
+}
+
+fn draw_text_at(text: &str, x: f64, y: f64, attributes: &NSMutableDictionary) {
+    let string = NSString::from_str(text);
+    let _: () = unsafe {
+        msg_send![
+            &*string,
+            drawAtPoint: NSPoint::new(x, y),
+            withAttributes: Some(attributes)
+        ]
+    };
 }
 
 fn draw_cursor(snapshot: &TerminalSnapshot) {
@@ -310,20 +342,43 @@ fn draw_cursor(snapshot: &TerminalSnapshot) {
     ));
 }
 
-fn terminal_text_attributes() -> Retained<NSMutableDictionary> {
+fn terminal_text_attributes(style: Style) -> Retained<NSMutableDictionary> {
     let attributes = NSMutableDictionary::new();
-    let color = NSColor::whiteColor();
-    let color_object: &AnyObject = color.as_ref();
+    let foreground = terminal_foreground_color(style);
+    let foreground_object: &AnyObject = foreground.as_ref();
 
     let _: () = unsafe {
         msg_send![
             &*attributes,
-            setObject: color_object,
+            setObject: foreground_object,
             forKey: &*NSForegroundColorAttributeName
         ]
     };
 
-    if let Some(font) = terminal_font() {
+    if let Some(background) = terminal_background_color(style) {
+        let background_object: &AnyObject = background.as_ref();
+        let _: () = unsafe {
+            msg_send![
+                &*attributes,
+                setObject: background_object,
+                forKey: &*NSBackgroundColorAttributeName
+            ]
+        };
+    }
+
+    if style.underline {
+        let underline = NSNumber::new_i32(1);
+        let underline_object: &AnyObject = underline.as_ref();
+        let _: () = unsafe {
+            msg_send![
+                &*attributes,
+                setObject: underline_object,
+                forKey: &*NSUnderlineStyleAttributeName
+            ]
+        };
+    }
+
+    if let Some(font) = terminal_font(style.bold) {
         let font_object: &AnyObject = font.as_ref();
         let _: () = unsafe {
             msg_send![
@@ -337,7 +392,20 @@ fn terminal_text_attributes() -> Retained<NSMutableDictionary> {
     attributes
 }
 
-fn terminal_font() -> Option<Retained<NSFont>> {
+fn terminal_font(bold: bool) -> Option<Retained<NSFont>> {
+    if bold {
+        for font_name in [
+            "JetBrainsMonoNFM-Bold",
+            "JetBrainsMonoNF-Bold",
+            "JetBrainsMono-Bold",
+        ] {
+            if let Some(font) = NSFont::fontWithName_size(&NSString::from_str(font_name), FONT_SIZE)
+            {
+                return Some(font);
+            }
+        }
+    }
+
     for font_name in TERMINAL_FONT_NAMES {
         if let Some(font) = NSFont::fontWithName_size(&NSString::from_str(font_name), FONT_SIZE) {
             return Some(font);
@@ -345,6 +413,130 @@ fn terminal_font() -> Option<Retained<NSFont>> {
     }
 
     NSFont::userFixedPitchFontOfSize(FONT_SIZE)
+}
+
+fn terminal_foreground_color(style: Style) -> Retained<NSColor> {
+    let color = if style.inverse {
+        style.background.or(Some(Color::Indexed(0)))
+    } else {
+        style.foreground
+    };
+    ns_color(color, true)
+}
+
+fn terminal_background_color(style: Style) -> Option<Retained<NSColor>> {
+    let color = if style.inverse {
+        style.foreground.or(Some(Color::Indexed(7)))
+    } else {
+        style.background
+    };
+    color.map(|color| ns_color(Some(color), false))
+}
+
+fn ns_color(color: Option<Color>, foreground: bool) -> Retained<NSColor> {
+    match color {
+        None if foreground => NSColor::whiteColor(),
+        None => NSColor::blackColor(),
+        Some(Color::Indexed(index)) => indexed_color(index),
+        Some(Color::Rgb(red, green, blue)) => rgb_color(red, green, blue),
+    }
+}
+
+fn indexed_color(index: u8) -> Retained<NSColor> {
+    let (red, green, blue) = match index {
+        0 => (0x1d, 0x1f, 0x21),
+        1 => (0xcc, 0x24, 0x1d),
+        2 => (0x98, 0x97, 0x1a),
+        3 => (0xd7, 0x99, 0x21),
+        4 => (0x45, 0x85, 0x88),
+        5 => (0xb1, 0x62, 0x86),
+        6 => (0x68, 0x9d, 0x6a),
+        7 => (0xeb, 0xdb, 0xb2),
+        8 => (0x92, 0x83, 0x74),
+        9 => (0xfb, 0x49, 0x34),
+        10 => (0xb8, 0xbb, 0x26),
+        11 => (0xfa, 0xbd, 0x2f),
+        12 => (0x83, 0xa5, 0x98),
+        13 => (0xd3, 0x86, 0x9b),
+        14 => (0x8e, 0xc0, 0x7c),
+        15 => (0xfb, 0xf1, 0xc7),
+        16..=231 => color_cube(index - 16),
+        232..=255 => {
+            let value = 8 + ((index - 232) * 10);
+            (value, value, value)
+        }
+    };
+
+    rgb_color(red, green, blue)
+}
+
+fn color_cube(index: u8) -> (u8, u8, u8) {
+    let red = index / 36;
+    let green = (index % 36) / 6;
+    let blue = index % 6;
+    (
+        cube_component(red),
+        cube_component(green),
+        cube_component(blue),
+    )
+}
+
+fn cube_component(value: u8) -> u8 {
+    if value == 0 {
+        0
+    } else {
+        55 + (value * 40)
+    }
+}
+
+fn rgb_color(red: u8, green: u8, blue: u8) -> Retained<NSColor> {
+    NSColor::colorWithSRGBRed_green_blue_alpha(
+        red as f64 / 255.0,
+        green as f64 / 255.0,
+        blue as f64 / 255.0,
+        1.0,
+    )
+}
+
+fn display_width(text: &str) -> usize {
+    text.chars().map(char_width).sum()
+}
+
+fn char_width(ch: char) -> usize {
+    if is_combining_mark(ch) {
+        0
+    } else if is_wide_char(ch) {
+        2
+    } else {
+        1
+    }
+}
+
+fn is_combining_mark(ch: char) -> bool {
+    matches!(
+        ch as u32,
+        0x0300..=0x036F
+            | 0x1AB0..=0x1AFF
+            | 0x1DC0..=0x1DFF
+            | 0x20D0..=0x20FF
+            | 0xFE20..=0xFE2F
+    )
+}
+
+fn is_wide_char(ch: char) -> bool {
+    matches!(
+        ch as u32,
+        0x1100..=0x115F
+            | 0x2329..=0x232A
+            | 0x2E80..=0xA4CF
+            | 0xAC00..=0xD7A3
+            | 0xF900..=0xFAFF
+            | 0xFE10..=0xFE19
+            | 0xFE30..=0xFE6F
+            | 0xFF00..=0xFF60
+            | 0xFFE0..=0xFFE6
+            | 0x1F300..=0x1FAFF
+    )
 }
 
 fn terminal_dimensions(bounds: NSRect) -> (usize, usize) {

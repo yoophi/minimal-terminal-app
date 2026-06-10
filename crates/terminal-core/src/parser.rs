@@ -178,7 +178,11 @@ fn contains_any(numbers: &[usize], targets: &[usize]) -> bool {
 }
 
 pub(crate) fn apply_sgr(style: &mut Style, numbers: &[usize]) {
-    let numbers = if numbers.is_empty() { &[0][..] } else { numbers };
+    let numbers = if numbers.is_empty() {
+        &[0][..]
+    } else {
+        numbers
+    };
     let mut index = 0;
 
     while index < numbers.len() {
@@ -196,9 +200,7 @@ pub(crate) fn apply_sgr(style: &mut Style, numbers: &[usize]) {
             39 => style.set_foreground(None),
             40..=47 => style.set_background(Some(Color::Indexed((numbers[index] - 40) as u8))),
             49 => style.set_background(None),
-            90..=97 => {
-                style.set_foreground(Some(Color::Indexed((numbers[index] - 90 + 8) as u8)))
-            }
+            90..=97 => style.set_foreground(Some(Color::Indexed((numbers[index] - 90 + 8) as u8))),
             100..=107 => {
                 style.set_background(Some(Color::Indexed((numbers[index] - 100 + 8) as u8)))
             }
