@@ -310,6 +310,13 @@ run_case_with_followup \
   "git-pager-horizontal-ok" \
   1500 \
   1000
+run_case_with_followup \
+  "git-pager-mark-quit" \
+  $'git log --oneline --graph --decorate -100 --color=never | less; printf "git-pager-mark-ok\\n"\n' \
+  $'ma\047aq' \
+  "git-pager-mark-ok" \
+  1500 \
+  1000
 ran=1
 
 if command -v tmux >/dev/null 2>&1; then

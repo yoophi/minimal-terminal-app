@@ -170,6 +170,7 @@ scripts/run-app-target-smokes.sh
 - `git-pager-page-quit`: `git log ... | less` 실행 후 follow-up Space와 `q`로 page navigation 뒤 pager 종료 확인
 - `git-pager-search-quit`: `git log ... | less` 실행 후 follow-up `/Implement`, Enter, `q`로 search 뒤 pager 종료 확인
 - `git-pager-horizontal-quit`: 긴 줄 형식의 `git log ... | less -S` 실행 후 follow-up Right Arrow와 `q`로 horizontal scroll 뒤 pager 종료 확인
+- `git-pager-mark-quit`: `git log ... | less` 실행 후 follow-up `m a`, `' a`, `q`로 mark 뒤 pager 종료 확인
 - `tmux-version`: `tmux -V`
 - `htop-version`: `htop --version`
 - `htop-runtime`: `htop` full-screen redraw snapshot

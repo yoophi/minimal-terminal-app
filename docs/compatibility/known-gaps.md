@@ -52,13 +52,14 @@
 - Phase 047에서 app 내부 `fzf --preview` preview pane redraw workflow를 자동화했다.
 - Phase 048에서 app 내부 `git log ... | less` pager search 뒤 quit workflow를 자동화했다.
 - Phase 049에서 app 내부 `git log ... | less -S` pager horizontal scroll 뒤 quit workflow를 자동화했다.
+- Phase 050에서 app 내부 `git log ... | less` pager mark 뒤 quit workflow를 자동화했다.
 - interactive key workflow는 아직 남아 있다.
 
 권장 다음 작업:
 
 - `htop` mouse 또는 추가 function key workflow를 앱 내부에서 수행한다.
 - `fzf` shell integration workflow를 앱 내부에서 수행한다.
-- `git log` pager mark workflow를 앱 내부에서 수행한다.
+- `git log` pager workflow는 현재 자동 smoke target에서 quit/page/search/horizontal/mark 경로를 확인한다.
 
 ## Priority 3
 
@@ -282,7 +283,13 @@ Phase 048에서 `scripts/run-app-target-smokes.sh`에 `git-pager-search-quit` ta
 
 상태: `partially supported`
 
-Phase 049에서 `scripts/run-app-target-smokes.sh`에 `git-pager-horizontal-quit` target을 추가했다. local verification environment에서 app 내부 PTY로 `git log --pretty=format:"%H %s" -100 --color=never | less -S`를 실행하고 follow-up Right Arrow sequence `ESC [ C`와 `q` 입력으로 shell marker `git-pager-horizontal-ok`를 확인했다. pager mark workflow는 Environment-dependent App Smoke Target gap으로 계속 추적한다.
+Phase 049에서 `scripts/run-app-target-smokes.sh`에 `git-pager-horizontal-quit` target을 추가했다. local verification environment에서 app 내부 PTY로 `git log --pretty=format:"%H %s" -100 --color=never | less -S`를 실행하고 follow-up Right Arrow sequence `ESC [ C`와 `q` 입력으로 shell marker `git-pager-horizontal-ok`를 확인했다.
+
+### git Pager Mark App Smoke
+
+상태: `partially supported`
+
+Phase 050에서 `scripts/run-app-target-smokes.sh`에 `git-pager-mark-quit` target을 추가했다. local verification environment에서 app 내부 PTY로 `git log --oneline --graph --decorate -100 --color=never | less`를 실행하고 follow-up `m a`, `' a`, `q` 입력으로 shell marker `git-pager-mark-ok`를 확인했다.
 
 ### htop Quit App Smoke
 
