@@ -91,6 +91,7 @@ impl Default for Parser {
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 enum Charset {
     Ascii,
+    British,
     DecSpecialGraphics,
 }
 
@@ -228,12 +229,20 @@ impl vte::Perform for ActionCollector {
                 self.g0_charset = Charset::DecSpecialGraphics;
                 return;
             }
+            ([b'('], b'A') => {
+                self.g0_charset = Charset::British;
+                return;
+            }
             ([b'('], b'B') => {
                 self.g0_charset = Charset::Ascii;
                 return;
             }
             ([b')'], b'0') => {
                 self.g1_charset = Charset::DecSpecialGraphics;
+                return;
+            }
+            ([b')'], b'A') => {
+                self.g1_charset = Charset::British;
                 return;
             }
             ([b')'], b'B') => {
@@ -244,12 +253,20 @@ impl vte::Perform for ActionCollector {
                 self.g2_charset = Charset::DecSpecialGraphics;
                 return;
             }
+            ([b'*'], b'A') => {
+                self.g2_charset = Charset::British;
+                return;
+            }
             ([b'*'], b'B') => {
                 self.g2_charset = Charset::Ascii;
                 return;
             }
             ([b'+'], b'0') => {
                 self.g3_charset = Charset::DecSpecialGraphics;
+                return;
+            }
+            ([b'+'], b'A') => {
+                self.g3_charset = Charset::British;
                 return;
             }
             ([b'+'], b'B') => {
@@ -268,40 +285,47 @@ impl vte::Perform for ActionCollector {
 }
 
 fn map_printable_char(ch: char, charset: Charset) -> char {
-    if charset != Charset::DecSpecialGraphics {
-        return ch;
+    if charset == Charset::British {
+        return match ch {
+            '#' => '£',
+            _ => ch,
+        };
     }
 
-    match ch {
-        '`' => '◆',
-        'a' => '▒',
-        'f' => '°',
-        'g' => '±',
-        'h' => '␤',
-        'i' => '␋',
-        'j' => '┘',
-        'k' => '┐',
-        'l' => '┌',
-        'm' => '└',
-        'n' => '┼',
-        'o' => '⎺',
-        'p' => '⎻',
-        'q' => '─',
-        'r' => '⎼',
-        's' => '⎽',
-        't' => '├',
-        'u' => '┤',
-        'v' => '┴',
-        'w' => '┬',
-        'x' => '│',
-        'y' => '≤',
-        'z' => '≥',
-        '{' => 'π',
-        '|' => '≠',
-        '}' => '£',
-        '~' => '·',
-        _ => ch,
+    if charset == Charset::DecSpecialGraphics {
+        return match ch {
+            '`' => '◆',
+            'a' => '▒',
+            'f' => '°',
+            'g' => '±',
+            'h' => '␤',
+            'i' => '␋',
+            'j' => '┘',
+            'k' => '┐',
+            'l' => '┌',
+            'm' => '└',
+            'n' => '┼',
+            'o' => '⎺',
+            'p' => '⎻',
+            'q' => '─',
+            'r' => '⎼',
+            's' => '⎽',
+            't' => '├',
+            'u' => '┤',
+            'v' => '┴',
+            'w' => '┬',
+            'x' => '│',
+            'y' => '≤',
+            'z' => '≥',
+            '{' => 'π',
+            '|' => '≠',
+            '}' => '£',
+            '~' => '·',
+            _ => ch,
+        };
     }
+
+    ch
 }
 
 fn parse_osc(params: &[&[u8]]) -> Action {
@@ -657,6 +681,20 @@ mod tests {
         assert_eq!(
             parser.advance_bytes(b"\x1bOmx"),
             vec![Action::Print('└'), Action::Print('x')]
+        );
+    }
+
+    #[test]
+    fn maps_british_nrcs_charset() {
+        let mut parser = Parser::default();
+
+        assert_eq!(
+            parser.advance_bytes(b"\x1b(A#x\x1b(B#"),
+            vec![Action::Print('£'), Action::Print('x'), Action::Print('#')]
+        );
+        assert_eq!(
+            parser.advance_bytes(b"\x1b*A\x1bN#x"),
+            vec![Action::Print('£'), Action::Print('x')]
         );
     }
 
