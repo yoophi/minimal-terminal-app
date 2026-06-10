@@ -27,27 +27,6 @@
 
 ## Priority 2
 
-### Cursor Style Sequence
-
-상태: `not supported`
-
-예시:
-
-- `CSI Ps SP q`
-
-중요한 이유:
-
-- editor는 block, bar, underline, blinking, steady cursor style을 요청할 수 있다.
-- 현재 renderer는 고정 block cursor만 그린다.
-
-권장 다음 작업:
-
-- cursor style을 `TerminalModes`에 추가한다.
-- cursor style sequence variant를 parse한다.
-- AppKit cursor rendering을 갱신하고 state test를 추가한다.
-
-## Priority 3
-
 ### Cross-Scrollback Selection
 
 상태: `partially supported`
@@ -62,7 +41,7 @@
 - visible row 좌표 대신 안정적인 buffer address space 기준 selection 좌표를 정의한다.
 - 현재 visible selection 동작은 첫 fallback으로 유지한다.
 
-## Priority 4
+## Priority 3
 
 ### 미확인 App Smoke Target
 
@@ -86,7 +65,7 @@
 - 통과하면 `matrix.md`의 상태와 evidence를 갱신한다.
 - 실패하면 실패 증상을 이 문서의 구체적인 gap으로 승격한다.
 
-## Priority 5
+## Priority 4
 
 ### Full xterm Compatibility Coverage
 
@@ -102,7 +81,7 @@
 - smoke test 실패에서 나온 unknown row를 우선순위에 따라 승격한다.
 - 새로 지원하는 sequence마다 작은 parser/grid fixture를 우선 추가한다.
 
-## Priority 6
+## Priority 5
 
 ### 대표 CLI/TUI Application Certification
 
@@ -137,3 +116,9 @@
 상태: `supported`
 
 Phase 011에서 `CSI 5 n`, `CSI 6 n` parser action, core response queue, app PTY response path를 구현했다. 현재 지원 범위는 `CSI 5n`의 `ESC[0n` 응답과 `CSI 6n`의 1-based cursor position report 응답이다.
+
+### Cursor Style Sequence
+
+상태: `supported`
+
+Phase 012에서 `CSI Ps SP q` parser action, cursor style mode, AppKit cursor shape rendering을 구현했다. 현재 block, bar, underline shape을 구분하며 blinking/steady 차이는 같은 steady rendering으로 처리한다.

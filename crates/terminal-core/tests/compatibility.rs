@@ -1,4 +1,4 @@
-use terminal_core::{Color, Cursor, Style, TerminalState};
+use terminal_core::{Color, Cursor, CursorStyle, Style, TerminalState};
 
 #[test]
 fn basic_terminal_sequences_have_core_evidence() {
@@ -61,5 +61,19 @@ fn device_status_reports_have_core_evidence() {
     assert_eq!(
         terminal.take_pending_responses(),
         b"\x1b[0n\x1b[3;6R".to_vec()
+    );
+}
+
+#[test]
+fn cursor_style_sequences_have_core_evidence() {
+    let mut terminal = TerminalState::new(4, 10);
+
+    terminal.append_bytes(b"\x1b[6 q");
+    assert_eq!(terminal.snapshot(4).modes.cursor_style, CursorStyle::Bar);
+
+    terminal.append_bytes(b"\x1b[4 q");
+    assert_eq!(
+        terminal.snapshot(4).modes.cursor_style,
+        CursorStyle::Underline
     );
 }

@@ -1,4 +1,4 @@
-use crate::cursor::Cursor;
+use crate::cursor::{Cursor, CursorStyle};
 use crate::grid::Grid;
 use crate::parser::{apply_sgr, Action, LineClearMode, Parser, ScreenClearMode};
 use crate::style::{Style, StyledLine};
@@ -15,6 +15,7 @@ pub struct TerminalSnapshot {
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct TerminalModes {
     pub cursor_visible: bool,
+    pub cursor_style: CursorStyle,
     pub bracketed_paste: bool,
     pub application_cursor_keys: bool,
 }
@@ -23,6 +24,7 @@ impl Default for TerminalModes {
     fn default() -> Self {
         Self {
             cursor_visible: true,
+            cursor_style: CursorStyle::Block,
             bracketed_paste: false,
             application_cursor_keys: false,
         }
@@ -177,6 +179,7 @@ impl TerminalState {
             }
             Action::SetBracketedPaste(enabled) => self.modes.bracketed_paste = enabled,
             Action::SetCursorVisible(visible) => self.modes.cursor_visible = visible,
+            Action::SetCursorStyle(style) => self.modes.cursor_style = style,
             Action::DeviceStatusReport => self.pending_responses.extend_from_slice(b"\x1b[0n"),
             Action::CursorPositionReport => {
                 self.pending_responses.extend_from_slice(
@@ -224,6 +227,7 @@ impl TerminalState {
         self.saved_cursor = Cursor::default();
         self.current_style = Style::default();
         self.modes.cursor_visible = true;
+        self.modes.cursor_style = CursorStyle::Block;
         self.modes.bracketed_paste = false;
         self.modes.application_cursor_keys = false;
         self.scroll_region = None;
@@ -247,7 +251,7 @@ impl TerminalState {
 #[cfg(test)]
 mod tests {
     use super::TerminalState;
-    use crate::{Color, Cursor, Style};
+    use crate::{Color, Cursor, CursorStyle, Style};
 
     #[test]
     fn writes_printable_text_and_tracks_cursor() {
@@ -506,5 +510,22 @@ mod tests {
         terminal.append_bytes(b"\x1b[2;4H\x1b[6n");
 
         assert_eq!(terminal.take_pending_responses(), b"\x1b[2;4R".to_vec());
+    }
+
+    #[test]
+    fn tracks_cursor_style_mode() {
+        let mut terminal = TerminalState::new(4, 10);
+
+        terminal.append_bytes(b"\x1b[6 q");
+        assert_eq!(terminal.snapshot(4).modes.cursor_style, CursorStyle::Bar);
+
+        terminal.append_bytes(b"\x1b[4 q");
+        assert_eq!(
+            terminal.snapshot(4).modes.cursor_style,
+            CursorStyle::Underline
+        );
+
+        terminal.append_bytes(b"\x1b[2 q");
+        assert_eq!(terminal.snapshot(4).modes.cursor_style, CursorStyle::Block);
     }
 }

@@ -1,3 +1,4 @@
+use crate::cursor::CursorStyle;
 use crate::style::{Color, Style};
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -21,6 +22,7 @@ pub(crate) enum Action {
     SetApplicationCursorKeys(bool),
     SetBracketedPaste(bool),
     SetCursorVisible(bool),
+    SetCursorStyle(CursorStyle),
     DeviceStatusReport,
     CursorPositionReport,
     CursorPosition { row: usize, col: usize },
@@ -132,6 +134,10 @@ fn parse_csi(numbers: &[usize], intermediates: &[u8], final_byte: char) -> Actio
         return parse_private_csi(numbers, final_byte);
     }
 
+    if intermediates == b" " && final_byte == 'q' {
+        return parse_cursor_style(numbers);
+    }
+
     match final_byte {
         '@' => Action::InsertBlankChars(first_or_default(&numbers, 1)),
         'A' => Action::CursorUp(first_or_default(&numbers, 1)),
@@ -168,6 +174,15 @@ fn parse_csi(numbers: &[usize], intermediates: &[u8], final_byte: char) -> Actio
         's' => Action::SaveCursor,
         'u' => Action::RestoreCursor,
         'm' => Action::SetGraphicRendition(numbers.to_vec()),
+        _ => Action::Ignore,
+    }
+}
+
+fn parse_cursor_style(numbers: &[usize]) -> Action {
+    match first_or_default(numbers, 0) {
+        0..=2 => Action::SetCursorStyle(CursorStyle::Block),
+        3 | 4 => Action::SetCursorStyle(CursorStyle::Underline),
+        5 | 6 => Action::SetCursorStyle(CursorStyle::Bar),
         _ => Action::Ignore,
     }
 }
@@ -281,6 +296,8 @@ fn parse_extended_color(numbers: &[usize]) -> Option<(Color, usize)> {
 
 #[cfg(test)]
 mod tests {
+    use crate::cursor::CursorStyle;
+
     use super::{Action, LineClearMode, Parser, ScreenClearMode};
 
     #[test]
@@ -463,5 +480,23 @@ mod tests {
             vec![Action::CursorPositionReport]
         );
         assert_eq!(parser.advance_bytes(b"\x1b[9n"), vec![Action::Ignore]);
+    }
+
+    #[test]
+    fn parses_cursor_style_sequences() {
+        let mut parser = Parser::default();
+        assert_eq!(
+            parser.advance_bytes(b"\x1b[2 q"),
+            vec![Action::SetCursorStyle(CursorStyle::Block)]
+        );
+        assert_eq!(
+            parser.advance_bytes(b"\x1b[4 q"),
+            vec![Action::SetCursorStyle(CursorStyle::Underline)]
+        );
+        assert_eq!(
+            parser.advance_bytes(b"\x1b[6 q"),
+            vec![Action::SetCursorStyle(CursorStyle::Bar)]
+        );
+        assert_eq!(parser.advance_bytes(b"\x1b[9 q"), vec![Action::Ignore]);
     }
 }

@@ -69,9 +69,27 @@ cursor shape 변경이 기존 block cursor 표시를 깨뜨릴 수 있다.
 
 ## Acceptance Criteria
 
-- cursor style parser/state test가 있다.
-- renderer가 최소 block/bar/underline을 구분한다.
-- `docs/compatibility/matrix.md`의 Cursor style row가 갱신되어 있다.
-- `docs/compatibility/known-gaps.md`의 cursor style gap이 제거되거나 제한이 명확히 낮춰져 있다.
-- `cargo test`와 `scripts/run-compatibility-core.sh`가 통과한다.
+- cursor style parser/state test가 있다. `done`
+- renderer가 최소 block/bar/underline을 구분한다. `done`
+- `docs/compatibility/matrix.md`의 Cursor style row가 갱신되어 있다. `done`
+- `docs/compatibility/known-gaps.md`의 cursor style gap이 제거되거나 제한이 명확히 낮춰져 있다. `done`
+- `cargo test`와 `scripts/run-compatibility-core.sh`가 통과한다. `done`
 
+## Implementation Update - 2026-06-10
+
+Status: implementation complete.
+
+구현된 내용:
+
+- `CursorStyle` enum을 추가했다.
+- `TerminalModes`가 cursor style을 저장한다.
+- parser가 `CSI Ps SP q`를 block, underline, bar cursor style로 해석한다.
+- AppKit renderer가 cursor style에 따라 block, vertical bar, underline rect를 그린다.
+- blinking/steady 차이는 MVP에서 같은 steady rendering으로 처리한다.
+- parser/state/compatibility test를 추가했다.
+- matrix와 known gaps를 갱신했다.
+
+검증:
+
+- `scripts/run-compatibility-core.sh`
+- `cargo test`

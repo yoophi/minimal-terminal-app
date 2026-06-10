@@ -14,7 +14,7 @@ use objc2_foundation::{
     NSNotFound, NSNumber, NSObjectProtocol, NSPoint, NSRange, NSRangePointer, NSRect, NSString,
     NSTimer,
 };
-use terminal_core::{Color, Style, StyledLine, TerminalModes, TerminalSnapshot};
+use terminal_core::{Color, CursorStyle, Style, StyledLine, TerminalModes, TerminalSnapshot};
 
 use crate::composition::{CompositionState, TextRange};
 use crate::input;
@@ -721,9 +721,14 @@ fn draw_cursor(snapshot: &TerminalSnapshot) {
 fn cursor_rect(snapshot: &TerminalSnapshot) -> NSRect {
     let x = PADDING_X + (snapshot.cursor.col as f64 * CELL_WIDTH);
     let y = PADDING_Y + (snapshot.cursor.row as f64 * LINE_HEIGHT) + 2.0;
+    let (x, y, width, height) = match snapshot.modes.cursor_style {
+        CursorStyle::Block => (x, y, CURSOR_WIDTH, CURSOR_HEIGHT),
+        CursorStyle::Bar => (x, y, 2.0, CURSOR_HEIGHT),
+        CursorStyle::Underline => (x, y + CURSOR_HEIGHT - 2.0, CURSOR_WIDTH, 2.0),
+    };
     NSRect::new(
         NSPoint::new(x, y),
-        objc2_foundation::NSSize::new(CURSOR_WIDTH, CURSOR_HEIGHT),
+        objc2_foundation::NSSize::new(width, height),
     )
 }
 
