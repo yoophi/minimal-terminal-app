@@ -13,15 +13,27 @@ const KEY_DOWN: u16 = 125;
 const KEY_UP: u16 = 126;
 
 pub fn encode_key_event(event: &NSEvent, input: &str) -> Option<Vec<u8>> {
+    encode_key(event.keyCode(), event.modifierFlags(), input)
+}
+
+fn encode_key(key_code: u16, flags: NSEventModifierFlags, input: &str) -> Option<Vec<u8>> {
+    if flags.contains(NSEventModifierFlags::Command) {
+        return None;
+    }
+
     if let Some(bytes) = encode_control_text(input) {
         return Some(bytes);
     }
 
-    if let Some(bytes) = encode_control_key(event) {
+    if let Some(bytes) = encode_control_key(key_code, flags) {
         return Some(bytes);
     }
 
-    match event.keyCode() {
+    if flags.contains(NSEventModifierFlags::Option) {
+        return encode_option_key(key_code, input);
+    }
+
+    match key_code {
         KEY_RETURN => Some(b"\r".to_vec()),
         KEY_BACKSPACE => Some(vec![0x7f]),
         KEY_FORWARD_DELETE => Some(b"\x1b[3~".to_vec()),
@@ -38,6 +50,21 @@ pub fn encode_key_event(event: &NSEvent, input: &str) -> Option<Vec<u8>> {
     }
 }
 
+fn encode_option_key(key_code: u16, input: &str) -> Option<Vec<u8>> {
+    match key_code {
+        KEY_LEFT => Some(b"\x1bb".to_vec()),
+        KEY_RIGHT => Some(b"\x1bf".to_vec()),
+        KEY_BACKSPACE => Some(vec![0x1b, 0x7f]),
+        _ if input.is_empty() => None,
+        _ => {
+            let mut bytes = Vec::with_capacity(1 + input.len());
+            bytes.push(0x1b);
+            bytes.extend_from_slice(input.as_bytes());
+            Some(bytes)
+        }
+    }
+}
+
 fn encode_control_text(input: &str) -> Option<Vec<u8>> {
     match input {
         "\u{3}" => Some(vec![0x03]),
@@ -46,13 +73,12 @@ fn encode_control_text(input: &str) -> Option<Vec<u8>> {
     }
 }
 
-fn encode_control_key(event: &NSEvent) -> Option<Vec<u8>> {
-    let flags = event.modifierFlags();
+fn encode_control_key(key_code: u16, flags: NSEventModifierFlags) -> Option<Vec<u8>> {
     if !flags.contains(NSEventModifierFlags::Control) {
         return None;
     }
 
-    match event.keyCode() {
+    match key_code {
         8 => Some(vec![0x03]),
         2 => Some(vec![0x04]),
         _ => None,
@@ -61,6 +87,8 @@ fn encode_control_key(event: &NSEvent) -> Option<Vec<u8>> {
 
 #[cfg(test)]
 mod tests {
+    use objc2_app_kit::NSEventModifierFlags;
+
     const KEY_RETURN: u16 = 36;
     const KEY_BACKSPACE: u16 = 51;
     const KEY_FORWARD_DELETE: u16 = 117;
@@ -74,25 +102,15 @@ mod tests {
     const KEY_UP: u16 = 126;
 
     fn encode_key_code(key_code: u16, input: &str) -> Option<Vec<u8>> {
-        if let Some(bytes) = super::encode_control_text(input) {
-            return Some(bytes);
-        }
+        super::encode_key(key_code, NSEventModifierFlags::empty(), input)
+    }
 
-        match key_code {
-            KEY_RETURN => Some(b"\r".to_vec()),
-            KEY_BACKSPACE => Some(vec![0x7f]),
-            KEY_FORWARD_DELETE => Some(b"\x1b[3~".to_vec()),
-            KEY_HOME => Some(b"\x1b[H".to_vec()),
-            KEY_END => Some(b"\x1b[F".to_vec()),
-            KEY_PAGE_UP => Some(b"\x1b[5~".to_vec()),
-            KEY_PAGE_DOWN => Some(b"\x1b[6~".to_vec()),
-            KEY_UP => Some(b"\x1b[A".to_vec()),
-            KEY_DOWN => Some(b"\x1b[B".to_vec()),
-            KEY_RIGHT => Some(b"\x1b[C".to_vec()),
-            KEY_LEFT => Some(b"\x1b[D".to_vec()),
-            _ if input.is_empty() => None,
-            _ => Some(input.as_bytes().to_vec()),
-        }
+    fn encode_modified_key(
+        key_code: u16,
+        flags: NSEventModifierFlags,
+        input: &str,
+    ) -> Option<Vec<u8>> {
+        super::encode_key(key_code, flags, input)
     }
 
     #[test]
@@ -132,5 +150,34 @@ mod tests {
             encode_key_code(KEY_PAGE_DOWN, ""),
             Some(b"\x1b[6~".to_vec())
         );
+    }
+
+    #[test]
+    fn reserves_command_combinations_for_app_shortcuts() {
+        assert_eq!(
+            encode_modified_key(8, NSEventModifierFlags::Command, "c"),
+            None
+        );
+    }
+
+    #[test]
+    fn encodes_option_as_meta_prefix() {
+        assert_eq!(
+            encode_modified_key(0, NSEventModifierFlags::Option, "x"),
+            Some(b"\x1bx".to_vec())
+        );
+        assert_eq!(
+            encode_modified_key(KEY_LEFT, NSEventModifierFlags::Option, ""),
+            Some(b"\x1bb".to_vec())
+        );
+        assert_eq!(
+            encode_modified_key(KEY_RIGHT, NSEventModifierFlags::Option, ""),
+            Some(b"\x1bf".to_vec())
+        );
+    }
+
+    #[test]
+    fn passes_confirmed_ime_text_as_utf8() {
+        assert_eq!(encode_key_code(0, "한글"), Some("한글".as_bytes().to_vec()));
     }
 }
