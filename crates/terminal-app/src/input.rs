@@ -16,6 +16,20 @@ pub fn encode_key_event(event: &NSEvent, input: &str) -> Option<Vec<u8>> {
     encode_key(event.keyCode(), event.modifierFlags(), input)
 }
 
+pub fn encode_application_cursor_key_event(event: &NSEvent) -> Option<Vec<u8>> {
+    encode_application_cursor_key(event.keyCode())
+}
+
+fn encode_application_cursor_key(key_code: u16) -> Option<Vec<u8>> {
+    match key_code {
+        KEY_UP => Some(b"\x1bOA".to_vec()),
+        KEY_DOWN => Some(b"\x1bOB".to_vec()),
+        KEY_RIGHT => Some(b"\x1bOC".to_vec()),
+        KEY_LEFT => Some(b"\x1bOD".to_vec()),
+        _ => None,
+    }
+}
+
 fn encode_key(key_code: u16, flags: NSEventModifierFlags, input: &str) -> Option<Vec<u8>> {
     if flags.contains(NSEventModifierFlags::Command) {
         return None;
@@ -174,5 +188,13 @@ mod tests {
     #[test]
     fn passes_confirmed_ime_text_as_utf8() {
         assert_eq!(encode_key_code(0, "한글"), Some("한글".as_bytes().to_vec()));
+    }
+
+    #[test]
+    fn encodes_application_cursor_keys_for_tui_modes() {
+        assert_eq!(super::encode_application_cursor_key(KEY_UP), Some(b"\x1bOA".to_vec()));
+        assert_eq!(super::encode_application_cursor_key(KEY_DOWN), Some(b"\x1bOB".to_vec()));
+        assert_eq!(super::encode_application_cursor_key(KEY_RIGHT), Some(b"\x1bOC".to_vec()));
+        assert_eq!(super::encode_application_cursor_key(KEY_LEFT), Some(b"\x1bOD".to_vec()));
     }
 }

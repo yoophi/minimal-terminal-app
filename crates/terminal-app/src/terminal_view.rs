@@ -14,7 +14,7 @@ use objc2_foundation::{
     NSNotFound, NSNumber, NSObjectProtocol, NSPoint, NSRange, NSRangePointer, NSRect, NSString,
     NSTimer,
 };
-use terminal_core::{Color, Style, StyledLine, TerminalSnapshot};
+use terminal_core::{Color, Style, StyledLine, TerminalModes, TerminalSnapshot};
 
 use crate::composition::{CompositionState, TextRange};
 use crate::input;
@@ -96,7 +96,13 @@ define_class!(
                     return;
                 };
                 let input = unsafe { characters.to_str(pool) };
-                let Some(bytes) = input::encode_key_event(event, input) else {
+                let bytes = if self.current_modes().application_cursor_keys {
+                    input::encode_application_cursor_key_event(event)
+                        .or_else(|| input::encode_key_event(event, input))
+                } else {
+                    input::encode_key_event(event, input)
+                };
+                let Some(bytes) = bytes else {
                     return;
                 };
 
@@ -351,7 +357,13 @@ impl TerminalView {
             input.len()
         ));
 
-        if let Err(error) = self.ivars().writer.write_all(input.as_bytes()) {
+        let bytes = if self.current_modes().bracketed_paste {
+            bracketed_paste_bytes(input)
+        } else {
+            input.as_bytes().to_vec()
+        };
+
+        if let Err(error) = self.ivars().writer.write_all(&bytes) {
             logging::pty_error(&format!("pty write failed from paste: {error}"));
         }
 
@@ -412,8 +424,17 @@ impl TerminalView {
                 lines: vec!["terminal buffer unavailable".to_string()],
                 styled_lines: Vec::new(),
                 cursor: terminal_core::Cursor::default(),
+                modes: TerminalModes::default(),
                 scrollback_len: 0,
             })
+    }
+
+    fn current_modes(&self) -> TerminalModes {
+        self.ivars()
+            .buffer
+            .lock()
+            .map(|buffer| buffer.snapshot(self.ivars().rows.get().max(1)).modes)
+            .unwrap_or_default()
     }
 
     fn grid_point_for_event(&self, event: &NSEvent) -> GridPoint {
@@ -439,6 +460,7 @@ impl TerminalView {
                 lines: Vec::new(),
                 styled_lines: Vec::new(),
                 cursor: terminal_core::Cursor::default(),
+                modes: TerminalModes::default(),
                 scrollback_len: 0,
             });
         let view_rect = cursor_rect(&snapshot);
@@ -643,6 +665,10 @@ fn draw_text_at(text: &str, x: f64, y: f64, attributes: &NSMutableDictionary) {
 }
 
 fn draw_cursor(snapshot: &TerminalSnapshot) {
+    if !snapshot.modes.cursor_visible {
+        return;
+    }
+
     let rect = cursor_rect(snapshot);
     NSColor::whiteColor().setFill();
     NSRectFill(rect);
@@ -860,6 +886,14 @@ fn terminal_dimensions(bounds: NSRect) -> (usize, usize) {
     let rows = (available_height / LINE_HEIGHT).floor().max(1.0) as usize;
     let cols = (available_width / CELL_WIDTH).floor().max(1.0) as usize;
     (rows, cols)
+}
+
+fn bracketed_paste_bytes(input: &str) -> Vec<u8> {
+    let mut bytes = Vec::with_capacity(input.len() + 12);
+    bytes.extend_from_slice(b"\x1b[200~");
+    bytes.extend_from_slice(input.as_bytes());
+    bytes.extend_from_slice(b"\x1b[201~");
+    bytes
 }
 
 fn text_from_input_object(

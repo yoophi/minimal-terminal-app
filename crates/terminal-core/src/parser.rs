@@ -13,6 +13,9 @@ pub(crate) enum Action {
     RestoreCursor,
     EnterAlternateScreen,
     ExitAlternateScreen,
+    SetApplicationCursorKeys(bool),
+    SetBracketedPaste(bool),
+    SetCursorVisible(bool),
     CursorPosition { row: usize, col: usize },
     CursorUp(usize),
     CursorDown(usize),
@@ -152,8 +155,14 @@ fn parse_csi(numbers: &[usize], intermediates: &[u8], final_byte: char) -> Actio
 
 fn parse_private_csi(numbers: &[usize], final_byte: char) -> Action {
     match final_byte {
+        'h' if contains_any(&numbers, &[1]) => Action::SetApplicationCursorKeys(true),
+        'l' if contains_any(&numbers, &[1]) => Action::SetApplicationCursorKeys(false),
+        'h' if contains_any(&numbers, &[25]) => Action::SetCursorVisible(true),
+        'l' if contains_any(&numbers, &[25]) => Action::SetCursorVisible(false),
         'h' if contains_any(&numbers, &[47, 1047, 1049]) => Action::EnterAlternateScreen,
         'l' if contains_any(&numbers, &[47, 1047, 1049]) => Action::ExitAlternateScreen,
+        'h' if contains_any(&numbers, &[2004]) => Action::SetBracketedPaste(true),
+        'l' if contains_any(&numbers, &[2004]) => Action::SetBracketedPaste(false),
         'h' | 'l' => Action::Ignore,
         _ => Action::Ignore,
     }
@@ -337,11 +346,26 @@ mod tests {
         assert_eq!(parser.advance('\u{1b}'), None);
         assert_eq!(parser.advance('['), None);
         assert_eq!(parser.advance('?'), None);
-        assert_eq!(parser.advance('2'), None);
+        assert_eq!(parser.advance('1'), None);
         assert_eq!(parser.advance('0'), None);
         assert_eq!(parser.advance('0'), None);
-        assert_eq!(parser.advance('4'), None);
+        assert_eq!(parser.advance('0'), None);
         assert_eq!(parser.advance('h'), Some(Action::Ignore));
+    }
+
+    #[test]
+    fn parses_tui_private_modes() {
+        let mut parser = Parser::default();
+        assert_eq!(parser.advance_bytes(b"\x1b[?25l"), vec![Action::SetCursorVisible(false)]);
+        assert_eq!(parser.advance_bytes(b"\x1b[?25h"), vec![Action::SetCursorVisible(true)]);
+        assert_eq!(
+            parser.advance_bytes(b"\x1b[?2004h"),
+            vec![Action::SetBracketedPaste(true)]
+        );
+        assert_eq!(
+            parser.advance_bytes(b"\x1b[?1h"),
+            vec![Action::SetApplicationCursorKeys(true)]
+        );
     }
 
     #[test]

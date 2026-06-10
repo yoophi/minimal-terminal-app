@@ -8,7 +8,25 @@ pub struct TerminalSnapshot {
     pub lines: Vec<String>,
     pub styled_lines: Vec<StyledLine>,
     pub cursor: Cursor,
+    pub modes: TerminalModes,
     pub scrollback_len: usize,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct TerminalModes {
+    pub cursor_visible: bool,
+    pub bracketed_paste: bool,
+    pub application_cursor_keys: bool,
+}
+
+impl Default for TerminalModes {
+    fn default() -> Self {
+        Self {
+            cursor_visible: true,
+            bracketed_paste: false,
+            application_cursor_keys: false,
+        }
+    }
 }
 
 pub struct TerminalState {
@@ -16,6 +34,7 @@ pub struct TerminalState {
     cursor: Cursor,
     saved_cursor: Cursor,
     current_style: Style,
+    modes: TerminalModes,
     main_screen: Option<ScreenState>,
     parser: Parser,
 }
@@ -26,6 +45,7 @@ struct ScreenState {
     cursor: Cursor,
     saved_cursor: Cursor,
     current_style: Style,
+    modes: TerminalModes,
 }
 
 impl TerminalState {
@@ -35,6 +55,7 @@ impl TerminalState {
             cursor: Cursor::default(),
             saved_cursor: Cursor::default(),
             current_style: Style::default(),
+            modes: TerminalModes::default(),
             main_screen: None,
             parser: Parser::default(),
         }
@@ -57,6 +78,7 @@ impl TerminalState {
             lines: self.grid.visible_lines_from(start, visible_rows),
             styled_lines: self.grid.visible_styled_lines_from(start, visible_rows),
             cursor: Cursor::new(self.cursor.row.saturating_sub(start), self.cursor.col),
+            modes: self.modes,
             scrollback_len: self.grid.scrollback_len(),
         }
     }
@@ -86,6 +108,7 @@ impl TerminalState {
                 .grid
                 .scrollback_styled_lines(offset_from_bottom, max_visible_lines),
             cursor: Cursor::default(),
+            modes: self.modes,
             scrollback_len: self.grid.scrollback_len(),
         }
     }
@@ -127,6 +150,11 @@ impl TerminalState {
             }
             Action::EnterAlternateScreen => self.enter_alternate_screen(),
             Action::ExitAlternateScreen => self.exit_alternate_screen(),
+            Action::SetApplicationCursorKeys(enabled) => {
+                self.modes.application_cursor_keys = enabled
+            }
+            Action::SetBracketedPaste(enabled) => self.modes.bracketed_paste = enabled,
+            Action::SetCursorVisible(visible) => self.modes.cursor_visible = visible,
             Action::CursorPosition { row, col } => {
                 self.grid.move_cursor(&mut self.cursor, row, col)
             }
@@ -154,6 +182,7 @@ impl TerminalState {
             cursor: self.cursor,
             saved_cursor: self.saved_cursor,
             current_style: self.current_style,
+            modes: self.modes,
         };
         let rows = self.grid.rows();
         let cols = self.grid.cols();
@@ -161,6 +190,9 @@ impl TerminalState {
         self.cursor = Cursor::default();
         self.saved_cursor = Cursor::default();
         self.current_style = Style::default();
+        self.modes.cursor_visible = true;
+        self.modes.bracketed_paste = false;
+        self.modes.application_cursor_keys = false;
         self.main_screen = Some(main_screen);
     }
 
@@ -173,6 +205,7 @@ impl TerminalState {
         self.cursor = main_screen.cursor;
         self.saved_cursor = main_screen.saved_cursor;
         self.current_style = main_screen.current_style;
+        self.modes = main_screen.modes;
     }
 }
 
@@ -328,6 +361,23 @@ mod tests {
         let snapshot = terminal.snapshot(3);
         assert_eq!(snapshot.lines[0], "A");
         assert_eq!(snapshot.cursor, Cursor::new(0, 1));
+    }
+
+    #[test]
+    fn tracks_tui_modes() {
+        let mut terminal = TerminalState::new(3, 10);
+        terminal.append_bytes(b"\x1b[?25l\x1b[?2004h\x1b[?1h");
+
+        let snapshot = terminal.snapshot(3);
+        assert!(!snapshot.modes.cursor_visible);
+        assert!(snapshot.modes.bracketed_paste);
+        assert!(snapshot.modes.application_cursor_keys);
+
+        terminal.append_bytes(b"\x1b[?25h\x1b[?2004l\x1b[?1l");
+        let snapshot = terminal.snapshot(3);
+        assert!(snapshot.modes.cursor_visible);
+        assert!(!snapshot.modes.bracketed_paste);
+        assert!(!snapshot.modes.application_cursor_keys);
     }
 
     #[test]
