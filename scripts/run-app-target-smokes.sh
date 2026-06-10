@@ -514,6 +514,13 @@ if command -v htop >/dev/null 2>&1; then
     "htop-f1-ok" \
     2500 \
     1200
+  run_case_with_followup \
+    "htop-f5-tree" \
+    "${htop_path}"$'\n' \
+    $'\e[15~' \
+    "├─" \
+    2500 \
+    1200
   ran=1
 else
   echo "app target smoke skipped: htop not found"

@@ -189,6 +189,7 @@ scripts/run-app-target-smokes.sh
 - `htop-quit`: `htop` 실행 후 follow-up `q`로 종료 확인
 - `htop-f10-quit`: `htop` 실행 후 follow-up F10 sequence로 종료 확인
 - `htop-f1-help-quit`: `htop` 실행 후 follow-up F1 sequence와 `q q`로 help와 htop 종료 확인
+- `htop-f5-tree`: `htop` 실행 후 follow-up F5 sequence로 tree view를 켜고 process tree marker `├─` 확인
 - `claude-version`: `claude --version`
 - `codex-cli-version`: `codex-cli --version`이 설치된 경우 실행
 - `codex-version`: `codex-cli`가 없고 `codex`가 설치된 경우 `codex --version` 실행
