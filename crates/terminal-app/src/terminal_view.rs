@@ -30,6 +30,8 @@ const LINE_HEIGHT: f64 = 18.0;
 const CELL_WIDTH: f64 = 8.4;
 const CURSOR_WIDTH: f64 = 8.0;
 const CURSOR_HEIGHT: f64 = 16.0;
+const KEY_RETURN: u16 = 36;
+const KEY_KEYPAD_ENTER: u16 = 76;
 const KEY_PAGE_UP: u16 = 116;
 const KEY_PAGE_DOWN: u16 = 121;
 const TERMINAL_FONT_NAMES: &[&str] = &[
@@ -568,7 +570,18 @@ fn should_use_text_input(event: &NSEvent) -> bool {
 
     !matches!(
         event.keyCode(),
-        KEY_PAGE_UP | KEY_PAGE_DOWN | 51 | 117 | 115 | 119 | 123 | 124 | 125 | 126
+        KEY_RETURN
+            | KEY_KEYPAD_ENTER
+            | KEY_PAGE_UP
+            | KEY_PAGE_DOWN
+            | 51
+            | 117
+            | 115
+            | 119
+            | 123
+            | 124
+            | 125
+            | 126
     )
 }
 
@@ -636,7 +649,7 @@ fn draw_composition_text(snapshot: &TerminalSnapshot, composition: &CompositionS
     style.foreground = Some(Color::Indexed(11));
     let attributes = terminal_text_attributes(style);
     let rect = cursor_rect(snapshot);
-    draw_text_at(
+    draw_text_cells_at(
         composition.marked_text(),
         rect.origin.x,
         rect.origin.y - 2.0,
@@ -648,7 +661,7 @@ fn draw_plain_terminal_text(lines: &[String]) {
     let attributes = terminal_text_attributes(Style::default());
 
     for (index, line) in lines.iter().enumerate() {
-        draw_text_at(
+        draw_text_cells_at(
             line,
             PADDING_X,
             PADDING_Y + (index as f64 * LINE_HEIGHT),
@@ -662,8 +675,24 @@ fn draw_styled_line(line: &StyledLine, y: f64) {
 
     for span in &line.spans {
         let attributes = terminal_text_attributes(span.style);
-        draw_text_at(&span.text, x, y, &attributes);
+        draw_text_cells_at(&span.text, x, y, &attributes);
         x += display_width(&span.text) as f64 * CELL_WIDTH;
+    }
+}
+
+fn draw_text_cells_at(text: &str, x: f64, y: f64, attributes: &NSMutableDictionary) {
+    let mut current_x = x;
+    let mut previous_x = x;
+
+    for ch in text.chars() {
+        let width = char_width(ch);
+        let draw_x = if width == 0 { previous_x } else { current_x };
+        draw_text_at(&ch.to_string(), draw_x, y, attributes);
+
+        if width > 0 {
+            previous_x = current_x;
+            current_x += width as f64 * CELL_WIDTH;
+        }
     }
 }
 

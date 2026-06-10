@@ -1,6 +1,7 @@
 use objc2_app_kit::{NSEvent, NSEventModifierFlags};
 
 const KEY_RETURN: u16 = 36;
+const KEY_KEYPAD_ENTER: u16 = 76;
 const KEY_BACKSPACE: u16 = 51;
 const KEY_FORWARD_DELETE: u16 = 117;
 const KEY_HOME: u16 = 115;
@@ -48,7 +49,7 @@ fn encode_key(key_code: u16, flags: NSEventModifierFlags, input: &str) -> Option
     }
 
     match key_code {
-        KEY_RETURN => Some(b"\r".to_vec()),
+        KEY_RETURN | KEY_KEYPAD_ENTER => Some(b"\r".to_vec()),
         KEY_BACKSPACE => Some(vec![0x7f]),
         KEY_FORWARD_DELETE => Some(b"\x1b[3~".to_vec()),
         KEY_HOME => Some(vec![0x01]),
@@ -99,6 +100,7 @@ mod tests {
     use objc2_app_kit::NSEventModifierFlags;
 
     const KEY_RETURN: u16 = 36;
+    const KEY_KEYPAD_ENTER: u16 = 76;
     const KEY_BACKSPACE: u16 = 51;
     const KEY_FORWARD_DELETE: u16 = 117;
     const KEY_HOME: u16 = 115;
@@ -125,6 +127,7 @@ mod tests {
     #[test]
     fn encodes_return_as_carriage_return() {
         assert_eq!(encode_key_code(KEY_RETURN, ""), Some(b"\r".to_vec()));
+        assert_eq!(encode_key_code(KEY_KEYPAD_ENTER, ""), Some(b"\r".to_vec()));
     }
 
     #[test]
