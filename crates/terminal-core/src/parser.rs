@@ -106,6 +106,7 @@ enum Charset {
     NorwegianDanish,
     Portuguese,
     Russian,
+    SerboCroatian,
     Spanish,
     Swedish,
     Swiss,
@@ -321,6 +322,10 @@ impl vte::Perform for ActionCollector {
                 self.g0_charset = Charset::Russian;
                 return;
             }
+            ([b'(', b'%'], b'3') => {
+                self.g0_charset = Charset::SerboCroatian;
+                return;
+            }
             ([b'('], b'Y') => {
                 self.g0_charset = Charset::Italian;
                 return;
@@ -391,6 +396,10 @@ impl vte::Perform for ActionCollector {
             }
             ([b')', b'&'], b'5') => {
                 self.g1_charset = Charset::Russian;
+                return;
+            }
+            ([b')', b'%'], b'3') => {
+                self.g1_charset = Charset::SerboCroatian;
                 return;
             }
             ([b')'], b'Y') => {
@@ -465,6 +474,10 @@ impl vte::Perform for ActionCollector {
                 self.g2_charset = Charset::Russian;
                 return;
             }
+            ([b'*', b'%'], b'3') => {
+                self.g2_charset = Charset::SerboCroatian;
+                return;
+            }
             ([b'*'], b'Y') => {
                 self.g2_charset = Charset::Italian;
                 return;
@@ -535,6 +548,10 @@ impl vte::Perform for ActionCollector {
             }
             ([b'+', b'&'], b'5') => {
                 self.g3_charset = Charset::Russian;
+                return;
+            }
+            ([b'+', b'%'], b'3') => {
+                self.g3_charset = Charset::SerboCroatian;
                 return;
             }
             ([b'+'], b'Y') => {
@@ -815,6 +832,22 @@ fn map_printable_char(ch: char, charset: Charset) -> char {
             '|' => 'Э',
             '}' => 'Щ',
             '~' => 'Ч',
+            _ => ch,
+        };
+    }
+
+    if charset == Charset::SerboCroatian {
+        return match ch {
+            '@' => 'Ž',
+            '[' => 'Š',
+            '\\' => 'Đ',
+            ']' => 'Ć',
+            '^' => 'Č',
+            '`' => 'ž',
+            '{' => 'š',
+            '|' => 'đ',
+            '}' => 'ć',
+            '~' => 'č',
             _ => ch,
         };
     }
@@ -1795,6 +1828,36 @@ mod tests {
         assert_eq!(
             parser.advance_bytes(b"\x1b)&5\x1b~\xc3\xa0"),
             vec![Action::Print('Ю')]
+        );
+    }
+
+    #[test]
+    fn maps_serbo_croatian_nrcs_charset() {
+        let mut parser = Parser::default();
+
+        assert_eq!(
+            parser.advance_bytes(b"\x1b(%3@[\\]^`{|}~\x1b(B@"),
+            vec![
+                Action::Print('Ž'),
+                Action::Print('Š'),
+                Action::Print('Đ'),
+                Action::Print('Ć'),
+                Action::Print('Č'),
+                Action::Print('ž'),
+                Action::Print('š'),
+                Action::Print('đ'),
+                Action::Print('ć'),
+                Action::Print('č'),
+                Action::Print('@'),
+            ]
+        );
+        assert_eq!(
+            parser.advance_bytes(b"\x1b*%3\x1bN~x"),
+            vec![Action::Print('č'), Action::Print('x')]
+        );
+        assert_eq!(
+            parser.advance_bytes(b"\x1b)%3\x1b~\xc3\xa0"),
+            vec![Action::Print('ž')]
         );
     }
 

@@ -842,6 +842,15 @@ mod tests {
     }
 
     #[test]
+    fn renders_serbo_croatian_nrcs_charset() {
+        let mut terminal = TerminalState::new(4, 24);
+
+        terminal.append_bytes(b"\x1b(%3@[\\]^`{|}~\x1b(B@");
+
+        assert_eq!(terminal.snapshot(4).lines[0], "ŽŠĐĆČžšđćč@");
+    }
+
+    #[test]
     fn queues_cursor_position_report_responses() {
         let mut terminal = TerminalState::new(4, 10);
 
