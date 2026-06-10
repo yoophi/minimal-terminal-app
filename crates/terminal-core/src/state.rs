@@ -701,6 +701,15 @@ mod tests {
     }
 
     #[test]
+    fn renders_dec_technical_charset() {
+        let mut terminal = TerminalState::new(4, 24);
+
+        terminal.append_bytes(b"\x1b(>!#&<=>?@ABCDV{}~8\x1b(B!");
+
+        assert_eq!(terminal.snapshot(4).lines[0], "⎷─│≤≠≥∫∴∝∞÷Δ√←→↓␦!");
+    }
+
+    #[test]
     fn renders_british_nrcs_charset() {
         let mut terminal = TerminalState::new(4, 20);
 

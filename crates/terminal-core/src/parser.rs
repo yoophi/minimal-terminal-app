@@ -96,6 +96,7 @@ enum Charset {
     British,
     DecSupplementalGraphics,
     DecSpecialGraphics,
+    DecTechnical,
     Dutch,
     Finnish,
     French,
@@ -289,6 +290,10 @@ impl vte::Perform for ActionCollector {
                 self.g0_charset = Charset::DecSupplementalGraphics;
                 return;
             }
+            ([b'('], b'>') => {
+                self.g0_charset = Charset::DecTechnical;
+                return;
+            }
             ([b'('], b'4') => {
                 self.g0_charset = Charset::Dutch;
                 return;
@@ -375,6 +380,10 @@ impl vte::Perform for ActionCollector {
             }
             ([b')', b'%'], b'5') => {
                 self.g1_charset = Charset::DecSupplementalGraphics;
+                return;
+            }
+            ([b')'], b'>') => {
+                self.g1_charset = Charset::DecTechnical;
                 return;
             }
             ([b')'], b'4') => {
@@ -465,6 +474,10 @@ impl vte::Perform for ActionCollector {
                 self.g2_charset = Charset::DecSupplementalGraphics;
                 return;
             }
+            ([b'*'], b'>') => {
+                self.g2_charset = Charset::DecTechnical;
+                return;
+            }
             ([b'*'], b'4') => {
                 self.g2_charset = Charset::Dutch;
                 return;
@@ -553,6 +566,10 @@ impl vte::Perform for ActionCollector {
                 self.g3_charset = Charset::DecSupplementalGraphics;
                 return;
             }
+            ([b'+'], b'>') => {
+                self.g3_charset = Charset::DecTechnical;
+                return;
+            }
             ([b'+'], b'4') => {
                 self.g3_charset = Charset::Dutch;
                 return;
@@ -637,6 +654,93 @@ impl vte::Perform for ActionCollector {
 }
 
 fn map_printable_char(ch: char, charset: Charset) -> char {
+    if charset == Charset::DecTechnical {
+        return match ch {
+            '!' => '⎷',
+            '"' => '┌',
+            '#' => '─',
+            '$' => '⌠',
+            '%' => '⌡',
+            '&' => '│',
+            '\'' => '⎡',
+            '(' => '⎣',
+            ')' => '⎤',
+            '*' => '⎦',
+            '+' => '⎧',
+            ',' => '⎩',
+            '-' => '⎫',
+            '.' => '⎭',
+            '/' => '⎨',
+            '0' => '⎬',
+            '1'..=';' => '␦',
+            '<' => '≤',
+            '=' => '≠',
+            '>' => '≥',
+            '?' => '∫',
+            '@' => '∴',
+            'A' => '∝',
+            'B' => '∞',
+            'C' => '÷',
+            'D' => 'Δ',
+            'E' => '∇',
+            'F' => 'Φ',
+            'G' => 'Γ',
+            'H' => '∼',
+            'I' => '≃',
+            'J' => 'Θ',
+            'K' => '×',
+            'L' => 'Λ',
+            'M' => '⇔',
+            'N' => '⇒',
+            'O' => '≡',
+            'P' => 'Π',
+            'Q' => 'Ψ',
+            'R' | 'T' | 'U' => '␦',
+            'S' => 'Σ',
+            'V' => '√',
+            'W' => 'Ω',
+            'X' => 'Ξ',
+            'Y' => 'Υ',
+            'Z' => '⊂',
+            '[' => '⊃',
+            '\\' => '∩',
+            ']' => '∪',
+            '^' => '∧',
+            '_' => '∨',
+            '`' => '¬',
+            'a' => 'α',
+            'b' => 'β',
+            'c' => 'χ',
+            'd' => 'δ',
+            'e' => 'ε',
+            'f' => 'φ',
+            'g' => 'γ',
+            'h' => 'η',
+            'i' => 'ι',
+            'j' => 'θ',
+            'k' => 'κ',
+            'l' => 'λ',
+            'm' | 'u' => '␦',
+            'n' => 'ν',
+            'o' => '∂',
+            'p' => 'π',
+            'q' => 'ψ',
+            'r' => 'ρ',
+            's' => 'σ',
+            't' => 'τ',
+            'v' => 'ƒ',
+            'w' => 'ω',
+            'x' => 'ξ',
+            'y' => 'υ',
+            'z' => 'ζ',
+            '{' => '←',
+            '|' => '↑',
+            '}' => '→',
+            '~' => '↓',
+            _ => ch,
+        };
+    }
+
     if charset == Charset::DecSupplementalGraphics {
         return match ch {
             '$' | '&' | ',' | '-' | '.' | '/' | '4' | '8' | '>' | 'P' | '^' | 'p' | '~' => '␦',
@@ -1361,6 +1465,56 @@ mod tests {
         assert_eq!(
             parser.advance_bytes(b"\x1b)%5\x1b~\xc2\xa1"),
             vec![Action::Print('¡')]
+        );
+    }
+
+    #[test]
+    fn maps_dec_technical_charset() {
+        let mut parser = Parser::default();
+
+        assert_eq!(
+            parser.advance_bytes(b"\x1b(>!\"#$%&'()*+,-./0<=>?@ABCDV{}~8\x1b(B!"),
+            vec![
+                Action::Print('⎷'),
+                Action::Print('┌'),
+                Action::Print('─'),
+                Action::Print('⌠'),
+                Action::Print('⌡'),
+                Action::Print('│'),
+                Action::Print('⎡'),
+                Action::Print('⎣'),
+                Action::Print('⎤'),
+                Action::Print('⎦'),
+                Action::Print('⎧'),
+                Action::Print('⎩'),
+                Action::Print('⎫'),
+                Action::Print('⎭'),
+                Action::Print('⎨'),
+                Action::Print('⎬'),
+                Action::Print('≤'),
+                Action::Print('≠'),
+                Action::Print('≥'),
+                Action::Print('∫'),
+                Action::Print('∴'),
+                Action::Print('∝'),
+                Action::Print('∞'),
+                Action::Print('÷'),
+                Action::Print('Δ'),
+                Action::Print('√'),
+                Action::Print('←'),
+                Action::Print('→'),
+                Action::Print('↓'),
+                Action::Print('␦'),
+                Action::Print('!'),
+            ]
+        );
+        assert_eq!(
+            parser.advance_bytes(b"\x1b*>\x1bN~x"),
+            vec![Action::Print('↓'), Action::Print('x')]
+        );
+        assert_eq!(
+            parser.advance_bytes(b"\x1b)>\x1b~\xc2\xa1"),
+            vec![Action::Print('⎷')]
         );
     }
 
