@@ -663,6 +663,17 @@ mod tests {
     }
 
     #[test]
+    fn renders_g2_and_g3_dec_special_graphics_with_locking_shift() {
+        let mut terminal = TerminalState::new(4, 20);
+
+        terminal.append_bytes(b"\x1b*0\x1bnlqk\x0f\r\n\x1b+0\x1bomqj\x0f ascii");
+
+        let snapshot = terminal.snapshot(4);
+        assert_eq!(snapshot.lines[0], "┌─┐");
+        assert_eq!(snapshot.lines[1], "└─┘ ascii");
+    }
+
+    #[test]
     fn queues_cursor_position_report_responses() {
         let mut terminal = TerminalState::new(4, 10);
 
