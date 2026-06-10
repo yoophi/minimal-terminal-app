@@ -40,7 +40,8 @@
 - `htop`, `fzf`, `git log`는 command-level smoke를 통과했지만 app 내부 TUI interaction evidence는 아직 없다.
 - Phase 032에서 app 내부 PTY command output snapshot smoke를 자동화했다.
 - Phase 033에서 app 내부 `fzf --filter`와 non-pager `git log --oneline` snapshot smoke를 자동화했다.
-- Phase 034에서 설치된 `tmux`, `htop`, `claude`의 app-internal version snapshot smoke를 자동화했다. 현재 PATH에서 `codex-cli`는 찾지 못해 skip된다.
+- Phase 034에서 설치된 `tmux`, `htop`, `claude`의 app-internal version snapshot smoke를 자동화했다.
+- Phase 055에서 현재 PATH의 `codex --version` fallback을 app-internal version snapshot smoke로 자동화했다.
 - Phase 038에서 app 내부 `htop` full-screen redraw snapshot smoke를 자동화했다.
 - Phase 039에서 app 내부 `fzf` interactive query redraw snapshot smoke를 자동화했다.
 - Phase 040에서 app 내부 `git log ... | less` pager quit workflow를 자동화했다.
@@ -108,7 +109,7 @@
 - `tmux`: `tmux 3.6b` version smoke는 통과했다.
 - `tmux` 안의 `vim`
 - `claude` 또는 `claude-code`: `2.1.170 (Claude Code)` version smoke는 통과했다.
-- `codex-cli`: `codex-cli 0.139.0` version smoke는 통과했다.
+- `codex` / `codex-cli`: `codex-cli 0.139.0` version smoke는 통과했다.
 
 중요한 이유:
 
@@ -217,7 +218,7 @@ Phase 033에서 `scripts/run-app-target-smokes.sh`를 추가했다. local verifi
 
 상태: `supported`
 
-Phase 034에서 `scripts/run-app-target-smokes.sh`에 `tmux -V`, `htop --version`, `claude --version`, `codex-cli --version` target을 추가했다. 현재 local verification environment에서는 `tmux-version`, `htop-version`, `claude-version`이 app 내부 PTY snapshot smoke를 통과했고, `codex-cli-version`은 PATH에서 `codex-cli`를 찾지 못해 skip된다. 실제 interactive workflow는 대표 CLI/TUI Application Certification gap으로 계속 추적한다.
+Phase 034에서 `scripts/run-app-target-smokes.sh`에 `tmux -V`, `htop --version`, `claude --version`, `codex-cli --version` target을 추가했다. Phase 055에서 현재 local verification environment의 `codex --version` fallback을 추가했다. `tmux-version`, `htop-version`, `claude-version`, `codex-version`이 app 내부 PTY snapshot smoke를 통과한다. 실제 interactive workflow는 대표 CLI/TUI Application Certification gap으로 계속 추적한다.
 
 ### DEC Special Graphics Charset
 

@@ -26,7 +26,7 @@ Phase 009-018은 1-5번의 많은 부분을 구현하거나 검증 대상으로 
 | `emacs -nw` | local PATH에서 `emacs` 미확인, `not supported`. | 설치 후 Meta/Option key, 복잡한 key chord, mouse 확인 필요 |
 | `tmux` | `tmux 3.6b` version smoke 통과, `partially supported`. | pane redraw, mouse mode, alternate screen nesting, resize, secondary DA |
 | `claude` / `claude-code` | `2.1.170 (Claude Code)` version smoke 통과, `partially supported`. | raw input, paste, resize, spinner/redraw, Ctrl/Alt 조합, 인증/네트워크 분리 |
-| `codex-cli` | `codex-cli 0.139.0` version smoke 통과, `partially supported`. | raw input, paste, resize, redraw, Ctrl/Alt 조합, 인증/네트워크 분리 |
+| `codex` / `codex-cli` | `codex-cli 0.139.0` version smoke 통과, `partially supported`. | raw input, paste, resize, redraw, Ctrl/Alt 조합, 인증/네트워크 분리 |
 
 ## 왜 별도 보증 단계가 필요한가
 
@@ -55,7 +55,7 @@ Phase 019에서는 대표 CLI/TUI application certification의 첫 기준을 마
 - `tmux`
 - `tmux` 안의 `vim`
 - `claude` 또는 `claude-code`
-- `codex-cli`
+- `codex` 또는 `codex-cli`
 - `fzf`
 - `htop`
 - `git log --oneline --graph --decorate`
@@ -82,4 +82,4 @@ Phase 019에서는 대표 CLI/TUI application certification의 첫 기준을 마
 - 실패 증상은 `docs/compatibility/known-gaps.md`의 구체 gap으로 연결되어 있다.
 - 자동화 가능한 부분은 Rust test, fixture replay, 또는 smoke script로 고정되어 있다.
 
-이 기준을 만족하기 전에는 `vim`, `emacs`, `tmux`, `claude`, `codex-cli`에 대해 "문제 없이 실행된다"고 표현하지 않는다. 대신 `supported`, `partially supported`, `unknown`을 앱별 workflow 근거에 맞춰 사용한다.
+이 기준을 만족하기 전에는 `vim`, `emacs`, `tmux`, `claude`, `codex`/`codex-cli`에 대해 "문제 없이 실행된다"고 표현하지 않는다. 대신 `supported`, `partially supported`, `unknown`을 앱별 workflow 근거에 맞춰 사용한다.

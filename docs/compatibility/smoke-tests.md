@@ -177,7 +177,8 @@ scripts/run-app-target-smokes.sh
 - `htop-quit`: `htop` 실행 후 follow-up `q`로 종료 확인
 - `htop-f10-quit`: `htop` 실행 후 follow-up F10 sequence로 종료 확인
 - `claude-version`: `claude --version`
-- `codex-cli-version`: `codex-cli --version`이 설치된 경우만 실행
+- `codex-cli-version`: `codex-cli --version`이 설치된 경우 실행
+- `codex-version`: `codex-cli`가 없고 `codex`가 설치된 경우 `codex --version` 실행
 - `vttest-menu`: `vttest` 시작 메뉴 snapshot
 
 범위:

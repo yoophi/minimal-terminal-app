@@ -362,8 +362,12 @@ if command -v codex-cli >/dev/null 2>&1; then
   codex_cli_path="$(command -v codex-cli)"
   run_case "codex-cli-version" "${codex_cli_path} --version"$'\n' "codex-cli"
   ran=1
+elif command -v codex >/dev/null 2>&1; then
+  codex_path="$(command -v codex)"
+  run_case "codex-version" "${codex_path} --version"$'\n' "codex-cli"
+  ran=1
 else
-  echo "app target smoke skipped: codex-cli not found"
+  echo "app target smoke skipped: codex/codex-cli not found"
 fi
 
 if command -v vttest >/dev/null 2>&1; then
