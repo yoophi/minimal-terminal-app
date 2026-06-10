@@ -1,5 +1,9 @@
+use base64::{engine::general_purpose::STANDARD, Engine as _};
+
 use crate::cursor::CursorStyle;
 use crate::style::{Color, Style};
+
+const MAX_OSC52_DECODED_BYTES: usize = 1024 * 1024;
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub(crate) enum Action {
@@ -28,6 +32,7 @@ pub(crate) enum Action {
     SetSgrMouse(bool),
     PrimaryDeviceAttributes,
     SecondaryDeviceAttributes,
+    SetClipboard(String),
     DeviceStatusReport,
     CursorPositionReport,
     CursorPosition { row: usize, col: usize },
@@ -133,6 +138,33 @@ impl vte::Perform for ActionCollector {
             _ => Action::Ignore,
         };
         self.actions.push(action);
+    }
+
+    fn osc_dispatch(&mut self, params: &[&[u8]], _bell_terminated: bool) {
+        self.actions.push(parse_osc(params));
+    }
+}
+
+fn parse_osc(params: &[&[u8]]) -> Action {
+    if params.len() < 3 || params[0] != b"52" {
+        return Action::Ignore;
+    }
+
+    let payload = params[2];
+    if payload == b"?" || payload.len() > MAX_OSC52_DECODED_BYTES.saturating_mul(2) {
+        return Action::Ignore;
+    }
+
+    let Ok(decoded) = STANDARD.decode(payload) else {
+        return Action::Ignore;
+    };
+    if decoded.len() > MAX_OSC52_DECODED_BYTES {
+        return Action::Ignore;
+    }
+
+    match String::from_utf8(decoded) {
+        Ok(text) => Action::SetClipboard(text),
+        Err(_) => Action::Ignore,
     }
 }
 
@@ -342,8 +374,25 @@ mod tests {
         assert_eq!(parser.advance('t'), None);
         assert_eq!(parser.advance('l'), None);
         assert_eq!(parser.advance('e'), None);
-        assert_eq!(parser.advance('\u{07}'), None);
+        assert_eq!(parser.advance('\u{07}'), Some(Action::Ignore));
         assert_eq!(parser.advance('x'), Some(Action::Print('x')));
+    }
+
+    #[test]
+    fn parses_osc52_clipboard_write() {
+        let mut parser = Parser::default();
+        assert_eq!(
+            parser.advance_bytes(b"\x1b]52;c;aGVsbG8=\x07"),
+            vec![Action::SetClipboard("hello".to_string())]
+        );
+        assert_eq!(
+            parser.advance_bytes(b"\x1b]52;c;?\x07"),
+            vec![Action::Ignore]
+        );
+        assert_eq!(
+            parser.advance_bytes(b"\x1b]52;c;not-base64\x07"),
+            vec![Action::Ignore]
+        );
     }
 
     #[test]

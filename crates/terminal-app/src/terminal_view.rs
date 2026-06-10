@@ -347,6 +347,7 @@ define_class!(
 
         #[unsafe(method(redrawTimerFired:))]
         fn redraw_timer_fired(&self, _timer: &NSTimer) {
+            self.apply_pending_clipboard_writes();
             self.as_super().setNeedsDisplay(true);
         }
     }
@@ -419,6 +420,29 @@ impl TerminalView {
 
         self.ivars().selection.borrow_mut().clear();
         self.ivars().scrollback_offset.set(0);
+    }
+
+    fn apply_pending_clipboard_writes(&self) {
+        let clipboard_writes = match self.ivars().buffer.lock() {
+            Ok(mut buffer) => buffer.take_pending_clipboard_writes(),
+            Err(_) => {
+                logging::pty_error("terminal buffer lock poisoned while draining OSC 52 clipboard");
+                return;
+            }
+        };
+
+        if clipboard_writes.is_empty() {
+            return;
+        }
+
+        let pasteboard = NSPasteboard::generalPasteboard();
+        for text in clipboard_writes {
+            pasteboard.clearContents();
+            pasteboard.setString_forType(&NSString::from_str(&text), unsafe {
+                &*NSPasteboardTypeString
+            });
+        }
+        logging::pty_info("terminal view applied OSC 52 clipboard write");
     }
 
     fn write_text_to_pty(&self, text: &str, source: &str) {

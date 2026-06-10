@@ -19,6 +19,10 @@ impl TerminalBuffer {
         self.terminal.take_pending_responses()
     }
 
+    pub fn take_pending_clipboard_writes(&mut self) -> Vec<String> {
+        self.terminal.take_pending_clipboard_writes()
+    }
+
     pub fn snapshot(&self, max_visible_lines: usize) -> TerminalSnapshot {
         self.terminal.snapshot(max_visible_lines)
     }

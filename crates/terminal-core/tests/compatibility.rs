@@ -89,6 +89,18 @@ fn secondary_device_attributes_have_core_evidence() {
 }
 
 #[test]
+fn osc52_clipboard_write_has_core_evidence() {
+    let mut terminal = TerminalState::new(4, 10);
+
+    terminal.append_bytes(b"\x1b]52;c;aGVsbG8=\x07");
+
+    assert_eq!(
+        terminal.take_pending_clipboard_writes(),
+        vec!["hello".to_string()]
+    );
+}
+
+#[test]
 fn cursor_style_sequences_have_core_evidence() {
     let mut terminal = TerminalState::new(4, 10);
 
