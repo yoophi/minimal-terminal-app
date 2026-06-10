@@ -44,27 +44,27 @@
 
 ## Priority 3
 
-### 미확인 App Smoke Target
+### Environment-dependent App Smoke Target
 
-상태: `unknown`
+상태: `partially supported`
 
 대상:
 
-- `htop`
-- `fzf`
-- `git log --oneline --graph --decorate`
+- `htop`: local verification environment에 설치되어 있지 않다.
+- `fzf`: `fzf 0.73.1` non-interactive filter smoke는 통과했다.
+- `git log --oneline --graph --decorate`: 현재 repo에서 command output smoke는 통과했다.
 
 중요한 이유:
 
-- Phase 008 matrix에는 대표 app smoke target이 포함되어 있지만, 이 항목들은 아직 runtime evidence가 없다.
-- `htop`과 `fzf`는 로컬 설치 여부에 따라 확인 가능성이 달라진다.
-- `git log --oneline --graph --decorate`는 history가 충분한 repository에서 확인해야 의미가 있다.
+- app 내부 interactive smoke는 로컬 설치, focus, 입력 조작에 따라 확인 가능성이 달라진다.
+- `htop`은 설치 후 별도 확인이 필요하다.
+- `fzf`와 `git log`는 command-level smoke를 통과했지만 app 내부 TUI interaction evidence는 아직 없다.
 
 권장 다음 작업:
 
-- 로컬에 설치된 도구부터 `docs/compatibility/smoke-tests.md` 절차로 확인한다.
-- 통과하면 `matrix.md`의 상태와 evidence를 갱신한다.
-- 실패하면 실패 증상을 이 문서의 구체적인 gap으로 승격한다.
+- `htop` 설치 환경에서 runtime smoke를 수행한다.
+- `fzf` interactive navigation smoke를 앱 내부에서 수행한다.
+- `git log` pager 진입, scroll, quit workflow를 앱 내부에서 수행한다.
 
 ## Priority 4
 

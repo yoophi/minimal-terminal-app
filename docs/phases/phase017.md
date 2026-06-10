@@ -63,7 +63,31 @@ Phase 017에서 다룰 작업:
 
 ## Acceptance Criteria
 
-- `htop`, `fzf`, `git log --oneline --graph --decorate`의 matrix 상태가 `unknown`이 아니다.
-- 실패 항목은 known gap으로 구체화되어 있다.
-- 필요한 경우 replay fixture 또는 parser/state test가 추가되어 있다.
+- `htop`, `fzf`, `git log --oneline --graph --decorate`의 matrix 상태가 `unknown`이 아니다. `done`
+- 실패 항목은 known gap으로 구체화되어 있다. `done`
+- 필요한 경우 replay fixture 또는 parser/state test가 추가되어 있다. `done`
 
+## Implementation Update - 2026-06-10
+
+Status: implementation complete for local environment resolution. Full interactive app smoke remains tracked in known gaps.
+
+확인 결과:
+
+- `htop`: local verification environment에 설치되어 있지 않다.
+- `fzf`: `/opt/homebrew/bin/fzf`, version `0.73.1`; `printf 'alpha\nbeta\n' | fzf --filter alpha` 통과.
+- `git`: `/usr/bin/git`; 현재 repository에서 `git log --oneline --graph --decorate -5 --no-color` 통과.
+
+구현된 내용:
+
+- app smoke matrix에서 `unknown` 상태를 제거했다.
+- `htop`은 local environment unavailable로 `not supported`에 두고 known gap에 설치 의존성을 기록했다.
+- `fzf`와 `git log --oneline --graph --decorate`는 command-level smoke 근거를 가진 `partially supported`로 갱신했다.
+- interactive app smoke 미확인 범위를 known gap으로 구체화했다.
+
+검증:
+
+- `fzf --version`
+- `printf 'alpha\nbeta\n' | fzf --filter alpha`
+- `git log --oneline --graph --decorate -5 --no-color`
+- `scripts/run-compatibility-core.sh`
+- `cargo test`
