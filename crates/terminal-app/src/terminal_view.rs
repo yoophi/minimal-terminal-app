@@ -97,6 +97,16 @@ define_class!(
             });
         }
 
+        #[unsafe(method(scrollWheel:))]
+        fn scroll_wheel(&self, event: &NSEvent) {
+            let rows = (event.scrollingDeltaY().abs() / LINE_HEIGHT).ceil().max(1.0) as usize;
+            if event.scrollingDeltaY() > 0.0 {
+                self.adjust_scrollback(rows as isize);
+            } else if event.scrollingDeltaY() < 0.0 {
+                self.adjust_scrollback(-(rows as isize));
+            }
+        }
+
         #[unsafe(method(paste:))]
         fn paste(&self, _sender: Option<&AnyObject>) {
             autoreleasepool(|pool| {
@@ -236,20 +246,27 @@ impl TerminalView {
 
     fn scroll_page_up(&self) {
         let rows = self.ivars().rows.get().max(1);
+        self.adjust_scrollback(rows as isize);
+    }
+
+    fn scroll_page_down(&self) {
+        let rows = self.ivars().rows.get().max(1);
+        self.adjust_scrollback(-(rows as isize));
+    }
+
+    fn adjust_scrollback(&self, delta_rows: isize) {
         let max_offset = self
             .ivars()
             .buffer
             .lock()
             .map(|buffer| buffer.scrollback_len())
             .unwrap_or(0);
-        let next_offset = (self.ivars().scrollback_offset.get() + rows).min(max_offset);
-        self.ivars().scrollback_offset.set(next_offset);
-        self.as_super().setNeedsDisplay(true);
-    }
-
-    fn scroll_page_down(&self) {
-        let rows = self.ivars().rows.get().max(1);
-        let next_offset = self.ivars().scrollback_offset.get().saturating_sub(rows);
+        let current = self.ivars().scrollback_offset.get();
+        let next_offset = if delta_rows.is_positive() {
+            current.saturating_add(delta_rows as usize).min(max_offset)
+        } else {
+            current.saturating_sub(delta_rows.unsigned_abs())
+        };
         self.ivars().scrollback_offset.set(next_offset);
         self.as_super().setNeedsDisplay(true);
     }
