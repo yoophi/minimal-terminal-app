@@ -415,7 +415,7 @@ else
 fi
 
 head_sha="$(git rev-parse --short HEAD)"
-run_case "git-log" $'git log --oneline -1 --no-color\n' "${head_sha}"
+run_case "git-log" $'git log --oneline -1 --no-color\n' "${head_sha}" 3000
 run_case_with_followup \
   "git-pager-quit" \
   $'git log --oneline --graph --decorate -100 --color=never | less; printf "git-pager-quit-ok\\n"\n' \
@@ -472,6 +472,11 @@ if command -v tmux >/dev/null 2>&1; then
     "tmux-split-ok" \
     3000 \
     1200
+  run_case \
+    "tmux-pane-resize" \
+    "tmux_socket=\"minimal-terminal-app-smoke-\$\$\"; ${tmux_path} -L \"\$tmux_socket\" new-session -d -s minimal-terminal-resize 'sleep 30'; ${tmux_path} -L \"\$tmux_socket\" split-window -v 'sleep 30'; ${tmux_path} -L \"\$tmux_socket\" select-pane -D; before=\"\$(${tmux_path} -L \"\$tmux_socket\" display-message -p '#{pane_height}')\"; ${tmux_path} -L \"\$tmux_socket\" resize-pane -D 2; after=\"\$(${tmux_path} -L \"\$tmux_socket\" display-message -p '#{pane_height}')\"; ${tmux_path} -L \"\$tmux_socket\" kill-server >/dev/null 2>&1 || true; if [ \"\$after\" -gt \"\$before\" ]; then printf \"tmux-pane-resize-ok:%s>%s\\n\" \"\$after\" \"\$before\"; else printf \"tmux-pane-resize-failed:%s<=%s\\n\" \"\$after\" \"\$before\"; exit 1; fi"$'\n' \
+    "tmux-pane-resize-ok" \
+    2500
   if command -v vim >/dev/null 2>&1; then
     vim_path="$(command -v vim)"
     run_case_with_followup \

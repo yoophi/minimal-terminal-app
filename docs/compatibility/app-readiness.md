@@ -25,7 +25,7 @@ Phase 009-018은 1-5번의 많은 부분을 구현하거나 검증 대상으로 
 | `vim` | replay evidence와 app-internal edit/write/quit smoke가 있어 `partially supported`. | remaining modifier key variants, mouse, resize, complex key chord, plugin redraw |
 | `less` | replay evidence, app-internal basic quit smoke, mouse wheel-down smoke가 있어 `partially supported`. | follow mode, edge-case search workflow |
 | `emacs -nw` | local PATH에서 `emacs` 미확인, `not supported`. | 설치 후 Meta/Option key, 복잡한 key chord, mouse 확인 필요 |
-| `tmux` | `tmux 3.6b` version smoke, attached session workflow smoke, split-pane workflow smoke, nested vim edit/write/quit smoke 통과, `partially supported`. | pane resize, mouse mode, split-pane 내부 nested TUI |
+| `tmux` | `tmux 3.6b` version smoke, attached session workflow smoke, split-pane workflow smoke, pane resize height 비교 smoke, nested vim edit/write/quit smoke 통과, `partially supported`. | mouse mode, copy mode, split-pane 내부 nested TUI resize/interaction |
 | `htop` | `htop 3.5.1` version smoke, `Tasks:` marker 기반 runtime layout smoke, quit/F10/F1 help/F5 tree smoke가 있어 `partially supported`. | mouse, setup/editing workflow |
 | `claude` / `claude-code` | `2.1.170 (Claude Code)` version smoke 통과, `partially supported`. | raw input, paste, resize, spinner/redraw, Ctrl/Alt 조합, 인증/네트워크 분리 |
 | `codex` / `codex-cli` | `codex-cli 0.139.0` version smoke 통과, `partially supported`. | raw input, paste, resize, redraw, Ctrl/Alt 조합, 인증/네트워크 분리 |

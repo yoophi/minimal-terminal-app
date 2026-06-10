@@ -248,7 +248,7 @@ Phase 033에서 `scripts/run-app-target-smokes.sh`를 추가했다. local verifi
 
 상태: `supported`
 
-Phase 034에서 `scripts/run-app-target-smokes.sh`에 `tmux -V`, `htop --version`, `claude --version`, `codex-cli --version` target을 추가했다. Phase 055에서 현재 local verification environment의 `codex --version` fallback을 추가했다. Phase 056에서 attached `tmux new-session` workflow를 추가했고, Phase 057에서 `tmux split-window` workflow를 추가했다. `tmux-version`, `tmux-attached-session`, `tmux-split-pane`, `htop-version`, `claude-version`, `codex-version`이 app 내부 PTY snapshot smoke를 통과한다. 실제 interactive workflow는 대표 CLI/TUI Application Certification gap으로 계속 추적한다.
+Phase 034에서 `scripts/run-app-target-smokes.sh`에 `tmux -V`, `htop --version`, `claude --version`, `codex-cli --version` target을 추가했다. Phase 055에서 현재 local verification environment의 `codex --version` fallback을 추가했다. Phase 056에서 attached `tmux new-session` workflow를 추가했고, Phase 057에서 `tmux split-window` workflow를 추가했다. Phase 104에서 detached tmux split pane resize height 비교 workflow를 추가했다. `tmux-version`, `tmux-attached-session`, `tmux-split-pane`, `tmux-pane-resize`, `htop-version`, `claude-version`, `codex-version`이 app 내부 PTY snapshot smoke를 통과한다. 실제 interactive workflow는 대표 CLI/TUI Application Certification gap으로 계속 추적한다.
 
 ### DEC Special Graphics Charset
 
