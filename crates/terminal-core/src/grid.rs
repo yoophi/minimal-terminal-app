@@ -94,6 +94,30 @@ impl Grid {
         }
     }
 
+    pub(crate) fn newline_in_region(
+        &mut self,
+        cursor: &mut Cursor,
+        region: Option<(usize, usize)>,
+    ) {
+        let Some(region) = region else {
+            self.newline(cursor);
+            return;
+        };
+        let Some((top, bottom)) = normalized_region(Some(region), self.rows) else {
+            self.newline(cursor);
+            return;
+        };
+
+        cursor.col = 0;
+        if cursor.row == bottom {
+            self.scroll_up_region(top, bottom);
+        } else if cursor.row >= top && cursor.row < bottom {
+            cursor.row += 1;
+        } else {
+            self.newline(cursor);
+        }
+    }
+
     pub(crate) fn backspace(&mut self, cursor: &mut Cursor) {
         if cursor.col > 0 {
             cursor.col -= 1;
@@ -142,6 +166,75 @@ impl Grid {
         let row = row.min(self.rows - 1);
         for col in 0..self.cols {
             self.lines[row][col].clear();
+        }
+    }
+
+    pub(crate) fn insert_blank_chars(&mut self, cursor: Cursor, count: usize) {
+        let row = cursor.row.min(self.rows - 1);
+        let col = cursor.col.min(self.cols - 1);
+        let count = count.max(1).min(self.cols - col);
+        for _ in 0..count {
+            self.lines[row].insert(col, Cell::blank());
+            self.lines[row].pop();
+        }
+    }
+
+    pub(crate) fn delete_chars(&mut self, cursor: Cursor, count: usize) {
+        let row = cursor.row.min(self.rows - 1);
+        let col = cursor.col.min(self.cols - 1);
+        let count = count.max(1).min(self.cols - col);
+        for _ in 0..count {
+            self.lines[row].remove(col);
+            self.lines[row].push(Cell::blank());
+        }
+    }
+
+    pub(crate) fn erase_chars(&mut self, cursor: Cursor, count: usize) {
+        let row = cursor.row.min(self.rows - 1);
+        let col = cursor.col.min(self.cols - 1);
+        let end = (col + count.max(1)).min(self.cols);
+        for cell in &mut self.lines[row][col..end] {
+            cell.clear();
+        }
+    }
+
+    pub(crate) fn insert_blank_lines(
+        &mut self,
+        cursor: Cursor,
+        count: usize,
+        region: Option<(usize, usize)>,
+    ) {
+        let Some((top, bottom)) = normalized_region(region, self.rows) else {
+            return;
+        };
+        if cursor.row < top || cursor.row > bottom {
+            return;
+        }
+
+        let count = count.max(1).min(bottom - cursor.row + 1);
+        for _ in 0..count {
+            self.lines.insert(cursor.row, blank_line(self.cols));
+            self.lines.remove(bottom + 1);
+        }
+    }
+
+    pub(crate) fn delete_lines(
+        &mut self,
+        cursor: Cursor,
+        count: usize,
+        region: Option<(usize, usize)>,
+    ) {
+        let Some((top, bottom)) = normalized_region(region, self.rows) else {
+            return;
+        };
+        if cursor.row < top || cursor.row > bottom {
+            return;
+        }
+
+        let count = count.max(1).min(bottom - cursor.row + 1);
+        for _ in 0..count {
+            self.lines.remove(cursor.row);
+            self.lines.insert(bottom, blank_line(self.cols));
         }
     }
 
@@ -232,6 +325,11 @@ impl Grid {
         self.lines.push(blank_line(self.cols));
     }
 
+    fn scroll_up_region(&mut self, top: usize, bottom: usize) {
+        self.lines.remove(top);
+        self.lines.insert(bottom, blank_line(self.cols));
+    }
+
     fn push_scrollback(&mut self, line: Vec<Cell>) {
         self.scrollback.push(line);
         if self.scrollback.len() > self.max_scrollback_lines {
@@ -239,6 +337,16 @@ impl Grid {
             self.scrollback.drain(0..overflow);
         }
     }
+}
+
+fn normalized_region(region: Option<(usize, usize)>, rows: usize) -> Option<(usize, usize)> {
+    let (top, bottom) = region.unwrap_or((0, rows.saturating_sub(1)));
+    if rows == 0 {
+        return None;
+    }
+    let top = top.min(rows - 1);
+    let bottom = bottom.min(rows - 1);
+    (bottom > top).then_some((top, bottom))
 }
 
 fn blank_line(cols: usize) -> Vec<Cell> {

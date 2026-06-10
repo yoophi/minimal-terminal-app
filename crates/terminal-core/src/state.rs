@@ -35,6 +35,7 @@ pub struct TerminalState {
     saved_cursor: Cursor,
     current_style: Style,
     modes: TerminalModes,
+    scroll_region: Option<(usize, usize)>,
     main_screen: Option<ScreenState>,
     parser: Parser,
 }
@@ -46,6 +47,7 @@ struct ScreenState {
     saved_cursor: Cursor,
     current_style: Style,
     modes: TerminalModes,
+    scroll_region: Option<(usize, usize)>,
 }
 
 impl TerminalState {
@@ -56,6 +58,7 @@ impl TerminalState {
             saved_cursor: Cursor::default(),
             current_style: Style::default(),
             modes: TerminalModes::default(),
+            scroll_region: None,
             main_screen: None,
             parser: Parser::default(),
         }
@@ -121,7 +124,9 @@ impl TerminalState {
         match action {
             Action::Print(ch) => self.grid.put_char(&mut self.cursor, ch, self.current_style),
             Action::CarriageReturn => self.grid.carriage_return(&mut self.cursor),
-            Action::Newline => self.grid.newline(&mut self.cursor),
+            Action::Newline => self
+                .grid
+                .newline_in_region(&mut self.cursor, self.scroll_region),
             Action::Backspace => self.grid.backspace(&mut self.cursor),
             Action::Tab => {
                 let next_tab = ((self.cursor.col / 8) + 1) * 8;
@@ -140,6 +145,17 @@ impl TerminalState {
                 ScreenClearMode::ToCursor => self.grid.clear_screen_to_cursor(self.cursor),
                 ScreenClearMode::Entire => self.grid.clear_screen(&mut self.cursor),
             },
+            Action::InsertBlankChars(count) => self.grid.insert_blank_chars(self.cursor, count),
+            Action::DeleteChars(count) => self.grid.delete_chars(self.cursor, count),
+            Action::EraseChars(count) => self.grid.erase_chars(self.cursor, count),
+            Action::InsertLines(count) => {
+                self.grid
+                    .insert_blank_lines(self.cursor, count, self.scroll_region)
+            }
+            Action::DeleteLines(count) => {
+                self.grid
+                    .delete_lines(self.cursor, count, self.scroll_region)
+            }
             Action::SaveCursor => self.saved_cursor = self.cursor,
             Action::RestoreCursor => {
                 self.grid.move_cursor(
@@ -166,6 +182,10 @@ impl TerminalState {
                 let row = self.cursor.row;
                 self.grid.move_cursor(&mut self.cursor, row, col);
             }
+            Action::SetScrollRegion(region) => {
+                self.scroll_region = region;
+                self.grid.move_cursor(&mut self.cursor, 0, 0);
+            }
             Action::SetGraphicRendition(numbers) => apply_sgr(&mut self.current_style, &numbers),
             Action::Ignore => {}
         }
@@ -183,6 +203,7 @@ impl TerminalState {
             saved_cursor: self.saved_cursor,
             current_style: self.current_style,
             modes: self.modes,
+            scroll_region: self.scroll_region,
         };
         let rows = self.grid.rows();
         let cols = self.grid.cols();
@@ -193,6 +214,7 @@ impl TerminalState {
         self.modes.cursor_visible = true;
         self.modes.bracketed_paste = false;
         self.modes.application_cursor_keys = false;
+        self.scroll_region = None;
         self.main_screen = Some(main_screen);
     }
 
@@ -206,6 +228,7 @@ impl TerminalState {
         self.saved_cursor = main_screen.saved_cursor;
         self.current_style = main_screen.current_style;
         self.modes = main_screen.modes;
+        self.scroll_region = main_screen.scroll_region;
     }
 }
 
@@ -378,6 +401,43 @@ mod tests {
         assert!(snapshot.modes.cursor_visible);
         assert!(!snapshot.modes.bracketed_paste);
         assert!(!snapshot.modes.application_cursor_keys);
+    }
+
+    #[test]
+    fn handles_insert_delete_and_erase_characters() {
+        let mut terminal = TerminalState::new(3, 12);
+        terminal.append_bytes(b"abcdef\r\x1b[2C\x1b[2@");
+        assert_eq!(terminal.snapshot(3).lines[0], "ab  cdef");
+
+        terminal.append_bytes(b"\r\x1b[2C\x1b[3P");
+        assert_eq!(terminal.snapshot(3).lines[0], "abdef");
+
+        terminal.append_bytes(b"\r\x1b[1C\x1b[2X");
+        assert_eq!(terminal.snapshot(3).lines[0], "a  ef");
+    }
+
+    #[test]
+    fn handles_scroll_region_newline() {
+        let mut terminal = TerminalState::new(5, 12);
+        terminal.append_bytes(b"0\n1\n2\n3\n4");
+        terminal.append_bytes(b"\x1b[2;4r\x1b[4;1H\nx");
+
+        let snapshot = terminal.snapshot(5);
+        assert_eq!(snapshot.lines, vec!["0", "2", "3", "x", "4"]);
+    }
+
+    #[test]
+    fn handles_insert_and_delete_lines_in_scroll_region() {
+        let mut terminal = TerminalState::new(5, 12);
+        terminal.append_bytes(b"0\n1\n2\n3\n4");
+        terminal.append_bytes(b"\x1b[2;5r\x1b[3;1H\x1b[L");
+
+        let snapshot = terminal.snapshot(5);
+        assert_eq!(snapshot.lines, vec!["0", "1", "", "2", "3"]);
+
+        terminal.append_bytes(b"\x1b[3;1H\x1b[M");
+        let snapshot = terminal.snapshot(5);
+        assert_eq!(snapshot.lines, vec!["0", "1", "2", "3", ""]);
     }
 
     #[test]

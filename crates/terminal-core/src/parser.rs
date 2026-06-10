@@ -9,6 +9,11 @@ pub(crate) enum Action {
     Tab,
     ClearLine(LineClearMode),
     ClearScreen(ScreenClearMode),
+    InsertBlankChars(usize),
+    DeleteChars(usize),
+    EraseChars(usize),
+    InsertLines(usize),
+    DeleteLines(usize),
     SaveCursor,
     RestoreCursor,
     EnterAlternateScreen,
@@ -22,6 +27,7 @@ pub(crate) enum Action {
     CursorRight(usize),
     CursorLeft(usize),
     CursorColumn(usize),
+    SetScrollRegion(Option<(usize, usize)>),
     SetGraphicRendition(Vec<usize>),
     Ignore,
 }
@@ -125,6 +131,7 @@ fn parse_csi(numbers: &[usize], intermediates: &[u8], final_byte: char) -> Actio
     }
 
     match final_byte {
+        '@' => Action::InsertBlankChars(first_or_default(&numbers, 1)),
         'A' => Action::CursorUp(first_or_default(&numbers, 1)),
         'B' => Action::CursorDown(first_or_default(&numbers, 1)),
         'C' => Action::CursorRight(first_or_default(&numbers, 1)),
@@ -146,10 +153,29 @@ fn parse_csi(numbers: &[usize], intermediates: &[u8], final_byte: char) -> Actio
             2 => Action::ClearLine(LineClearMode::Entire),
             _ => Action::Ignore,
         },
+        'L' => Action::InsertLines(first_or_default(&numbers, 1)),
+        'M' => Action::DeleteLines(first_or_default(&numbers, 1)),
+        'P' => Action::DeleteChars(first_or_default(&numbers, 1)),
+        'X' => Action::EraseChars(first_or_default(&numbers, 1)),
+        'r' => parse_scroll_region(&numbers),
         's' => Action::SaveCursor,
         'u' => Action::RestoreCursor,
         'm' => Action::SetGraphicRendition(numbers.to_vec()),
         _ => Action::Ignore,
+    }
+}
+
+fn parse_scroll_region(numbers: &[usize]) -> Action {
+    if numbers.is_empty() {
+        return Action::SetScrollRegion(None);
+    }
+
+    let top = first_or_default(numbers, 1).saturating_sub(1);
+    let bottom = numbers.get(1).copied().unwrap_or(0).saturating_sub(1);
+    if bottom <= top {
+        Action::Ignore
+    } else {
+        Action::SetScrollRegion(Some((top, bottom)))
     }
 }
 
@@ -356,8 +382,14 @@ mod tests {
     #[test]
     fn parses_tui_private_modes() {
         let mut parser = Parser::default();
-        assert_eq!(parser.advance_bytes(b"\x1b[?25l"), vec![Action::SetCursorVisible(false)]);
-        assert_eq!(parser.advance_bytes(b"\x1b[?25h"), vec![Action::SetCursorVisible(true)]);
+        assert_eq!(
+            parser.advance_bytes(b"\x1b[?25l"),
+            vec![Action::SetCursorVisible(false)]
+        );
+        assert_eq!(
+            parser.advance_bytes(b"\x1b[?25h"),
+            vec![Action::SetCursorVisible(true)]
+        );
         assert_eq!(
             parser.advance_bytes(b"\x1b[?2004h"),
             vec![Action::SetBracketedPaste(true)]
@@ -380,6 +412,35 @@ mod tests {
         assert_eq!(
             parser.advance('m'),
             Some(Action::SetGraphicRendition(vec![1, 31]))
+        );
+    }
+
+    #[test]
+    fn parses_tui_editing_sequences() {
+        let mut parser = Parser::default();
+        assert_eq!(
+            parser.advance_bytes(b"\x1b[2@"),
+            vec![Action::InsertBlankChars(2)]
+        );
+        assert_eq!(
+            parser.advance_bytes(b"\x1b[3P"),
+            vec![Action::DeleteChars(3)]
+        );
+        assert_eq!(
+            parser.advance_bytes(b"\x1b[4X"),
+            vec![Action::EraseChars(4)]
+        );
+        assert_eq!(
+            parser.advance_bytes(b"\x1b[2L"),
+            vec![Action::InsertLines(2)]
+        );
+        assert_eq!(
+            parser.advance_bytes(b"\x1b[2M"),
+            vec![Action::DeleteLines(2)]
+        );
+        assert_eq!(
+            parser.advance_bytes(b"\x1b[2;4r"),
+            vec![Action::SetScrollRegion(Some((1, 3)))]
         );
     }
 }

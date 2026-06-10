@@ -192,9 +192,21 @@ mod tests {
 
     #[test]
     fn encodes_application_cursor_keys_for_tui_modes() {
-        assert_eq!(super::encode_application_cursor_key(KEY_UP), Some(b"\x1bOA".to_vec()));
-        assert_eq!(super::encode_application_cursor_key(KEY_DOWN), Some(b"\x1bOB".to_vec()));
-        assert_eq!(super::encode_application_cursor_key(KEY_RIGHT), Some(b"\x1bOC".to_vec()));
-        assert_eq!(super::encode_application_cursor_key(KEY_LEFT), Some(b"\x1bOD".to_vec()));
+        assert_eq!(
+            super::encode_application_cursor_key(KEY_UP),
+            Some(b"\x1bOA".to_vec())
+        );
+        assert_eq!(
+            super::encode_application_cursor_key(KEY_DOWN),
+            Some(b"\x1bOB".to_vec())
+        );
+        assert_eq!(
+            super::encode_application_cursor_key(KEY_RIGHT),
+            Some(b"\x1bOC".to_vec())
+        );
+        assert_eq!(
+            super::encode_application_cursor_key(KEY_LEFT),
+            Some(b"\x1bOD".to_vec())
+        );
     }
 }
