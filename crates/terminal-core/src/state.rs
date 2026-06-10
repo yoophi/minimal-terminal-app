@@ -728,6 +728,15 @@ mod tests {
     }
 
     #[test]
+    fn renders_italian_nrcs_charset() {
+        let mut terminal = TerminalState::new(4, 20);
+
+        terminal.append_bytes(b"\x1b(Y#@[\\]`{|}~\x1b(B#");
+
+        assert_eq!(terminal.snapshot(4).lines[0], "£§°çéùàòèì#");
+    }
+
+    #[test]
     fn queues_cursor_position_report_responses() {
         let mut terminal = TerminalState::new(4, 10);
 
