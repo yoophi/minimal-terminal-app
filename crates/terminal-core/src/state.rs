@@ -746,6 +746,15 @@ mod tests {
     }
 
     #[test]
+    fn renders_dutch_nrcs_charset() {
+        let mut terminal = TerminalState::new(4, 20);
+
+        terminal.append_bytes(b"\x1b(4#@[\\] {|}~\x1b(B#");
+
+        assert_eq!(terminal.snapshot(4).lines[0], "£¾ĳ½| ¨ƒ¼´#");
+    }
+
+    #[test]
     fn queues_cursor_position_report_responses() {
         let mut terminal = TerminalState::new(4, 10);
 

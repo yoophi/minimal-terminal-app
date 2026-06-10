@@ -95,6 +95,7 @@ enum Charset {
     Ascii,
     British,
     DecSpecialGraphics,
+    Dutch,
     Finnish,
     French,
     German,
@@ -271,6 +272,10 @@ impl vte::Perform for ActionCollector {
                 self.g0_charset = Charset::Ascii;
                 return;
             }
+            ([b'('], b'4') => {
+                self.g0_charset = Charset::Dutch;
+                return;
+            }
             ([b'('], b'C') => {
                 self.g0_charset = Charset::Finnish;
                 return;
@@ -301,6 +306,10 @@ impl vte::Perform for ActionCollector {
             }
             ([b')'], b'B') => {
                 self.g1_charset = Charset::Ascii;
+                return;
+            }
+            ([b')'], b'4') => {
+                self.g1_charset = Charset::Dutch;
                 return;
             }
             ([b')'], b'C') => {
@@ -335,6 +344,10 @@ impl vte::Perform for ActionCollector {
                 self.g2_charset = Charset::Ascii;
                 return;
             }
+            ([b'*'], b'4') => {
+                self.g2_charset = Charset::Dutch;
+                return;
+            }
             ([b'*'], b'C') => {
                 self.g2_charset = Charset::Finnish;
                 return;
@@ -365,6 +378,10 @@ impl vte::Perform for ActionCollector {
             }
             ([b'+'], b'B') => {
                 self.g3_charset = Charset::Ascii;
+                return;
+            }
+            ([b'+'], b'4') => {
+                self.g3_charset = Charset::Dutch;
                 return;
             }
             ([b'+'], b'C') => {
@@ -416,6 +433,21 @@ fn map_printable_char(ch: char, charset: Charset) -> char {
             '|' => 'ö',
             '}' => 'ü',
             '~' => 'ß',
+            _ => ch,
+        };
+    }
+
+    if charset == Charset::Dutch {
+        return match ch {
+            '#' => '£',
+            '@' => '¾',
+            '[' => 'ĳ',
+            '\\' => '½',
+            ']' => '|',
+            '{' => '¨',
+            '|' => 'ƒ',
+            '}' => '¼',
+            '~' => '´',
             _ => ch,
         };
     }
@@ -1058,6 +1090,36 @@ mod tests {
         assert_eq!(
             parser.advance_bytes(b"\x1b)Z\x1b~\xc3\xbb"),
             vec![Action::Print('°')]
+        );
+    }
+
+    #[test]
+    fn maps_dutch_nrcs_charset() {
+        let mut parser = Parser::default();
+
+        assert_eq!(
+            parser.advance_bytes(b"\x1b(4#@[\\] {|}~\x1b(B#"),
+            vec![
+                Action::Print('£'),
+                Action::Print('¾'),
+                Action::Print('ĳ'),
+                Action::Print('½'),
+                Action::Print('|'),
+                Action::Print(' '),
+                Action::Print('¨'),
+                Action::Print('ƒ'),
+                Action::Print('¼'),
+                Action::Print('´'),
+                Action::Print('#'),
+            ]
+        );
+        assert_eq!(
+            parser.advance_bytes(b"\x1b*4\x1bN~x"),
+            vec![Action::Print('´'), Action::Print('x')]
+        );
+        assert_eq!(
+            parser.advance_bytes(b"\x1b)4\x1b~\xc3\xbb"),
+            vec![Action::Print('¨')]
         );
     }
 
