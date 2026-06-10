@@ -51,4 +51,3 @@ fn tui_private_modes_and_editing_sequences_have_core_evidence() {
     terminal.append_bytes(b"\x1b[2;4r\x1b[4;1H\nx");
     assert_eq!(terminal.snapshot(5).lines, vec!["abdef", "", "", "x", ""]);
 }
-

@@ -19,6 +19,7 @@ use terminal_core::{Color, Style, StyledLine, TerminalModes, TerminalSnapshot};
 use crate::composition::{CompositionState, TextRange};
 use crate::input;
 use crate::logging;
+use crate::paste;
 use crate::pty::PtyWriter;
 use crate::selection::{selected_text, GridPoint, SelectionRange, SelectionState};
 use crate::terminal_buffer::TerminalBuffer;
@@ -374,7 +375,7 @@ impl TerminalView {
         ));
 
         let bytes = if self.current_modes().bracketed_paste {
-            bracketed_paste_bytes(input)
+            paste::bracketed_paste_bytes(input)
         } else {
             input.as_bytes().to_vec()
         };
@@ -929,14 +930,6 @@ fn terminal_dimensions(bounds: NSRect) -> (usize, usize) {
     let rows = (available_height / LINE_HEIGHT).floor().max(1.0) as usize;
     let cols = (available_width / CELL_WIDTH).floor().max(1.0) as usize;
     (rows, cols)
-}
-
-fn bracketed_paste_bytes(input: &str) -> Vec<u8> {
-    let mut bytes = Vec::with_capacity(input.len() + 12);
-    bytes.extend_from_slice(b"\x1b[200~");
-    bytes.extend_from_slice(input.as_bytes());
-    bytes.extend_from_slice(b"\x1b[201~");
-    bytes
 }
 
 fn text_from_input_object(

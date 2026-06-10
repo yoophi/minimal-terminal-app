@@ -76,9 +76,27 @@ Phase 010에서 다룰 작업:
 
 ## Acceptance Criteria
 
-- paste wrapper가 module 단위로 테스트된다.
-- input encoder test coverage가 Phase 005/007 동작을 포괄한다.
-- selection test coverage가 Phase 006 edge case를 포괄한다.
-- `cargo test`가 통과한다.
-- `docs/compatibility/matrix.md` evidence가 필요한 경우 갱신되어 있다.
+- paste wrapper가 module 단위로 테스트된다. `done`
+- input encoder test coverage가 Phase 005/007 동작을 포괄한다. `done`
+- selection test coverage가 Phase 006 edge case를 포괄한다. `done`
+- `cargo test`가 통과한다. `done`
+- `docs/compatibility/matrix.md` evidence가 필요한 경우 갱신되어 있다. `done`
 
+## Implementation Update - 2026-06-10
+
+Status: implementation complete.
+
+구현된 내용:
+
+- `crates/terminal-app/src/paste.rs`를 추가하고 bracketed paste wrapping을 순수 함수로 분리했다.
+- `TerminalView` paste path가 새 paste module을 사용하도록 변경했다.
+- paste UTF-8 preservation test를 추가했다.
+- input encoder의 Control key path와 Command shortcut reserve test를 보강했다.
+- selection extraction의 combining mark, wide character boundary, empty line, overlong end column test를 추가했다.
+- combining mark가 선택된 base character와 함께 복사되도록 selection slicing을 보정했다.
+- `docs/compatibility/matrix.md`의 paste/bracketed paste evidence를 갱신했다.
+
+검증:
+
+- `scripts/run-compatibility-core.sh`
+- `cargo test`

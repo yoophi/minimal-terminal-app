@@ -150,6 +150,18 @@ mod tests {
     }
 
     #[test]
+    fn encodes_control_key_combinations() {
+        assert_eq!(
+            encode_modified_key(8, NSEventModifierFlags::Control, ""),
+            Some(vec![0x03])
+        );
+        assert_eq!(
+            encode_modified_key(2, NSEventModifierFlags::Control, ""),
+            Some(vec![0x04])
+        );
+    }
+
+    #[test]
     fn encodes_navigation_keys() {
         assert_eq!(
             encode_key_code(KEY_FORWARD_DELETE, ""),
@@ -168,6 +180,10 @@ mod tests {
     fn reserves_command_combinations_for_app_shortcuts() {
         assert_eq!(
             encode_modified_key(8, NSEventModifierFlags::Command, "c"),
+            None
+        );
+        assert_eq!(
+            encode_modified_key(KEY_BACKSPACE, NSEventModifierFlags::Command, ""),
             None
         );
     }

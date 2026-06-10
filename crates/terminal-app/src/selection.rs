@@ -89,7 +89,11 @@ fn slice_display_width(text: &str, start_col: usize, end_col: usize) -> String {
     for ch in text.chars() {
         let width = char_width(ch);
         let next_col = col + width;
-        if next_col > start_col && col < end_col {
+        if width == 0 {
+            if col > start_col && col <= end_col {
+                output.push(ch);
+            }
+        } else if next_col > start_col && col < end_col {
             output.push(ch);
         }
         col = next_col;
@@ -171,6 +175,50 @@ mod tests {
         );
 
         assert_eq!(text, "한");
+    }
+
+    #[test]
+    fn preserves_wide_character_when_boundary_splits_cell() {
+        let lines = vec!["한글".to_string()];
+        let text = selected_text(
+            &lines,
+            SelectionRange::new(GridPoint { row: 0, col: 1 }, GridPoint { row: 0, col: 2 }),
+        );
+
+        assert_eq!(text, "한");
+    }
+
+    #[test]
+    fn preserves_combining_marks_attached_to_selected_base() {
+        let lines = vec!["e\u{301}x".to_string()];
+        let text = selected_text(
+            &lines,
+            SelectionRange::new(GridPoint { row: 0, col: 0 }, GridPoint { row: 0, col: 1 }),
+        );
+
+        assert_eq!(text, "e\u{301}");
+    }
+
+    #[test]
+    fn extracts_text_across_empty_lines() {
+        let lines = vec!["one".to_string(), String::new(), "three".to_string()];
+        let text = selected_text(
+            &lines,
+            SelectionRange::new(GridPoint { row: 0, col: 1 }, GridPoint { row: 2, col: 2 }),
+        );
+
+        assert_eq!(text, "ne\n\nth");
+    }
+
+    #[test]
+    fn clamps_selection_past_line_width() {
+        let lines = vec!["short".to_string()];
+        let text = selected_text(
+            &lines,
+            SelectionRange::new(GridPoint { row: 0, col: 1 }, GridPoint { row: 0, col: 99 }),
+        );
+
+        assert_eq!(text, "hort");
     }
 
     #[test]

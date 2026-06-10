@@ -18,6 +18,7 @@ use objc2_foundation::{
 mod composition;
 mod input;
 mod logging;
+mod paste;
 mod pty;
 mod selection;
 mod terminal_buffer;
