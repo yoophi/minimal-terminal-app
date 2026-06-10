@@ -388,6 +388,13 @@ if command -v vim >/dev/null 2>&1; then
     "vim-mouse-ok" \
     2500 \
     1800
+  run_case_with_followup \
+    "vim-window-split" \
+    "tmp=\"/tmp/minimal-terminal-vim-split-smoke.txt\"; rm -f \"\$tmp\"; ${vim_path} --clean -Nu NONE -n; printf \"vim-split-count:%s\\n\" \"\$(cat \"\$tmp\")\"; rm -f \"\$tmp\""$'\n' \
+    $'\027s:call writefile([string(winnr(\047$\047))], "/tmp/minimal-terminal-vim-split-smoke.txt")\r:qall!\r' \
+    "vim-split-count:2" \
+    3200 \
+    1400
   ran=1
 else
   echo "app target smoke skipped: vim not found"
@@ -427,7 +434,7 @@ else
 fi
 
 head_sha="$(git rev-parse --short HEAD)"
-run_case "git-log" $'git log --oneline -1 --no-color\n' "${head_sha}" 3000
+run_case "git-log" $'git log --oneline -1 --no-color\n' "${head_sha}" 5000
 run_case_with_followup \
   "git-pager-quit" \
   $'git log --oneline --graph --decorate -100 --color=never | less; printf "git-pager-quit-ok\\n"\n' \

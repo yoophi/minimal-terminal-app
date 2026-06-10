@@ -118,7 +118,7 @@
 
 대상:
 
-- `vim`: clean vim edit/write/quit workflow smoke는 통과했다.
+- `vim`: clean vim edit/write/quit, mouse left press, window split key chord workflow smoke는 통과했다.
 - `emacs -nw`: local verification environment의 PATH에서 `emacs`를 찾지 못했다.
 - `tmux`: `tmux 3.6b` version smoke, attached session workflow smoke, split-pane workflow smoke는 통과했다.
 - `tmux` 안의 `vim`: clean nested edit/write/quit workflow smoke는 통과했다.
@@ -130,6 +130,7 @@
 - Phase 009-018을 완료해도 특정 앱이 문제 없이 실행된다고 보증할 수는 없다.
 - `TERM=xterm-256color`를 선언하는 이상 앱별 terminal capability 기대치와 실제 구현이 어긋날 수 있다.
 - `tmux`와 editor, agent-style CLI는 DSR/DA, key encoding, resize, alternate screen, paste, mouse reporting 같은 여러 기능을 조합해서 사용한다.
+- Phase 107에서 app 내부 clean Vim의 `<C-W>s` window split key chord workflow를 자동화했다.
 
 권장 다음 작업:
 
