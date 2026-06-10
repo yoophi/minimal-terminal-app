@@ -6,6 +6,20 @@ use crate::style::{Color, Style};
 const MAX_OSC52_DECODED_BYTES: usize = 1024 * 1024;
 const MAX_OSC52_SELECTOR_BYTES: usize = 64;
 const MAX_OSC_TITLE_BYTES: usize = 4096;
+const ISO_GREEK_SUPPLEMENTAL: [char; 96] = [
+    '\u{00a0}', '\u{2018}', '\u{2019}', '\u{00a3}', '␦', '␦', '\u{00a6}', '\u{00a7}', '\u{00a8}',
+    '\u{00a9}', '␦', '\u{00ab}', '\u{00ac}', '\u{00ad}', '␦', '\u{2015}', '\u{00b0}', '\u{00b1}',
+    '\u{00b2}', '\u{00b3}', '\u{0384}', '\u{0385}', '\u{0386}', '\u{00b7}', '\u{0388}', '\u{0389}',
+    '\u{038a}', '\u{00bb}', '\u{038c}', '\u{00bd}', '\u{038e}', '\u{038f}', '\u{0390}', '\u{0391}',
+    '\u{0392}', '\u{0393}', '\u{0394}', '\u{0395}', '\u{0396}', '\u{0397}', '\u{0398}', '\u{0399}',
+    '\u{039a}', '\u{039b}', '\u{039c}', '\u{039d}', '\u{039e}', '\u{039f}', '\u{03a0}', '\u{03a1}',
+    '␦', '\u{03a3}', '\u{03a4}', '\u{03a5}', '\u{03a6}', '\u{03a7}', '\u{03a8}', '\u{03a9}',
+    '\u{03aa}', '\u{03ab}', '\u{03ac}', '\u{03ad}', '\u{03ae}', '\u{03af}', '\u{03b0}', '\u{03b1}',
+    '\u{03b2}', '\u{03b3}', '\u{03b4}', '\u{03b5}', '\u{03b6}', '\u{03b7}', '\u{03b8}', '\u{03b9}',
+    '\u{03ba}', '\u{03bb}', '\u{03bc}', '\u{03bd}', '\u{03be}', '\u{03bf}', '\u{03c0}', '\u{03c1}',
+    '\u{03c2}', '\u{03c3}', '\u{03c4}', '\u{03c5}', '\u{03c6}', '\u{03c7}', '\u{03c8}', '\u{03c9}',
+    '\u{03ca}', '\u{03cb}', '\u{03cc}', '\u{03cd}', '\u{03ce}', '␦',
+];
 const ISO_LATIN2_SUPPLEMENTAL: [char; 96] = [
     '\u{00a0}', '\u{0104}', '\u{02d8}', '\u{0141}', '\u{00a4}', '\u{013d}', '\u{015a}', '\u{00a7}',
     '\u{00a8}', '\u{0160}', '\u{015e}', '\u{0164}', '\u{0179}', '\u{00ad}', '\u{017d}', '\u{017b}',
@@ -122,6 +136,7 @@ enum Charset {
     German,
     Greek,
     Hebrew,
+    IsoGreekSupplemental,
     IsoLatin1Supplemental,
     IsoLatin2Supplemental,
     Italian,
@@ -518,6 +533,10 @@ impl vte::Perform for ActionCollector {
                 self.g1_charset = Charset::IsoLatin2Supplemental;
                 return;
             }
+            ([b'-'], b'F') => {
+                self.g1_charset = Charset::IsoGreekSupplemental;
+                return;
+            }
             ([b'*'], b'0') => {
                 self.g2_charset = Charset::DecSpecialGraphics;
                 return;
@@ -632,6 +651,10 @@ impl vte::Perform for ActionCollector {
             }
             ([b'.'], b'B') => {
                 self.g2_charset = Charset::IsoLatin2Supplemental;
+                return;
+            }
+            ([b'.'], b'F') => {
+                self.g2_charset = Charset::IsoGreekSupplemental;
                 return;
             }
             ([b'+'], b'0') => {
@@ -750,6 +773,10 @@ impl vte::Perform for ActionCollector {
                 self.g3_charset = Charset::IsoLatin2Supplemental;
                 return;
             }
+            ([b'/'], b'F') => {
+                self.g3_charset = Charset::IsoGreekSupplemental;
+                return;
+            }
             ([b'(' | b')' | b'*' | b'+' | b'-' | b'.' | b'/'], _) => return,
             _ => Action::Ignore,
         };
@@ -772,6 +799,13 @@ fn map_printable_char(ch: char, charset: Charset) -> char {
     if charset == Charset::IsoLatin2Supplemental {
         return match ch {
             ' '..='\u{7f}' => ISO_LATIN2_SUPPLEMENTAL[ch as usize - 0x20],
+            _ => ch,
+        };
+    }
+
+    if charset == Charset::IsoGreekSupplemental {
+        return match ch {
+            ' '..='\u{7f}' => ISO_GREEK_SUPPLEMENTAL[ch as usize - 0x20],
             _ => ch,
         };
     }
@@ -1860,6 +1894,30 @@ mod tests {
         assert_eq!(
             parser.advance_bytes(b"\x1b/B\x1b|\xc3\xa0"),
             vec![Action::Print('ŕ')]
+        );
+    }
+
+    #[test]
+    fn maps_iso_greek_supplemental_charset() {
+        let mut parser = Parser::default();
+
+        assert_eq!(
+            parser.advance_bytes(b"\x1b-F\x1b~\xc2\xa1\xc2\xb4\xc3\x81\xc3\x92\xc3\xb9"),
+            vec![
+                Action::Print('‘'),
+                Action::Print('΄'),
+                Action::Print('Α'),
+                Action::Print('␦'),
+                Action::Print('ω'),
+            ]
+        );
+        assert_eq!(
+            parser.advance_bytes(b"\x1b.F\x1b}\xc2\xa2"),
+            vec![Action::Print('’')]
+        );
+        assert_eq!(
+            parser.advance_bytes(b"\x1b/F\x1b|\xc3\xa0"),
+            vec![Action::Print('ΰ')]
         );
     }
 
