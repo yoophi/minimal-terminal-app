@@ -25,6 +25,7 @@ pub(crate) enum Action {
     SetCursorStyle(CursorStyle),
     SetMouseReporting(bool),
     SetSgrMouse(bool),
+    PrimaryDeviceAttributes,
     DeviceStatusReport,
     CursorPositionReport,
     CursorPosition { row: usize, col: usize },
@@ -146,6 +147,7 @@ fn parse_csi(numbers: &[usize], intermediates: &[u8], final_byte: char) -> Actio
         'B' => Action::CursorDown(first_or_default(&numbers, 1)),
         'C' => Action::CursorRight(first_or_default(&numbers, 1)),
         'D' => Action::CursorLeft(first_or_default(&numbers, 1)),
+        'c' => Action::PrimaryDeviceAttributes,
         'G' => Action::CursorColumn(first_or_default(&numbers, 1).saturating_sub(1)),
         'H' | 'f' => Action::CursorPosition {
             row: first_or_default(&numbers, 1).saturating_sub(1),
@@ -494,6 +496,19 @@ mod tests {
             vec![Action::CursorPositionReport]
         );
         assert_eq!(parser.advance_bytes(b"\x1b[9n"), vec![Action::Ignore]);
+    }
+
+    #[test]
+    fn parses_primary_device_attributes() {
+        let mut parser = Parser::default();
+        assert_eq!(
+            parser.advance_bytes(b"\x1b[c"),
+            vec![Action::PrimaryDeviceAttributes]
+        );
+        assert_eq!(
+            parser.advance_bytes(b"\x1b[0c"),
+            vec![Action::PrimaryDeviceAttributes]
+        );
     }
 
     #[test]

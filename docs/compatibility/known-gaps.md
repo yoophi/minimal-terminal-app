@@ -78,9 +78,27 @@
 
 권장 다음 작업:
 
-- `docs/compatibility/matrix.md`를 sequence family별로 계속 확장한다.
-- smoke test 실패에서 나온 unknown row를 우선순위에 따라 승격한다.
+- Secondary device attributes `CSI > c` 응답을 검토한다.
+- function key, application keypad, modifier key variants를 확장한다.
+- OSC 52 clipboard는 보안 정책과 함께 별도 설계한다.
+- legacy mouse encoding이 필요한지 app smoke로 판단한다.
 - 새로 지원하는 sequence마다 작은 parser/grid fixture를 우선 추가한다.
+
+### vttest Runtime Coverage
+
+상태: `not supported`
+
+중요한 이유:
+
+- `vttest`는 terminal emulator 호환성을 검증하는 de facto 테스트 도구다.
+- 현재 local verification environment에서 `/opt/homebrew/bin/vttest`와 `vttest -V`는 확인했다.
+- 실제 menu 기반 runtime 결과는 아직 수집하지 못했다.
+
+권장 다음 작업:
+
+- `docs/compatibility/smoke-tests.md`의 `vttest` 절차를 앱 내부에서 실행한다.
+- 실패 항목을 cursor, erase, scrolling, reporting, character set, keyboard input, OSC 등 sequence family로 분해한다.
+- 통과/실패 결과를 matrix evidence와 known gap으로 연결한다.
 
 ## Priority 5
 
@@ -123,3 +141,9 @@ Phase 011에서 `CSI 5 n`, `CSI 6 n` parser action, core response queue, app PTY
 상태: `supported`
 
 Phase 012에서 `CSI Ps SP q` parser action, cursor style mode, AppKit cursor shape rendering을 구현했다. 현재 block, bar, underline shape을 구분하며 blinking/steady 차이는 같은 steady rendering으로 처리한다.
+
+### Primary Device Attributes
+
+상태: `supported`
+
+Phase 018에서 `CSI c`, `CSI 0 c` parser action과 core response queue를 구현했다. 현재 VT100 계열 `ESC[?1;2c` 응답을 보낸다. Secondary DA는 full xterm gap으로 남긴다.

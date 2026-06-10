@@ -141,6 +141,24 @@ git log --oneline --graph --decorate
 - 종료 후 shell 화면이 복원된다.
 - 실패하면 `known-gaps.md`의 미확인 app smoke target을 구체적인 gap으로 승격한다.
 
+## vttest Smoke
+
+로컬에 `vttest`가 설치된 경우 실행한다.
+
+```sh
+vttest
+```
+
+기록 형식:
+
+- `vttest` 설치 경로와 버전 또는 package source
+- 실행 날짜와 macOS 버전
+- 통과/실패 menu 번호
+- 실패 증상
+- 관련 sequence family: cursor, erase, scrolling, reporting, character set, keyboard input, OSC
+
+현재 local verification environment에서는 `/opt/homebrew/bin/vttest`와 `vttest -V` 결과 `VT100 test program, version 2.7 (20251205)`를 확인했다. menu 기반 runtime 결과는 아직 수동 smoke 대상으로 남긴다.
+
 ## 실패 처리
 
 Smoke 테스트가 실패하면 다음 순서로 반영한다.

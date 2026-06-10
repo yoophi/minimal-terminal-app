@@ -68,11 +68,35 @@ xterm compatibility는 매우 넓다.
 
 ## Acceptance Criteria
 
-- `vttest` smoke 절차가 문서화되어 있다.
-- 최소 한 번의 `vttest` 결과가 matrix/known gaps에 반영되어 있다.
-- full xterm compatibility gap이 세부 row로 분해되기 시작했다.
-- 새로 구현한 sequence는 test evidence를 가진다.
-- `scripts/run-compatibility-core.sh`와 `cargo test`가 통과한다.
+- `vttest` smoke 절차가 문서화되어 있다. `done`
+- 최소 한 번의 `vttest` 결과가 matrix/known gaps에 반영되어 있다. `done`
+- full xterm compatibility gap이 세부 row로 분해되기 시작했다. `done`
+- 새로 구현한 sequence는 test evidence를 가진다. `done`
+- `scripts/run-compatibility-core.sh`와 `cargo test`가 통과한다. `done`
+
+## Implementation Update - 2026-06-10
+
+Status: implementation complete for initial vttest/xterm expansion.
+
+확인 결과:
+
+- `vttest`: `/opt/homebrew/bin/vttest`
+- `vttest -V`: `VT100 test program, version 2.7 (20251205)`
+
+구현된 내용:
+
+- `docs/compatibility/smoke-tests.md`에 `vttest` 실행 절차와 기록 형식을 추가했다.
+- `vttest` 설치/version 확인 결과와 interactive menu smoke gap을 matrix와 known gaps에 반영했다.
+- full xterm compatibility umbrella gap을 secondary DA, function/application keypad, OSC 52 clipboard, legacy mouse encoding, vttest runtime coverage로 분해하기 시작했다.
+- Primary device attributes `CSI c`, `CSI 0 c` 응답을 구현했다.
+- parser/state/compatibility test evidence를 추가했다.
+
+검증:
+
+- `command -v vttest`
+- `vttest -V`
+- `scripts/run-compatibility-core.sh`
+- `cargo test`
 
 ## After Phase 018
 

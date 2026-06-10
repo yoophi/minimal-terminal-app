@@ -70,6 +70,15 @@ fn device_status_reports_have_core_evidence() {
 }
 
 #[test]
+fn primary_device_attributes_have_core_evidence() {
+    let mut terminal = TerminalState::new(4, 10);
+
+    terminal.append_bytes(b"\x1b[c");
+
+    assert_eq!(terminal.take_pending_responses(), b"\x1b[?1;2c".to_vec());
+}
+
+#[test]
 fn cursor_style_sequences_have_core_evidence() {
     let mut terminal = TerminalState::new(4, 10);
 

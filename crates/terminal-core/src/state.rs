@@ -217,6 +217,9 @@ impl TerminalState {
             Action::SetCursorStyle(style) => self.modes.cursor_style = style,
             Action::SetMouseReporting(enabled) => self.modes.mouse_reporting = enabled,
             Action::SetSgrMouse(enabled) => self.modes.sgr_mouse = enabled,
+            Action::PrimaryDeviceAttributes => {
+                self.pending_responses.extend_from_slice(b"\x1b[?1;2c")
+            }
             Action::DeviceStatusReport => self.pending_responses.extend_from_slice(b"\x1b[0n"),
             Action::CursorPositionReport => {
                 self.pending_responses.extend_from_slice(
@@ -545,6 +548,15 @@ mod tests {
 
         assert_eq!(terminal.take_pending_responses(), b"\x1b[0n".to_vec());
         assert!(terminal.take_pending_responses().is_empty());
+    }
+
+    #[test]
+    fn queues_primary_device_attributes_response() {
+        let mut terminal = TerminalState::new(4, 10);
+
+        terminal.append_bytes(b"\x1b[c");
+
+        assert_eq!(terminal.take_pending_responses(), b"\x1b[?1;2c".to_vec());
     }
 
     #[test]
