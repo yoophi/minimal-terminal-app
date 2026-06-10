@@ -68,8 +68,25 @@ TUI 버전이나 shell 환경에 따라 escape stream이 달라질 수 있다.
 
 ## Acceptance Criteria
 
-- `tui_replay.rs`가 있다.
-- 최소 `less` 또는 `vim` replay fixture가 있다.
-- replay test가 `scripts/run-compatibility-core.sh`에 포함된다.
-- matrix evidence가 갱신되어 있다.
+- `tui_replay.rs`가 있다. `done`
+- 최소 `less` 또는 `vim` replay fixture가 있다. `done`
+- replay test가 `scripts/run-compatibility-core.sh`에 포함된다. `done`
+- matrix evidence가 갱신되어 있다. `done`
 
+## Implementation Update - 2026-06-10
+
+Status: implementation complete.
+
+구현된 내용:
+
+- `crates/terminal-core/tests/tui_replay.rs`를 추가했다.
+- `crates/terminal-core/tests/fixtures/tui/*.ansi` fixture 저장 위치를 추가했다.
+- fixture는 diff가 쉬운 `\x1b`, `\n`, `\r` textual escape format으로 저장하고 test에서 byte stream으로 decode한다.
+- `less`, `vim`, `top` 최소 replay fixture를 추가했다.
+- replay test가 alternate screen restore, cursor visibility/style restore, styled redraw를 검증한다.
+- matrix와 regression runner 문서를 갱신했다.
+
+검증:
+
+- `scripts/run-compatibility-core.sh`
+- `cargo test`
