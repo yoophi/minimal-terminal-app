@@ -10,7 +10,6 @@
 
 예시:
 
-- legacy mouse encoding
 - runtime `vim`/`less` mouse smoke evidence
 - modifier-aware mouse report
 
@@ -21,7 +20,6 @@
 
 권장 다음 작업:
 
-- legacy mouse encoding이 필요한지 runtime smoke로 판단한다.
 - `vim` 또는 `less` mouse smoke 결과를 기록한다.
 - modifier key가 포함된 mouse report가 필요한지 확인한다.
 
@@ -79,7 +77,7 @@
 
 - 아직 확인하지 않은 modifier key variants를 앱별 smoke로 검증한다.
 - OSC 52 query/readback과 세부 보안 정책은 별도 설계한다.
-- legacy mouse encoding이 필요한지 app smoke로 판단한다.
+- modifier-aware mouse report가 필요한지 app smoke로 판단한다.
 - 새로 지원하는 sequence마다 작은 parser/grid fixture를 우선 추가한다.
 
 ### vttest Runtime Coverage
@@ -169,3 +167,9 @@ Phase 022에서 `ESC =`, `ESC >` application keypad mode와 numeric keypad SS3 e
 상태: `partially supported`
 
 Phase 023에서 OSC 52 clipboard write를 구현했다. core parser가 `OSC 52 ; Pc ; Pd` payload를 base64 decode해 pending clipboard write로 큐잉하고, AppKit layer가 main thread에서 pasteboard write를 수행한다. clipboard query/readback, prompt/permission policy, size policy tuning은 full xterm gap으로 남긴다.
+
+### Legacy Mouse Encoding
+
+상태: `supported`
+
+Phase 024에서 SGR mouse mode가 꺼진 상태의 legacy X10-style mouse report를 구현했다. app input layer가 mouse reporting mode에서 legacy 또는 SGR encoding을 선택하고 press, release, drag, wheel report를 보낸다. modifier-aware mouse report와 runtime app smoke는 Mouse Reporting gap으로 남긴다.

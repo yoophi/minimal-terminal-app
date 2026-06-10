@@ -267,7 +267,7 @@ define_class!(
         #[unsafe(method(mouseDown:))]
         fn mouse_down(&self, event: &NSEvent) {
             let point = self.grid_point_for_event(event);
-            if self.write_sgr_mouse_report(mouse::LEFT_BUTTON, point, false) {
+            if self.write_mouse_report(mouse::LEFT_BUTTON, point, false) {
                 self.ivars().selection.borrow_mut().clear();
                 self.ivars().scrollback_offset.set(0);
                 return;
@@ -280,7 +280,7 @@ define_class!(
         #[unsafe(method(mouseDragged:))]
         fn mouse_dragged(&self, event: &NSEvent) {
             let point = self.grid_point_for_event(event);
-            if self.write_sgr_mouse_report(mouse::LEFT_DRAG, point, false) {
+            if self.write_mouse_report(mouse::LEFT_DRAG, point, false) {
                 return;
             }
 
@@ -291,7 +291,7 @@ define_class!(
         #[unsafe(method(mouseUp:))]
         fn mouse_up(&self, event: &NSEvent) {
             let point = self.grid_point_for_event(event);
-            if self.write_sgr_mouse_report(mouse::LEFT_BUTTON, point, true) {
+            if self.write_mouse_report(mouse::LEFT_BUTTON, point, true) {
                 return;
             }
 
@@ -303,12 +303,12 @@ define_class!(
         fn scroll_wheel(&self, event: &NSEvent) {
             let point = self.grid_point_for_event(event);
             if event.scrollingDeltaY() > 0.0
-                && self.write_sgr_mouse_report(mouse::WHEEL_UP, point, false)
+                && self.write_mouse_report(mouse::WHEEL_UP, point, false)
             {
                 return;
             }
             if event.scrollingDeltaY() < 0.0
-                && self.write_sgr_mouse_report(mouse::WHEEL_DOWN, point, false)
+                && self.write_mouse_report(mouse::WHEEL_DOWN, point, false)
             {
                 return;
             }
@@ -507,13 +507,17 @@ impl TerminalView {
             .unwrap_or_default()
     }
 
-    fn write_sgr_mouse_report(&self, code: u16, point: GridPoint, release: bool) -> bool {
+    fn write_mouse_report(&self, code: u16, point: GridPoint, release: bool) -> bool {
         let modes = self.current_modes();
-        if !modes.mouse_reporting || !modes.sgr_mouse {
+        if !modes.mouse_reporting {
             return false;
         }
 
-        let bytes = mouse::sgr_mouse_report(code, point.row, point.col, release);
+        let bytes = if modes.sgr_mouse {
+            mouse::sgr_mouse_report(code, point.row, point.col, release)
+        } else {
+            mouse::legacy_mouse_report(code, point.row, point.col, release)
+        };
         if let Err(error) = self.ivars().writer.write_all(&bytes) {
             logging::pty_error(&format!("pty write failed from mouse report: {error}"));
         }
