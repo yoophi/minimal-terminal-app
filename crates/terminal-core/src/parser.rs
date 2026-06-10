@@ -5,8 +5,10 @@ pub(crate) enum Action {
     Newline,
     Backspace,
     Tab,
-    ClearLineFromCursor,
-    ClearScreen,
+    ClearLine(LineClearMode),
+    ClearScreen(ScreenClearMode),
+    SaveCursor,
+    RestoreCursor,
     CursorPosition { row: usize, col: usize },
     CursorUp(usize),
     CursorDown(usize),
@@ -14,6 +16,20 @@ pub(crate) enum Action {
     CursorLeft(usize),
     CursorColumn(usize),
     Ignore,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub(crate) enum LineClearMode {
+    FromCursor,
+    ToCursor,
+    Entire,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub(crate) enum ScreenClearMode {
+    FromCursor,
+    ToCursor,
+    Entire,
 }
 
 #[derive(Clone, Debug, Default)]
@@ -75,6 +91,14 @@ impl Parser {
                 self.state = ParserState::Charset;
                 None
             }
+            '7' => {
+                self.state = ParserState::Ground;
+                Some(Action::SaveCursor)
+            }
+            '8' => {
+                self.state = ParserState::Ground;
+                Some(Action::RestoreCursor)
+            }
             _ => {
                 self.state = ParserState::Ground;
                 Some(Action::Ignore)
@@ -130,8 +154,20 @@ fn parse_csi(params: &str, final_byte: char) -> Action {
             row: first_or_default(&numbers, 1).saturating_sub(1),
             col: numbers.get(1).copied().unwrap_or(1).saturating_sub(1),
         },
-        'J' if first_or_default(&numbers, 0) == 2 => Action::ClearScreen,
-        'K' => Action::ClearLineFromCursor,
+        'J' => match first_or_default(&numbers, 0) {
+            0 => Action::ClearScreen(ScreenClearMode::FromCursor),
+            1 => Action::ClearScreen(ScreenClearMode::ToCursor),
+            2 | 3 => Action::ClearScreen(ScreenClearMode::Entire),
+            _ => Action::Ignore,
+        },
+        'K' => match first_or_default(&numbers, 0) {
+            0 => Action::ClearLine(LineClearMode::FromCursor),
+            1 => Action::ClearLine(LineClearMode::ToCursor),
+            2 => Action::ClearLine(LineClearMode::Entire),
+            _ => Action::Ignore,
+        },
+        's' => Action::SaveCursor,
+        'u' => Action::RestoreCursor,
         'm' => Action::Ignore,
         _ => Action::Ignore,
     }
@@ -160,7 +196,7 @@ fn first_or_default(numbers: &[usize], default: usize) -> usize {
 
 #[cfg(test)]
 mod tests {
-    use super::{Action, Parser};
+    use super::{Action, LineClearMode, Parser, ScreenClearMode};
 
     #[test]
     fn parses_cursor_position() {
@@ -199,5 +235,34 @@ mod tests {
         assert_eq!(parser.advance('('), None);
         assert_eq!(parser.advance('B'), None);
         assert_eq!(parser.advance('x'), Some(Action::Print('x')));
+    }
+
+    #[test]
+    fn parses_erase_modes() {
+        let mut parser = Parser::default();
+        assert_eq!(parser.advance('\u{1b}'), None);
+        assert_eq!(parser.advance('['), None);
+        assert_eq!(parser.advance('2'), None);
+        assert_eq!(
+            parser.advance('K'),
+            Some(Action::ClearLine(LineClearMode::Entire))
+        );
+
+        assert_eq!(parser.advance('\u{1b}'), None);
+        assert_eq!(parser.advance('['), None);
+        assert_eq!(parser.advance('1'), None);
+        assert_eq!(
+            parser.advance('J'),
+            Some(Action::ClearScreen(ScreenClearMode::ToCursor))
+        );
+    }
+
+    #[test]
+    fn parses_save_and_restore_cursor() {
+        let mut parser = Parser::default();
+        assert_eq!(parser.advance('\u{1b}'), None);
+        assert_eq!(parser.advance('7'), Some(Action::SaveCursor));
+        assert_eq!(parser.advance('\u{1b}'), None);
+        assert_eq!(parser.advance('8'), Some(Action::RestoreCursor));
     }
 }

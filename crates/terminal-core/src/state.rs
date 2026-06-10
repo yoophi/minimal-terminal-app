@@ -1,17 +1,19 @@
 use crate::cursor::Cursor;
 use crate::grid::Grid;
-use crate::parser::{Action, Parser};
+use crate::parser::{Action, LineClearMode, Parser, ScreenClearMode};
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct TerminalSnapshot {
     pub lines: Vec<String>,
     pub cursor: Cursor,
+    pub scrollback_len: usize,
 }
 
 #[derive(Clone, Debug)]
 pub struct TerminalState {
     grid: Grid,
     cursor: Cursor,
+    saved_cursor: Cursor,
     parser: Parser,
 }
 
@@ -20,6 +22,7 @@ impl TerminalState {
         Self {
             grid: Grid::new(rows, cols),
             cursor: Cursor::default(),
+            saved_cursor: Cursor::default(),
             parser: Parser::default(),
         }
     }
@@ -43,6 +46,7 @@ impl TerminalState {
         TerminalSnapshot {
             lines: self.grid.visible_lines_from(start, visible_rows),
             cursor: Cursor::new(self.cursor.row.saturating_sub(start), self.cursor.col),
+            scrollback_len: self.grid.scrollback_len(),
         }
     }
 
@@ -56,6 +60,20 @@ impl TerminalState {
 
     pub fn scrollback_len(&self) -> usize {
         self.grid.scrollback_len()
+    }
+
+    pub fn scrollback_snapshot(
+        &self,
+        offset_from_bottom: usize,
+        max_visible_lines: usize,
+    ) -> TerminalSnapshot {
+        TerminalSnapshot {
+            lines: self
+                .grid
+                .scrollback_lines(offset_from_bottom, max_visible_lines),
+            cursor: Cursor::default(),
+            scrollback_len: self.grid.scrollback_len(),
+        }
     }
 
     pub fn resize(&mut self, rows: usize, cols: usize) {
@@ -74,8 +92,24 @@ impl TerminalState {
                     self.grid.put_char(&mut self.cursor, ' ');
                 }
             }
-            Action::ClearLineFromCursor => self.grid.clear_line_from_cursor(self.cursor),
-            Action::ClearScreen => self.grid.clear_screen(&mut self.cursor),
+            Action::ClearLine(mode) => match mode {
+                LineClearMode::FromCursor => self.grid.clear_line_from_cursor(self.cursor),
+                LineClearMode::ToCursor => self.grid.clear_line_to_cursor(self.cursor),
+                LineClearMode::Entire => self.grid.clear_entire_line(self.cursor.row),
+            },
+            Action::ClearScreen(mode) => match mode {
+                ScreenClearMode::FromCursor => self.grid.clear_screen_from_cursor(self.cursor),
+                ScreenClearMode::ToCursor => self.grid.clear_screen_to_cursor(self.cursor),
+                ScreenClearMode::Entire => self.grid.clear_screen(&mut self.cursor),
+            },
+            Action::SaveCursor => self.saved_cursor = self.cursor,
+            Action::RestoreCursor => {
+                self.grid.move_cursor(
+                    &mut self.cursor,
+                    self.saved_cursor.row,
+                    self.saved_cursor.col,
+                );
+            }
             Action::CursorPosition { row, col } => {
                 self.grid.move_cursor(&mut self.cursor, row, col)
             }
@@ -140,6 +174,27 @@ mod tests {
     }
 
     #[test]
+    fn csi_clear_entire_line_removes_text_on_both_sides() {
+        let mut terminal = TerminalState::new(3, 16);
+        terminal.append_bytes(b"old prompt");
+        terminal.append_bytes(b"\rnew\x1b[2Kok");
+
+        let snapshot = terminal.snapshot(3);
+        assert_eq!(snapshot.lines[0], "   ok");
+        assert_eq!(snapshot.cursor, Cursor::new(0, 5));
+    }
+
+    #[test]
+    fn saves_and_restores_cursor() {
+        let mut terminal = TerminalState::new(3, 16);
+        terminal.append_bytes(b"ab\x1b7cd\x1b8X");
+
+        let snapshot = terminal.snapshot(3);
+        assert_eq!(snapshot.lines[0], "abXd");
+        assert_eq!(snapshot.cursor, Cursor::new(0, 3));
+    }
+
+    #[test]
     fn scrolls_when_output_exceeds_rows() {
         let mut terminal = TerminalState::new(2, 10);
         terminal.append_bytes(b"one\ntwo\nthree");
@@ -177,5 +232,36 @@ mod tests {
         terminal.append_bytes(b"one\ntwo\nthree");
 
         assert_eq!(terminal.scrollback_len(), 1);
+    }
+
+    #[test]
+    fn exposes_scrollback_snapshot() {
+        let mut terminal = TerminalState::new(2, 10);
+        terminal.append_bytes(b"one\ntwo\nthree");
+
+        let snapshot = terminal.scrollback_snapshot(0, 10);
+        assert_eq!(snapshot.lines, vec!["one"]);
+        assert_eq!(snapshot.scrollback_len, 1);
+    }
+
+    #[test]
+    fn wide_characters_advance_cursor_by_two_cells() {
+        let mut terminal = TerminalState::new(3, 10);
+        terminal.append_bytes("한글".as_bytes());
+
+        let snapshot = terminal.snapshot(3);
+        assert_eq!(snapshot.lines[0], "한글");
+        assert_eq!(snapshot.cursor, Cursor::new(0, 4));
+    }
+
+    #[test]
+    fn backspace_removes_whole_wide_character() {
+        let mut terminal = TerminalState::new(3, 10);
+        terminal.append_bytes("A한".as_bytes());
+        terminal.append_bytes(&[0x7f]);
+
+        let snapshot = terminal.snapshot(3);
+        assert_eq!(snapshot.lines[0], "A");
+        assert_eq!(snapshot.cursor, Cursor::new(0, 1));
     }
 }

@@ -110,6 +110,7 @@ define_class!(
                 .unwrap_or_else(|_| TerminalSnapshot {
                     lines: vec!["terminal buffer unavailable".to_string()],
                     cursor: terminal_core::Cursor::default(),
+                    scrollback_len: 0,
                 });
 
             draw_terminal_text(&snapshot);

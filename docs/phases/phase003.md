@@ -42,6 +42,11 @@ Phase 003에서 다룰 작업은 다음과 같다.
 - terminal-core resize API 추가
 - `TIOCSWINSZ`를 통한 PTY resize 전달
 - scrollback 기본 저장 모델 추가
+- Unicode width 기반 cell 점유 폭 처리 추가
+- 한글/CJK wide character cursor 이동 및 backspace 처리 추가
+- ANSI erase mode 확장: `J`/`K`의 `0`, `1`, `2`, `3` mode
+- ANSI cursor save/restore 처리 추가: `ESC 7`, `ESC 8`, `CSI s`, `CSI u`
+- scrollback snapshot API 초안 추가
 
 현재 `terminal-core`가 처리하는 동작:
 
@@ -57,6 +62,11 @@ Phase 003에서 다룰 작업은 다음과 같다.
 - SGR style sequence `m` 무시
 - resize 시 visible grid 보존 및 cursor clamp
 - scroll 시 overflow line을 scrollback에 저장
+- 한글/CJK wide character를 2 cell로 처리
+- combining mark는 cursor advance 없이 무시
+- erase line/screen mode별 처리
+- cursor save/restore
+- scrollback snapshot 조회
 
 이번 단계의 의도는 완전한 terminal emulator를 만드는 것이 아니라, Phase 002의 문자열 버퍼를 테스트 가능한 grid/cursor 기반으로 교체하는 것이다.
 
@@ -79,12 +89,15 @@ cursor-check
 - Ctrl-C 런타임 검증: `sleep 5` 실행 중 `Ctrl-C` 입력 시 `^C`, `INT`, 새 prompt 표시 확인.
 - terminal-core 단위 테스트로 resize와 scrollback 길이를 검증했다.
 - view resize 시 grid rows/cols와 PTY window size가 함께 갱신된다.
+- terminal-core 단위 테스트로 한글 wide character cursor 이동과 backspace를 검증했다.
+- terminal-core 단위 테스트로 ANSI erase mode와 cursor save/restore를 검증했다.
+- terminal-core 단위 테스트로 scrollback snapshot 조회를 검증했다.
 
 남은 표시 문제:
 
 - zsh prompt redraw 과정에서 command line이 한 번 중복되어 보일 수 있다.
-- prompt 오른쪽 정렬 영역과 cursor movement sequence는 아직 완전히 해석하지 못한다.
-- OSC/charset escape는 skip하도록 보강했지만, ANSI/VT parser 범위는 여전히 제한적이다.
+- prompt 오른쪽 정렬 영역과 일부 고급 cursor movement sequence는 아직 완전히 해석하지 못한다.
+- OSC/charset escape는 skip하도록 보강했고 erase/save/restore를 추가했지만, ANSI/VT parser 범위는 여전히 제한적이다.
 
 ## Why Cursor Belongs Here
 
@@ -118,7 +131,7 @@ Phase 003에서는 input encoder를 별도 책임으로 둔다.
 - printable UTF-8 text `done`
 - Enter `done`
 - Backspace/Delete `done`
-- Tab
+- Tab `done`
 - Ctrl-C `done`
 - Ctrl-D `done`
 - arrow keys `done`
@@ -164,6 +177,8 @@ Phase 003의 최소 완료 기준:
 - Ctrl-C가 foreground shell process로 전달된다. `done`
 - arrow key escape sequence가 shell line editor에 전달된다. `implemented`
 - window resize 시 PTY size와 grid size가 동기화된다. `done`
+- Unicode wide character가 cursor/grid에서 올바른 cell 폭을 차지한다. `done`
+- scrollback 기본 모델이 scroll된 line을 보존한다. `done`
 - `cargo test`로 terminal-core parser/grid/cursor 기본 동작을 검증한다. `done`
 
 ## Non-goals
@@ -192,10 +207,9 @@ Phase 002에서 확인한 중요한 교훈:
 다음 작업은 Phase 003 안에서 계속 진행한다.
 
 - arrow key, Home/End, PageUp/PageDown의 실제 login shell 런타임 검증
-- Tab, Option/Command 조합, IME composition 처리 방침 결정
+- Option/Command 조합, IME composition 처리 방침 결정
 - scrollback UI 노출 방식 결정
-- Unicode width 처리 방침 결정
-- ANSI parser 범위 확장
+- ANSI parser 범위 추가 확장
 
 ## Prioritization Notes
 
@@ -204,4 +218,16 @@ Phase 003 잔여 작업은 다음 순서로 처리했다.
 1. Input encoder: 사용자가 가장 먼저 체감하는 기본 조작이며, Backspace/Ctrl-C/arrow key는 shell 사용의 최소 조건이다.
 2. Resize synchronization: terminal grid와 PTY가 다른 크기를 사용하면 prompt redraw와 line editing이 계속 어긋난다.
 3. Scrollback model: UI 노출 전이라도 core가 scroll된 line을 잃지 않는 구조가 필요하다.
-4. Unicode width and ANSI expansion: 정확한 렌더링 품질에 중요하지만 parser/grid 정책에 더 큰 영향을 주므로 다음 반복에서 별도로 다룬다.
+4. Unicode width: 한글 표시와 cursor 위치 정확도에 직접 영향을 주므로 CJK wide character부터 처리한다.
+5. ANSI parser expansion: prompt redraw를 덜 깨지게 하기 위해 erase mode와 cursor save/restore를 우선 처리한다.
+
+## Phase 003 Closure
+
+Phase 003의 핵심 목표인 terminal core, cursor, 기본 input semantics는 구현과 테스트가 완료되었다.
+
+다음 항목은 Phase 003의 핵심 완료 조건을 넘어서며, 별도 후속 phase로 분리하는 것이 좋다.
+
+- IME composition: AppKit `NSTextInputClient` 수준의 별도 설계가 필요하다.
+- scrollback UI: core snapshot API는 준비되었지만, keyboard/mouse gesture와 selection 정책이 필요하다.
+- ANSI/VT 완성도 확대: xterm 호환성은 지속적인 parser 확장 작업이다.
+- Option/Command 조합: macOS UX 정책과 shell 전달 정책을 먼저 정해야 한다.

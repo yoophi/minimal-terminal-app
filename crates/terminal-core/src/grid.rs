@@ -57,15 +57,24 @@ impl Grid {
     }
 
     pub(crate) fn put_char(&mut self, cursor: &mut Cursor, ch: char) {
+        let width = char_width(ch);
+        if width == 0 {
+            return;
+        }
+
         if cursor.row >= self.rows {
             cursor.row = self.rows - 1;
         }
-        if cursor.col >= self.cols {
+        if cursor.col + width > self.cols {
             self.newline(cursor);
         }
 
         self.lines[cursor.row][cursor.col].set_ch(ch);
-        cursor.col += 1;
+        if width == 2 && cursor.col + 1 < self.cols {
+            self.lines[cursor.row][cursor.col + 1].set_wide_continuation();
+        }
+
+        cursor.col += width;
         if cursor.col >= self.cols {
             self.newline(cursor);
         }
@@ -87,7 +96,11 @@ impl Grid {
     pub(crate) fn backspace(&mut self, cursor: &mut Cursor) {
         if cursor.col > 0 {
             cursor.col -= 1;
-            self.lines[cursor.row][cursor.col].set_ch(' ');
+            if self.lines[cursor.row][cursor.col].is_wide_continuation() && cursor.col > 0 {
+                self.lines[cursor.row][cursor.col].clear();
+                cursor.col -= 1;
+            }
+            self.lines[cursor.row][cursor.col].clear();
         }
     }
 
@@ -114,14 +127,41 @@ impl Grid {
 
     pub(crate) fn clear_line_from_cursor(&mut self, cursor: Cursor) {
         for col in cursor.col..self.cols {
-            self.lines[cursor.row][col].set_ch(' ');
+            self.lines[cursor.row][col].clear();
         }
+    }
+
+    pub(crate) fn clear_line_to_cursor(&mut self, cursor: Cursor) {
+        for col in 0..=cursor.col.min(self.cols - 1) {
+            self.lines[cursor.row][col].clear();
+        }
+    }
+
+    pub(crate) fn clear_entire_line(&mut self, row: usize) {
+        let row = row.min(self.rows - 1);
+        for col in 0..self.cols {
+            self.lines[row][col].clear();
+        }
+    }
+
+    pub(crate) fn clear_screen_from_cursor(&mut self, cursor: Cursor) {
+        self.clear_line_from_cursor(cursor);
+        for row in (cursor.row + 1)..self.rows {
+            self.clear_entire_line(row);
+        }
+    }
+
+    pub(crate) fn clear_screen_to_cursor(&mut self, cursor: Cursor) {
+        for row in 0..cursor.row {
+            self.clear_entire_line(row);
+        }
+        self.clear_line_to_cursor(cursor);
     }
 
     pub(crate) fn clear_screen(&mut self, cursor: &mut Cursor) {
         for line in &mut self.lines {
             for cell in line {
-                cell.set_ch(' ');
+                cell.clear();
             }
         }
         *cursor = Cursor::default();
@@ -133,7 +173,24 @@ impl Grid {
         let end = (start + max_visible_lines).min(self.rows);
         self.lines[start..end]
             .iter()
-            .map(|line| trim_trailing_blanks(line.iter().map(Cell::ch).collect()))
+            .map(|line| render_line(line))
+            .collect()
+    }
+
+    pub(crate) fn scrollback_lines(
+        &self,
+        offset_from_bottom: usize,
+        max_lines: usize,
+    ) -> Vec<String> {
+        if self.scrollback.is_empty() || max_lines == 0 {
+            return Vec::new();
+        }
+
+        let end = self.scrollback.len().saturating_sub(offset_from_bottom);
+        let start = end.saturating_sub(max_lines);
+        self.scrollback[start..end]
+            .iter()
+            .map(|line| render_line(line))
             .collect()
     }
 
@@ -164,9 +221,56 @@ fn resize_line(line: &mut Vec<Cell>, cols: usize) {
     }
 }
 
+fn render_line(line: &[Cell]) -> String {
+    let mut text = String::with_capacity(line.len());
+    for cell in line {
+        if !cell.is_wide_continuation() {
+            text.push(cell.ch());
+        }
+    }
+    trim_trailing_blanks(text)
+}
+
 fn trim_trailing_blanks(mut text: String) -> String {
     while text.ends_with(' ') {
         text.pop();
     }
     text
+}
+
+fn char_width(ch: char) -> usize {
+    if is_combining_mark(ch) {
+        0
+    } else if is_wide_char(ch) {
+        2
+    } else {
+        1
+    }
+}
+
+fn is_combining_mark(ch: char) -> bool {
+    matches!(
+        ch as u32,
+        0x0300..=0x036F
+            | 0x1AB0..=0x1AFF
+            | 0x1DC0..=0x1DFF
+            | 0x20D0..=0x20FF
+            | 0xFE20..=0xFE2F
+    )
+}
+
+fn is_wide_char(ch: char) -> bool {
+    matches!(
+        ch as u32,
+        0x1100..=0x115F
+            | 0x2329..=0x232A
+            | 0x2E80..=0xA4CF
+            | 0xAC00..=0xD7A3
+            | 0xF900..=0xFAFF
+            | 0xFE10..=0xFE19
+            | 0xFE30..=0xFE6F
+            | 0xFF00..=0xFF60
+            | 0xFFE0..=0xFFE6
+            | 0x1F300..=0x1FAFF
+    )
 }
