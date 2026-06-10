@@ -1,0 +1,102 @@
+# 알려진 호환성 Gap
+
+이 문서는 Phase 007 이후 남아 있는 호환성 gap을 추적한다. 우선순위는 기본 shell 사용성, 데이터 손실/입력 오작동 위험, 대표 TUI 영향, 구현 범위, 테스트 가능성을 기준으로 정한다.
+
+## Priority 1
+
+### Device Status Report 응답
+
+상태: `not supported`
+
+예시:
+
+- `CSI 5 n`
+- `CSI 6 n`
+
+중요한 이유:
+
+- 일부 shell, editor, terminal-aware tool은 terminal 상태나 cursor 위치를 질의한다.
+- 이 기능은 단순 parser 처리만으로는 부족하며, terminal이 PTY로 응답을 써야 한다.
+
+권장 다음 작업:
+
+- DSR 요청을 나타내는 parser action을 추가한다.
+- terminal-core state에서 PTY writer로 응답을 전달하는 통제된 경로를 추가한다.
+- cursor position 응답을 core test와 runtime smoke command로 검증한다.
+
+## Priority 2
+
+### Mouse Reporting
+
+상태: `not supported`
+
+예시:
+
+- DEC mouse mode enable/disable sequence
+- SGR mouse encoding
+- mouse press, drag, release, wheel report를 PTY로 전달
+
+중요한 이유:
+
+- `vim`, `less`, multiplexer 및 여러 TUI는 mouse selection, scrolling, pane interaction에 mouse reporting을 사용할 수 있다.
+- 현재 앱은 mouse drag를 native selection에만 사용한다.
+
+권장 다음 작업:
+
+- 지원할 mouse mode를 parse하고 `TerminalModes`에 저장한다.
+- native selection과 TUI mouse reporting 사이의 우선순위를 정한다.
+- mouse mode가 켜진 상태에서 AppKit mouse event를 terminal mouse report로 encode한다.
+
+## Priority 3
+
+### Cursor Style Sequence
+
+상태: `not supported`
+
+예시:
+
+- `CSI Ps SP q`
+
+중요한 이유:
+
+- editor는 block, bar, underline, blinking, steady cursor style을 요청할 수 있다.
+- 현재 renderer는 고정 block cursor만 그린다.
+
+권장 다음 작업:
+
+- cursor style을 `TerminalModes`에 추가한다.
+- cursor style sequence variant를 parse한다.
+- AppKit cursor rendering을 갱신하고 state test를 추가한다.
+
+## Priority 4
+
+### Cross-Scrollback Selection
+
+상태: `partially supported`
+
+중요한 이유:
+
+- 현재 selection/copy는 현재 보이는 snapshot 기준으로 동작한다.
+- live screen에서 scrollback으로 이어지거나 여러 scrollback page를 가로지르는 selection은 모델링되어 있지 않다.
+
+권장 다음 작업:
+
+- visible row 좌표 대신 안정적인 buffer address space 기준 selection 좌표를 정의한다.
+- 현재 visible selection 동작은 첫 fallback으로 유지한다.
+
+## Priority 5
+
+### Full xterm Compatibility Coverage
+
+상태: `not supported`
+
+중요한 이유:
+
+- xterm compatibility는 넓은 장기 목표이며 단일 acceptance criterion으로 다루면 안 된다.
+
+권장 다음 작업:
+
+- `docs/compatibility/matrix.md`를 sequence family별로 계속 확장한다.
+- smoke test 실패에서 나온 unknown row를 우선순위에 따라 승격한다.
+- 새로 지원하는 sequence마다 작은 parser/grid fixture를 우선 추가한다.
+

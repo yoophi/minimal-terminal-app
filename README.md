@@ -2,7 +2,7 @@
 
 macOS에서 사용할 안정성 우선의 터미널 에뮬레이터를 개발하는 Rust 프로젝트입니다.
 
-현재 단계는 macOS 네이티브 AppKit 창에서 login shell 출력을 표시하는 최소 기반 코드입니다.
+현재 단계는 macOS 네이티브 AppKit 창에서 login shell, terminal grid/cursor, ANSI/SGR style, scrollback, selection/copy, Korean IME composition, 그리고 1차 TUI compatibility 확장을 포함한 MVP 기반 코드입니다.
 
 ## Goals
 
@@ -21,7 +21,7 @@ macOS에서 사용할 안정성 우선의 터미널 에뮬레이터를 개발하
 개발 빌드 확인:
 
 ```bash
-cargo check
+cargo test
 ```
 
 macOS `.app` 번들 생성:
@@ -51,7 +51,16 @@ docs/
 ├── phases/
 │   ├── phase001.md
 │   ├── phase002.md
-│   └── phase003.md
+│   ├── phase003.md
+│   ├── phase004.md
+│   ├── phase005.md
+│   ├── phase006.md
+│   ├── phase007.md
+│   └── phase008.md
+├── compatibility/
+│   ├── matrix.md
+│   ├── smoke-tests.md
+│   └── known-gaps.md
 └── LOGGING.md
 
 scripts/
@@ -60,3 +69,11 @@ scripts/
 GOAL.md               # project goal and MVP scope
 ARCHITECTURE.md       # proposed architecture
 ```
+
+## Current Phase Status
+
+- Phase 001-004: AppKit scaffold, PTY pipeline, terminal core, `vte` parser, and SGR style rendering are complete.
+- Phase 005: Korean IME composition and text input stability are implemented.
+- Phase 006: Selection, copy, and scrollback UX are implemented for the current visible snapshot.
+- Phase 007: First TUI compatibility expansion is implemented.
+- Phase 008: Compatibility matrix, smoke test protocol, known gap tracking, and core compatibility evidence tests are implemented. GUI/runtime smoke scenarios remain manual.
