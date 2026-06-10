@@ -139,6 +139,12 @@
 
 Phase 011에서 `CSI 5 n`, `CSI 6 n` parser action, core response queue, app PTY response path를 구현했다. 현재 지원 범위는 `CSI 5n`의 `ESC[0n` 응답과 `CSI 6n`의 1-based cursor position report 응답이다.
 
+### 8-bit C1 CSI Introducer
+
+상태: `supported`
+
+Phase 096에서 8-bit C1 `0x9B` CSI introducer가 `ESC [` 형태와 같은 parser/state 경로를 사용한다는 자동 evidence를 추가했다. 현재 cursor movement, SGR, DSR 대표 경로가 `0x9B` 입력에서도 처리된다. 다른 C1 control family 전체 지원은 full xterm compatibility gap으로 남긴다.
+
 ### Cursor Style Sequence
 
 상태: `supported`

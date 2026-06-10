@@ -13,6 +13,17 @@ fn basic_terminal_sequences_have_core_evidence() {
 }
 
 #[test]
+fn c1_csi_sequences_have_core_evidence() {
+    let mut terminal = TerminalState::new(4, 16);
+
+    terminal.append_bytes(b"abc\r\x9b2C!\x9b1;31mred\x9b0m\x9b5n");
+
+    let snapshot = terminal.snapshot(4);
+    assert_eq!(snapshot.lines[0], "ab!red");
+    assert_eq!(terminal.take_pending_responses(), b"\x1b[0n".to_vec());
+}
+
+#[test]
 fn dec_special_graphics_have_core_evidence() {
     let mut terminal = TerminalState::new(4, 20);
 

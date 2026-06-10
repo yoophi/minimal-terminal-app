@@ -585,6 +585,17 @@ mod tests {
     }
 
     #[test]
+    fn handles_8_bit_c1_csi_sequences() {
+        let mut terminal = TerminalState::new(3, 16);
+
+        terminal.append_bytes(b"abc\r\x9b2C!\x9b1;31mred\x9b0m\x9b5n");
+
+        let snapshot = terminal.snapshot(3);
+        assert_eq!(snapshot.lines[0], "ab!red");
+        assert_eq!(terminal.take_pending_responses(), b"\x1b[0n".to_vec());
+    }
+
+    #[test]
     fn queues_primary_device_attributes_response() {
         let mut terminal = TerminalState::new(4, 10);
 

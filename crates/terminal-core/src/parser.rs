@@ -222,6 +222,13 @@ impl Parser {
             active_right_charset: self.active_right_charset,
             single_shift_charset: self.single_shift_charset,
         };
+        let normalized_bytes;
+        let bytes = if bytes.contains(&C1_CSI) {
+            normalized_bytes = normalize_c1_csi(bytes);
+            normalized_bytes.as_slice()
+        } else {
+            bytes
+        };
         self.parser.advance(&mut performer, bytes);
         self.g0_charset = performer.g0_charset;
         self.g1_charset = performer.g1_charset;
@@ -232,6 +239,21 @@ impl Parser {
         self.single_shift_charset = performer.single_shift_charset;
         performer.actions
     }
+}
+
+const C1_CSI: u8 = 0x9b;
+
+fn normalize_c1_csi(bytes: &[u8]) -> Vec<u8> {
+    let mut normalized =
+        Vec::with_capacity(bytes.len() + bytes.iter().filter(|&&b| b == C1_CSI).count());
+    for &byte in bytes {
+        if byte == C1_CSI {
+            normalized.extend_from_slice(b"\x1b[");
+        } else {
+            normalized.push(byte);
+        }
+    }
+    normalized
 }
 
 #[derive(Debug)]
@@ -3207,5 +3229,22 @@ mod tests {
             vec![Action::SetCursorStyle(CursorStyle::Bar)]
         );
         assert_eq!(parser.advance_bytes(b"\x1b[9 q"), vec![Action::Ignore]);
+    }
+
+    #[test]
+    fn parses_8_bit_c1_csi_sequences() {
+        let mut parser = Parser::default();
+        assert_eq!(
+            parser.advance_bytes(b"\x9b2C"),
+            vec![Action::CursorRight(2)]
+        );
+        assert_eq!(
+            parser.advance_bytes(b"\x9b1;31m"),
+            vec![Action::SetGraphicRendition(vec![1, 31])]
+        );
+        assert_eq!(
+            parser.advance_bytes(b"\x9b5n"),
+            vec![Action::DeviceStatusReport]
+        );
     }
 }
