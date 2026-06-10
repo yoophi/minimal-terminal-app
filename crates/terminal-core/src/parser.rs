@@ -32,6 +32,20 @@ const ISO_HEBREW_SUPPLEMENTAL: [char; 96] = [
     '\u{05e2}', '\u{05e3}', '\u{05e4}', '\u{05e5}', '\u{05e6}', '\u{05e7}', '\u{05e8}', '\u{05e9}',
     '\u{05ea}', '␦', '␦', '␦', '␦', '␦',
 ];
+const ISO_LATIN_CYRILLIC_SUPPLEMENTAL: [char; 96] = [
+    '\u{00a0}', '\u{0401}', '\u{0402}', '\u{0403}', '\u{0404}', '\u{0405}', '\u{0406}', '\u{0407}',
+    '\u{0408}', '\u{0409}', '\u{040a}', '\u{040b}', '\u{040c}', '\u{00ad}', '\u{040e}', '\u{040f}',
+    '\u{0410}', '\u{0411}', '\u{0412}', '\u{0413}', '\u{0414}', '\u{0415}', '\u{0416}', '\u{0417}',
+    '\u{0418}', '\u{0419}', '\u{041a}', '\u{041b}', '\u{041c}', '\u{041d}', '\u{041e}', '\u{041f}',
+    '\u{0420}', '\u{0421}', '\u{0422}', '\u{0423}', '\u{0424}', '\u{0425}', '\u{0426}', '\u{0427}',
+    '\u{0428}', '\u{0429}', '\u{042a}', '\u{042b}', '\u{042c}', '\u{042d}', '\u{042e}', '\u{042f}',
+    '\u{0430}', '\u{0431}', '\u{0432}', '\u{0433}', '\u{0434}', '\u{0435}', '\u{0436}', '\u{0437}',
+    '\u{0438}', '\u{0439}', '\u{043a}', '\u{043b}', '\u{043c}', '\u{043d}', '\u{043e}', '\u{043f}',
+    '\u{0440}', '\u{0441}', '\u{0442}', '\u{0443}', '\u{0444}', '\u{0445}', '\u{0446}', '\u{0447}',
+    '\u{0448}', '\u{0449}', '\u{044a}', '\u{044b}', '\u{044c}', '\u{044d}', '\u{044e}', '\u{044f}',
+    '\u{2116}', '\u{0451}', '\u{0452}', '\u{0453}', '\u{0454}', '\u{0455}', '\u{0456}', '\u{0457}',
+    '\u{0458}', '\u{0459}', '\u{045a}', '\u{045b}', '\u{045c}', '\u{00a7}', '\u{045e}', '\u{045f}',
+];
 const ISO_LATIN2_SUPPLEMENTAL: [char; 96] = [
     '\u{00a0}', '\u{0104}', '\u{02d8}', '\u{0141}', '\u{00a4}', '\u{013d}', '\u{015a}', '\u{00a7}',
     '\u{00a8}', '\u{0160}', '\u{015e}', '\u{0164}', '\u{0179}', '\u{00ad}', '\u{017d}', '\u{017b}',
@@ -150,6 +164,7 @@ enum Charset {
     Hebrew,
     IsoGreekSupplemental,
     IsoHebrewSupplemental,
+    IsoLatinCyrillicSupplemental,
     IsoLatin1Supplemental,
     IsoLatin2Supplemental,
     Italian,
@@ -554,6 +569,10 @@ impl vte::Perform for ActionCollector {
                 self.g1_charset = Charset::IsoHebrewSupplemental;
                 return;
             }
+            ([b'-'], b'L') => {
+                self.g1_charset = Charset::IsoLatinCyrillicSupplemental;
+                return;
+            }
             ([b'*'], b'0') => {
                 self.g2_charset = Charset::DecSpecialGraphics;
                 return;
@@ -676,6 +695,10 @@ impl vte::Perform for ActionCollector {
             }
             ([b'.'], b'H') => {
                 self.g2_charset = Charset::IsoHebrewSupplemental;
+                return;
+            }
+            ([b'.'], b'L') => {
+                self.g2_charset = Charset::IsoLatinCyrillicSupplemental;
                 return;
             }
             ([b'+'], b'0') => {
@@ -802,6 +825,10 @@ impl vte::Perform for ActionCollector {
                 self.g3_charset = Charset::IsoHebrewSupplemental;
                 return;
             }
+            ([b'/'], b'L') => {
+                self.g3_charset = Charset::IsoLatinCyrillicSupplemental;
+                return;
+            }
             ([b'(' | b')' | b'*' | b'+' | b'-' | b'.' | b'/'], _) => return,
             _ => Action::Ignore,
         };
@@ -838,6 +865,13 @@ fn map_printable_char(ch: char, charset: Charset) -> char {
     if charset == Charset::IsoHebrewSupplemental {
         return match ch {
             ' '..='\u{7f}' => ISO_HEBREW_SUPPLEMENTAL[ch as usize - 0x20],
+            _ => ch,
+        };
+    }
+
+    if charset == Charset::IsoLatinCyrillicSupplemental {
+        return match ch {
+            ' '..='\u{7f}' => ISO_LATIN_CYRILLIC_SUPPLEMENTAL[ch as usize - 0x20],
             _ => ch,
         };
     }
@@ -1975,6 +2009,31 @@ mod tests {
         assert_eq!(
             parser.advance_bytes(b"\x1b/H\x1b|\xc3\xa1"),
             vec![Action::Print('ב')]
+        );
+    }
+
+    #[test]
+    fn maps_iso_latin_cyrillic_supplemental_charset() {
+        let mut parser = Parser::default();
+
+        assert_eq!(
+            parser.advance_bytes(b"\x1b-L\x1b~\xc2\xa1\xc2\xb0\xc3\x80\xc3\x90\xc3\xb0\xc3\xbf"),
+            vec![
+                Action::Print('Ё'),
+                Action::Print('А'),
+                Action::Print('Р'),
+                Action::Print('а'),
+                Action::Print('№'),
+                Action::Print('џ'),
+            ]
+        );
+        assert_eq!(
+            parser.advance_bytes(b"\x1b.L\x1b}\xc2\xa2"),
+            vec![Action::Print('Ђ')]
+        );
+        assert_eq!(
+            parser.advance_bytes(b"\x1b/L\x1b|\xc3\xa1"),
+            vec![Action::Print('с')]
         );
     }
 
