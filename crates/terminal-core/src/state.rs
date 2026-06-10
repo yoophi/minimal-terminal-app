@@ -728,6 +728,15 @@ mod tests {
     }
 
     #[test]
+    fn renders_dec_hebrew_supplemental_charset() {
+        let mut terminal = TerminalState::new(4, 27);
+
+        terminal.append_bytes(b"\x1b(\"4!\"#%()*+9:;<=?@`abcxyz{|}~\x1b(B!");
+
+        assert_eq!(terminal.snapshot(4).lines[0], "¡¢£¥¨©×«¹÷»¼½¿␦אבגדרשת␦␦␦␦!");
+    }
+
+    #[test]
     fn renders_british_nrcs_charset() {
         let mut terminal = TerminalState::new(4, 20);
 

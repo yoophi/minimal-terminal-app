@@ -96,6 +96,7 @@ enum Charset {
     British,
     DecCyrillic,
     DecGreekSupplemental,
+    DecHebrewSupplemental,
     DecSupplementalGraphics,
     DecSpecialGraphics,
     DecTechnical,
@@ -328,6 +329,10 @@ impl vte::Perform for ActionCollector {
                 self.g0_charset = Charset::DecGreekSupplemental;
                 return;
             }
+            ([b'(', b'"'], b'4') => {
+                self.g0_charset = Charset::DecHebrewSupplemental;
+                return;
+            }
             ([b'(', b'%'], b'=') => {
                 self.g0_charset = Charset::Hebrew;
                 return;
@@ -426,6 +431,10 @@ impl vte::Perform for ActionCollector {
             }
             ([b')', b'"'], b'?') => {
                 self.g1_charset = Charset::DecGreekSupplemental;
+                return;
+            }
+            ([b')', b'"'], b'4') => {
+                self.g1_charset = Charset::DecHebrewSupplemental;
                 return;
             }
             ([b')', b'%'], b'=') => {
@@ -528,6 +537,10 @@ impl vte::Perform for ActionCollector {
                 self.g2_charset = Charset::DecGreekSupplemental;
                 return;
             }
+            ([b'*', b'"'], b'4') => {
+                self.g2_charset = Charset::DecHebrewSupplemental;
+                return;
+            }
             ([b'*', b'%'], b'=') => {
                 self.g2_charset = Charset::Hebrew;
                 return;
@@ -628,6 +641,10 @@ impl vte::Perform for ActionCollector {
                 self.g3_charset = Charset::DecGreekSupplemental;
                 return;
             }
+            ([b'+', b'"'], b'4') => {
+                self.g3_charset = Charset::DecHebrewSupplemental;
+                return;
+            }
             ([b'+', b'%'], b'=') => {
                 self.g3_charset = Charset::Hebrew;
                 return;
@@ -688,6 +705,62 @@ impl vte::Perform for ActionCollector {
 }
 
 fn map_printable_char(ch: char, charset: Charset) -> char {
+    if charset == Charset::DecHebrewSupplemental {
+        return match ch {
+            '!' => '¡',
+            '"' => '¢',
+            '#' => '£',
+            '$' | '&' | ',' | '-' | '.' | '/' | '4' | '8' | '>' | '@'..='_' | '{'..='~' => '␦',
+            '%' => '¥',
+            '\'' => '§',
+            '(' => '¨',
+            ')' => '©',
+            '*' => '×',
+            '+' => '«',
+            '0' => '°',
+            '1' => '±',
+            '2' => '²',
+            '3' => '³',
+            '5' => 'µ',
+            '6' => '¶',
+            '7' => '·',
+            '9' => '¹',
+            ':' => '÷',
+            ';' => '»',
+            '<' => '¼',
+            '=' => '½',
+            '?' => '¿',
+            '`' => 'א',
+            'a' => 'ב',
+            'b' => 'ג',
+            'c' => 'ד',
+            'd' => 'ה',
+            'e' => 'ו',
+            'f' => 'ז',
+            'g' => 'ח',
+            'h' => 'ט',
+            'i' => 'י',
+            'j' => 'ך',
+            'k' => 'כ',
+            'l' => 'ל',
+            'm' => 'ם',
+            'n' => 'מ',
+            'o' => 'ן',
+            'p' => 'נ',
+            'q' => 'ס',
+            'r' => 'ע',
+            's' => 'ף',
+            't' => 'פ',
+            'u' => 'ץ',
+            'v' => 'צ',
+            'w' => 'ק',
+            'x' => 'ר',
+            'y' => 'ש',
+            'z' => 'ת',
+            _ => ch,
+        };
+    }
+
     if charset == Charset::DecGreekSupplemental {
         return match ch {
             '!' => '¡',
@@ -1815,6 +1888,60 @@ mod tests {
         assert_eq!(
             parser.advance_bytes(b"\x1b)\"?\x1b~\xc3\x80"),
             vec![Action::Print('ϊ')]
+        );
+    }
+
+    #[test]
+    fn maps_dec_hebrew_supplemental_charset() {
+        let mut parser = Parser::default();
+
+        assert_eq!(
+            parser.advance_bytes(b"\x1b(\"4!\"#%()*+01235679:;<=?@_`abcxyz{|}~\x1b(B!"),
+            vec![
+                Action::Print('¡'),
+                Action::Print('¢'),
+                Action::Print('£'),
+                Action::Print('¥'),
+                Action::Print('¨'),
+                Action::Print('©'),
+                Action::Print('×'),
+                Action::Print('«'),
+                Action::Print('°'),
+                Action::Print('±'),
+                Action::Print('²'),
+                Action::Print('³'),
+                Action::Print('µ'),
+                Action::Print('¶'),
+                Action::Print('·'),
+                Action::Print('¹'),
+                Action::Print('÷'),
+                Action::Print('»'),
+                Action::Print('¼'),
+                Action::Print('½'),
+                Action::Print('¿'),
+                Action::Print('␦'),
+                Action::Print('␦'),
+                Action::Print('א'),
+                Action::Print('ב'),
+                Action::Print('ג'),
+                Action::Print('ד'),
+                Action::Print('ר'),
+                Action::Print('ש'),
+                Action::Print('ת'),
+                Action::Print('␦'),
+                Action::Print('␦'),
+                Action::Print('␦'),
+                Action::Print('␦'),
+                Action::Print('!'),
+            ]
+        );
+        assert_eq!(
+            parser.advance_bytes(b"\x1b*\"4\x1bN`x"),
+            vec![Action::Print('א'), Action::Print('x')]
+        );
+        assert_eq!(
+            parser.advance_bytes(b"\x1b)\"4\x1b~\xc3\xa0"),
+            vec![Action::Print('א')]
         );
     }
 
