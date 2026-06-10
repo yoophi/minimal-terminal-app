@@ -356,6 +356,17 @@ if command -v fzf >/dev/null 2>&1; then
     900 \
     1200 \
     700
+  run_case_with_three_followups \
+    "fzf-shell-ctrl-r" \
+    "print -s 'printf \"fzf-history-ok\\\\n\"'; source /opt/homebrew/opt/fzf/shell/key-bindings.zsh; printf \"fzf-history-ready\\n\""$'\n' \
+    $'\022' \
+    "fzf-history-ok"$'\r' \
+    $'\r' \
+    "fzf-history-ok" \
+    2200 \
+    900 \
+    1200 \
+    700
   ran=1
 else
   echo "app target smoke skipped: fzf not found"

@@ -167,6 +167,7 @@ scripts/run-app-target-smokes.sh
 - `fzf-multi-select`: `printf 'alpha\nbeta\n' | fzf -m` 실행 후 query input `b`, Tab, Enter로 multi-select 결과 확인
 - `fzf-shell-ctrl-t`: zsh fzf key binding source 후 Ctrl-T widget으로 파일 경로를 command line에 삽입하고 실행 확인
 - `fzf-shell-alt-c`: zsh fzf key binding source 후 Alt-C widget으로 directory를 선택하고 cwd 변경 확인
+- `fzf-shell-ctrl-r`: zsh fzf key binding source 후 Ctrl-R widget으로 history command를 선택하고 실행 확인
 - `vim-edit-write-quit`: `vim --clean -Nu NONE -n <tempfile>` 실행 후 insert, write, quit, shell 복원 확인
 - `less-basic-quit`: `printf 'one\ntwo\nthree\n' | less` 실행 후 follow-up `q`로 pager 종료 확인
 - `git-log`: `git log --oneline -1 --no-color`
