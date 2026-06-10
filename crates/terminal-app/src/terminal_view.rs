@@ -5,10 +5,11 @@ use objc2::rc::{autoreleasepool, Retained};
 use objc2::runtime::AnyObject;
 use objc2::{define_class, msg_send, sel, ClassType, DefinedClass, MainThreadOnly};
 use objc2_app_kit::{
-    NSColor, NSEvent, NSFont, NSRectFill, NSResponder, NSView, NSWindow,
+    NSColor, NSEvent, NSFont, NSFontAttributeName, NSForegroundColorAttributeName, NSRectFill,
+    NSResponder, NSView, NSWindow,
 };
 use objc2_foundation::{
-    MainThreadMarker, NSObjectProtocol, NSPoint, NSRect, NSString, NSTimer,
+    MainThreadMarker, NSMutableDictionary, NSObjectProtocol, NSPoint, NSRect, NSString, NSTimer,
 };
 
 use crate::logging;
@@ -18,6 +19,11 @@ use crate::terminal_buffer::TerminalBuffer;
 const PADDING_X: f64 = 12.0;
 const PADDING_Y: f64 = 14.0;
 const FONT_SIZE: f64 = 14.0;
+const TERMINAL_FONT_NAMES: &[&str] = &[
+    "JetBrainsMonoNFM-Regular",
+    "JetBrainsMonoNF-Regular",
+    "JetBrainsMono-Regular",
+];
 
 pub(crate) struct TerminalViewIvars {
     buffer: Arc<Mutex<TerminalBuffer>>,
@@ -122,17 +128,50 @@ fn draw_background(rect: NSRect) {
 }
 
 fn draw_terminal_text(text: &str) {
-    NSColor::whiteColor().set();
-    if let Some(font) = NSFont::userFixedPitchFontOfSize(FONT_SIZE) {
-        font.set();
-    }
-
+    let attributes = terminal_text_attributes();
     let string = NSString::from_str(text);
     let _: () = unsafe {
         msg_send![
             &*string,
             drawAtPoint: NSPoint::new(PADDING_X, PADDING_Y),
-            withAttributes: Option::<&AnyObject>::None
+            withAttributes: Some(&*attributes)
         ]
     };
+}
+
+fn terminal_text_attributes() -> Retained<NSMutableDictionary> {
+    let attributes = NSMutableDictionary::new();
+    let color = NSColor::whiteColor();
+    let color_object: &AnyObject = color.as_ref();
+
+    let _: () = unsafe {
+        msg_send![
+            &*attributes,
+            setObject: color_object,
+            forKey: &*NSForegroundColorAttributeName
+        ]
+    };
+
+    if let Some(font) = terminal_font() {
+        let font_object: &AnyObject = font.as_ref();
+        let _: () = unsafe {
+            msg_send![
+                &*attributes,
+                setObject: font_object,
+                forKey: &*NSFontAttributeName
+            ]
+        };
+    }
+
+    attributes
+}
+
+fn terminal_font() -> Option<Retained<NSFont>> {
+    for font_name in TERMINAL_FONT_NAMES {
+        if let Some(font) = NSFont::fontWithName_size(&NSString::from_str(font_name), FONT_SIZE) {
+            return Some(font);
+        }
+    }
+
+    NSFont::userFixedPitchFontOfSize(FONT_SIZE)
 }
