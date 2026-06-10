@@ -710,6 +710,15 @@ mod tests {
     }
 
     #[test]
+    fn renders_dec_cyrillic_charset() {
+        let mut terminal = TerminalState::new(4, 25);
+
+        terminal.append_bytes(b"\x1b(&4@ABCXYZ[\\]^_`abcxyz{|}~!\x1b(B!");
+
+        assert_eq!(terminal.snapshot(4).lines[0], "юабцьызшэщчъЮАБЦЬЫЗШЭЩЧ␦!");
+    }
+
+    #[test]
     fn renders_british_nrcs_charset() {
         let mut terminal = TerminalState::new(4, 20);
 

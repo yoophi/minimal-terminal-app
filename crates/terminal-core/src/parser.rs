@@ -94,6 +94,7 @@ impl Default for Parser {
 enum Charset {
     Ascii,
     British,
+    DecCyrillic,
     DecSupplementalGraphics,
     DecSpecialGraphics,
     DecTechnical,
@@ -334,6 +335,10 @@ impl vte::Perform for ActionCollector {
                 self.g0_charset = Charset::Russian;
                 return;
             }
+            ([b'(', b'&'], b'4') => {
+                self.g0_charset = Charset::DecCyrillic;
+                return;
+            }
             ([b'(', b'%'], b'3') => {
                 self.g0_charset = Charset::SerboCroatian;
                 return;
@@ -424,6 +429,10 @@ impl vte::Perform for ActionCollector {
             }
             ([b')', b'&'], b'5') => {
                 self.g1_charset = Charset::Russian;
+                return;
+            }
+            ([b')', b'&'], b'4') => {
+                self.g1_charset = Charset::DecCyrillic;
                 return;
             }
             ([b')', b'%'], b'3') => {
@@ -518,6 +527,10 @@ impl vte::Perform for ActionCollector {
                 self.g2_charset = Charset::Russian;
                 return;
             }
+            ([b'*', b'&'], b'4') => {
+                self.g2_charset = Charset::DecCyrillic;
+                return;
+            }
             ([b'*', b'%'], b'3') => {
                 self.g2_charset = Charset::SerboCroatian;
                 return;
@@ -610,6 +623,10 @@ impl vte::Perform for ActionCollector {
                 self.g3_charset = Charset::Russian;
                 return;
             }
+            ([b'+', b'&'], b'4') => {
+                self.g3_charset = Charset::DecCyrillic;
+                return;
+            }
             ([b'+', b'%'], b'3') => {
                 self.g3_charset = Charset::SerboCroatian;
                 return;
@@ -654,6 +671,76 @@ impl vte::Perform for ActionCollector {
 }
 
 fn map_printable_char(ch: char, charset: Charset) -> char {
+    if charset == Charset::DecCyrillic {
+        return match ch {
+            '!'..='?' => '␦',
+            '@' => 'ю',
+            'A' => 'а',
+            'B' => 'б',
+            'C' => 'ц',
+            'D' => 'д',
+            'E' => 'е',
+            'F' => 'ф',
+            'G' => 'г',
+            'H' => 'х',
+            'I' => 'и',
+            'J' => 'й',
+            'K' => 'к',
+            'L' => 'л',
+            'M' => 'м',
+            'N' => 'н',
+            'O' => 'о',
+            'P' => 'п',
+            'Q' => 'я',
+            'R' => 'р',
+            'S' => 'с',
+            'T' => 'т',
+            'U' => 'у',
+            'V' => 'ж',
+            'W' => 'в',
+            'X' => 'ь',
+            'Y' => 'ы',
+            'Z' => 'з',
+            '[' => 'ш',
+            '\\' => 'э',
+            ']' => 'щ',
+            '^' => 'ч',
+            '_' => 'ъ',
+            '`' => 'Ю',
+            'a' => 'А',
+            'b' => 'Б',
+            'c' => 'Ц',
+            'd' => 'Д',
+            'e' => 'Е',
+            'f' => 'Ф',
+            'g' => 'Г',
+            'h' => 'Х',
+            'i' => 'И',
+            'j' => 'Й',
+            'k' => 'К',
+            'l' => 'Л',
+            'm' => 'М',
+            'n' => 'Н',
+            'o' => 'О',
+            'p' => 'П',
+            'q' => 'Я',
+            'r' => 'Р',
+            's' => 'С',
+            't' => 'Т',
+            'u' => 'У',
+            'v' => 'Ж',
+            'w' => 'В',
+            'x' => 'Ь',
+            'y' => 'Ы',
+            'z' => 'З',
+            '{' => 'Ш',
+            '|' => 'Э',
+            '}' => 'Щ',
+            '~' => 'Ч',
+            _ => ch,
+        };
+    }
+
     if charset == Charset::DecTechnical {
         return match ch {
             '!' => '⎷',
@@ -1515,6 +1602,50 @@ mod tests {
         assert_eq!(
             parser.advance_bytes(b"\x1b)>\x1b~\xc2\xa1"),
             vec![Action::Print('⎷')]
+        );
+    }
+
+    #[test]
+    fn maps_dec_cyrillic_charset() {
+        let mut parser = Parser::default();
+
+        assert_eq!(
+            parser.advance_bytes(b"\x1b(&4@ABCXYZ[\\]^_`abcxyz{|}~!\x1b(B!"),
+            vec![
+                Action::Print('ю'),
+                Action::Print('а'),
+                Action::Print('б'),
+                Action::Print('ц'),
+                Action::Print('ь'),
+                Action::Print('ы'),
+                Action::Print('з'),
+                Action::Print('ш'),
+                Action::Print('э'),
+                Action::Print('щ'),
+                Action::Print('ч'),
+                Action::Print('ъ'),
+                Action::Print('Ю'),
+                Action::Print('А'),
+                Action::Print('Б'),
+                Action::Print('Ц'),
+                Action::Print('Ь'),
+                Action::Print('Ы'),
+                Action::Print('З'),
+                Action::Print('Ш'),
+                Action::Print('Э'),
+                Action::Print('Щ'),
+                Action::Print('Ч'),
+                Action::Print('␦'),
+                Action::Print('!'),
+            ]
+        );
+        assert_eq!(
+            parser.advance_bytes(b"\x1b*&4\x1bN@x"),
+            vec![Action::Print('ю'), Action::Print('x')]
+        );
+        assert_eq!(
+            parser.advance_bytes(b"\x1b)&4\x1b~\xc3\x80"),
+            vec![Action::Print('ю')]
         );
     }
 
