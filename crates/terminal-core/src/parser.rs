@@ -95,6 +95,7 @@ enum Charset {
     Ascii,
     British,
     DecCyrillic,
+    DecGreekSupplemental,
     DecSupplementalGraphics,
     DecSpecialGraphics,
     DecTechnical,
@@ -323,6 +324,10 @@ impl vte::Perform for ActionCollector {
                 self.g0_charset = Charset::Greek;
                 return;
             }
+            ([b'(', b'"'], b'?') => {
+                self.g0_charset = Charset::DecGreekSupplemental;
+                return;
+            }
             ([b'(', b'%'], b'=') => {
                 self.g0_charset = Charset::Hebrew;
                 return;
@@ -417,6 +422,10 @@ impl vte::Perform for ActionCollector {
             }
             ([b')', b'"'], b'>') => {
                 self.g1_charset = Charset::Greek;
+                return;
+            }
+            ([b')', b'"'], b'?') => {
+                self.g1_charset = Charset::DecGreekSupplemental;
                 return;
             }
             ([b')', b'%'], b'=') => {
@@ -515,6 +524,10 @@ impl vte::Perform for ActionCollector {
                 self.g2_charset = Charset::Greek;
                 return;
             }
+            ([b'*', b'"'], b'?') => {
+                self.g2_charset = Charset::DecGreekSupplemental;
+                return;
+            }
             ([b'*', b'%'], b'=') => {
                 self.g2_charset = Charset::Hebrew;
                 return;
@@ -611,6 +624,10 @@ impl vte::Perform for ActionCollector {
                 self.g3_charset = Charset::Greek;
                 return;
             }
+            ([b'+', b'"'], b'?') => {
+                self.g3_charset = Charset::DecGreekSupplemental;
+                return;
+            }
             ([b'+', b'%'], b'=') => {
                 self.g3_charset = Charset::Hebrew;
                 return;
@@ -671,6 +688,94 @@ impl vte::Perform for ActionCollector {
 }
 
 fn map_printable_char(ch: char, charset: Charset) -> char {
+    if charset == Charset::DecGreekSupplemental {
+        return match ch {
+            '!' => '¡',
+            '"' => '¢',
+            '#' => '£',
+            '$' | '&' | ',' | '-' | '.' | '/' | '4' | '8' | '>' | 'P' | '^' | 'p' | '~' => '␦',
+            '%' => '¥',
+            '\'' => '§',
+            '(' => '¤',
+            ')' => '©',
+            '*' => 'ª',
+            '+' => '«',
+            '0' => '°',
+            '1' => '±',
+            '2' => '²',
+            '3' => '³',
+            '5' => 'µ',
+            '6' => '¶',
+            '7' => '·',
+            '9' => '¹',
+            ':' => 'º',
+            ';' => '»',
+            '<' => '¼',
+            '=' => '½',
+            '?' => '¿',
+            '@' => 'ϊ',
+            'A' => 'Α',
+            'B' => 'Β',
+            'C' => 'Γ',
+            'D' => 'Δ',
+            'E' => 'Ε',
+            'F' => 'Ζ',
+            'G' => 'Η',
+            'H' => 'Θ',
+            'I' => 'Ι',
+            'J' => 'Κ',
+            'K' => 'Λ',
+            'L' => 'Μ',
+            'M' => 'Ν',
+            'N' => 'Ξ',
+            'O' => 'Ο',
+            'Q' => 'Π',
+            'R' => 'Ρ',
+            'S' => 'Σ',
+            'T' => 'Τ',
+            'U' => 'Υ',
+            'V' => 'Φ',
+            'W' => 'Χ',
+            'X' => 'Ψ',
+            'Y' => 'Ω',
+            'Z' => 'ά',
+            '[' => 'έ',
+            '\\' => 'ή',
+            ']' => 'ί',
+            '_' => 'ό',
+            '`' => 'ϋ',
+            'a' => 'α',
+            'b' => 'β',
+            'c' => 'γ',
+            'd' => 'δ',
+            'e' => 'ε',
+            'f' => 'ζ',
+            'g' => 'η',
+            'h' => 'θ',
+            'i' => 'ι',
+            'j' => 'κ',
+            'k' => 'λ',
+            'l' => 'μ',
+            'm' => 'ν',
+            'n' => 'ξ',
+            'o' => 'ο',
+            'q' => 'π',
+            'r' => 'ρ',
+            's' => 'σ',
+            't' => 'τ',
+            'u' => 'υ',
+            'v' => 'φ',
+            'w' => 'χ',
+            'x' => 'ψ',
+            'y' => 'ω',
+            'z' => 'ς',
+            '{' => 'ύ',
+            '|' => 'ώ',
+            '}' => '΄',
+            _ => ch,
+        };
+    }
+
     if charset == Charset::DecCyrillic {
         return match ch {
             '!'..='?' => '␦',
@@ -1646,6 +1751,70 @@ mod tests {
         assert_eq!(
             parser.advance_bytes(b"\x1b)&4\x1b~\xc3\x80"),
             vec![Action::Print('ю')]
+        );
+    }
+
+    #[test]
+    fn maps_dec_greek_supplemental_charset() {
+        let mut parser = Parser::default();
+
+        assert_eq!(
+            parser.advance_bytes(b"\x1b(\"?!\"#%()*+01235679:;<=?@ABCXYZ[\\]^_`abcxyz{|}~\x1b(B!"),
+            vec![
+                Action::Print('¡'),
+                Action::Print('¢'),
+                Action::Print('£'),
+                Action::Print('¥'),
+                Action::Print('¤'),
+                Action::Print('©'),
+                Action::Print('ª'),
+                Action::Print('«'),
+                Action::Print('°'),
+                Action::Print('±'),
+                Action::Print('²'),
+                Action::Print('³'),
+                Action::Print('µ'),
+                Action::Print('¶'),
+                Action::Print('·'),
+                Action::Print('¹'),
+                Action::Print('º'),
+                Action::Print('»'),
+                Action::Print('¼'),
+                Action::Print('½'),
+                Action::Print('¿'),
+                Action::Print('ϊ'),
+                Action::Print('Α'),
+                Action::Print('Β'),
+                Action::Print('Γ'),
+                Action::Print('Ψ'),
+                Action::Print('Ω'),
+                Action::Print('ά'),
+                Action::Print('έ'),
+                Action::Print('ή'),
+                Action::Print('ί'),
+                Action::Print('␦'),
+                Action::Print('ό'),
+                Action::Print('ϋ'),
+                Action::Print('α'),
+                Action::Print('β'),
+                Action::Print('γ'),
+                Action::Print('ψ'),
+                Action::Print('ω'),
+                Action::Print('ς'),
+                Action::Print('ύ'),
+                Action::Print('ώ'),
+                Action::Print('΄'),
+                Action::Print('␦'),
+                Action::Print('!'),
+            ]
+        );
+        assert_eq!(
+            parser.advance_bytes(b"\x1b*\"?\x1bN@x"),
+            vec![Action::Print('ϊ'), Action::Print('x')]
+        );
+        assert_eq!(
+            parser.advance_bytes(b"\x1b)\"?\x1b~\xc3\x80"),
+            vec![Action::Print('ϊ')]
         );
     }
 
