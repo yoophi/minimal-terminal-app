@@ -104,6 +104,7 @@ enum Charset {
     NorwegianDanish,
     Spanish,
     Swedish,
+    Swiss,
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -307,6 +308,10 @@ impl vte::Perform for ActionCollector {
                 self.g0_charset = Charset::Spanish;
                 return;
             }
+            ([b'('], b'=') => {
+                self.g0_charset = Charset::Swiss;
+                return;
+            }
             ([b'('], b'`' | b'E' | b'6') => {
                 self.g0_charset = Charset::NorwegianDanish;
                 return;
@@ -353,6 +358,10 @@ impl vte::Perform for ActionCollector {
             }
             ([b')'], b'Z') => {
                 self.g1_charset = Charset::Spanish;
+                return;
+            }
+            ([b')'], b'=') => {
+                self.g1_charset = Charset::Swiss;
                 return;
             }
             ([b')'], b'`' | b'E' | b'6') => {
@@ -403,6 +412,10 @@ impl vte::Perform for ActionCollector {
                 self.g2_charset = Charset::Spanish;
                 return;
             }
+            ([b'*'], b'=') => {
+                self.g2_charset = Charset::Swiss;
+                return;
+            }
             ([b'*'], b'`' | b'E' | b'6') => {
                 self.g2_charset = Charset::NorwegianDanish;
                 return;
@@ -449,6 +462,10 @@ impl vte::Perform for ActionCollector {
             }
             ([b'+'], b'Z') => {
                 self.g3_charset = Charset::Spanish;
+                return;
+            }
+            ([b'+'], b'=') => {
+                self.g3_charset = Charset::Swiss;
                 return;
             }
             ([b'+'], b'`' | b'E' | b'6') => {
@@ -530,6 +547,24 @@ fn map_printable_char(ch: char, charset: Charset) -> char {
             '|' => 'ö',
             '}' => 'å',
             '~' => 'ü',
+            _ => ch,
+        };
+    }
+
+    if charset == Charset::Swiss {
+        return match ch {
+            '#' => 'ù',
+            '@' => 'à',
+            '[' => 'é',
+            '\\' => 'ç',
+            ']' => 'ê',
+            '^' => 'î',
+            '_' => 'è',
+            '`' => 'ô',
+            '{' => 'ä',
+            '|' => 'ö',
+            '}' => 'ü',
+            '~' => 'û',
             _ => ch,
         };
     }
@@ -1310,6 +1345,38 @@ mod tests {
         assert_eq!(
             parser.advance_bytes(b"\x1b)Q\x1b~\xc3\xbb"),
             vec![Action::Print('é')]
+        );
+    }
+
+    #[test]
+    fn maps_swiss_nrcs_charset() {
+        let mut parser = Parser::default();
+
+        assert_eq!(
+            parser.advance_bytes(b"\x1b(=#@[\\]^_`{|}~\x1b(B#"),
+            vec![
+                Action::Print('ù'),
+                Action::Print('à'),
+                Action::Print('é'),
+                Action::Print('ç'),
+                Action::Print('ê'),
+                Action::Print('î'),
+                Action::Print('è'),
+                Action::Print('ô'),
+                Action::Print('ä'),
+                Action::Print('ö'),
+                Action::Print('ü'),
+                Action::Print('û'),
+                Action::Print('#'),
+            ]
+        );
+        assert_eq!(
+            parser.advance_bytes(b"\x1b*=\x1bN~x"),
+            vec![Action::Print('û'), Action::Print('x')]
+        );
+        assert_eq!(
+            parser.advance_bytes(b"\x1b)=\x1b~\xc3\xbb"),
+            vec![Action::Print('ä')]
         );
     }
 
