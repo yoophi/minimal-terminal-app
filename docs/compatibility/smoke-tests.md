@@ -160,6 +160,7 @@ scripts/run-app-target-smokes.sh
 현재 자동 target:
 
 - `fzf-filter`: `printf 'alpha\nbeta\n' | fzf --filter alpha`
+- `fzf-interactive`: `printf 'alpha\nbeta\n' | fzf` 실행 후 query input `b`로 interactive redraw 확인
 - `git-log`: `git log --oneline -1 --no-color`
 - `tmux-version`: `tmux -V`
 - `htop-version`: `htop --version`
