@@ -101,6 +101,7 @@ enum Charset {
     German,
     Italian,
     Spanish,
+    Swedish,
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -280,6 +281,10 @@ impl vte::Perform for ActionCollector {
                 self.g0_charset = Charset::Finnish;
                 return;
             }
+            ([b'('], b'H' | b'7') => {
+                self.g0_charset = Charset::Swedish;
+                return;
+            }
             ([b'('], b'R' | b'f') => {
                 self.g0_charset = Charset::French;
                 return;
@@ -314,6 +319,10 @@ impl vte::Perform for ActionCollector {
             }
             ([b')'], b'C') => {
                 self.g1_charset = Charset::Finnish;
+                return;
+            }
+            ([b')'], b'H' | b'7') => {
+                self.g1_charset = Charset::Swedish;
                 return;
             }
             ([b')'], b'R' | b'f') => {
@@ -352,6 +361,10 @@ impl vte::Perform for ActionCollector {
                 self.g2_charset = Charset::Finnish;
                 return;
             }
+            ([b'*'], b'H' | b'7') => {
+                self.g2_charset = Charset::Swedish;
+                return;
+            }
             ([b'*'], b'R' | b'f') => {
                 self.g2_charset = Charset::French;
                 return;
@@ -386,6 +399,10 @@ impl vte::Perform for ActionCollector {
             }
             ([b'+'], b'C') => {
                 self.g3_charset = Charset::Finnish;
+                return;
+            }
+            ([b'+'], b'H' | b'7') => {
+                self.g3_charset = Charset::Swedish;
                 return;
             }
             ([b'+'], b'R' | b'f') => {
@@ -454,6 +471,22 @@ fn map_printable_char(ch: char, charset: Charset) -> char {
 
     if charset == Charset::Finnish {
         return match ch {
+            '[' => 'Ä',
+            '\\' => 'Ö',
+            ']' => 'Å',
+            '^' => 'Ü',
+            '`' => 'é',
+            '{' => 'ä',
+            '|' => 'ö',
+            '}' => 'å',
+            '~' => 'ü',
+            _ => ch,
+        };
+    }
+
+    if charset == Charset::Swedish {
+        return match ch {
+            '@' => 'É',
             '[' => 'Ä',
             '\\' => 'Ö',
             ']' => 'Å',
@@ -1120,6 +1153,36 @@ mod tests {
         assert_eq!(
             parser.advance_bytes(b"\x1b)4\x1b~\xc3\xbb"),
             vec![Action::Print('¨')]
+        );
+    }
+
+    #[test]
+    fn maps_swedish_nrcs_charset() {
+        let mut parser = Parser::default();
+
+        assert_eq!(
+            parser.advance_bytes(b"\x1b(H@[\\]^`{|}~\x1b(B@"),
+            vec![
+                Action::Print('É'),
+                Action::Print('Ä'),
+                Action::Print('Ö'),
+                Action::Print('Å'),
+                Action::Print('Ü'),
+                Action::Print('é'),
+                Action::Print('ä'),
+                Action::Print('ö'),
+                Action::Print('å'),
+                Action::Print('ü'),
+                Action::Print('@'),
+            ]
+        );
+        assert_eq!(
+            parser.advance_bytes(b"\x1b*7\x1bN~x"),
+            vec![Action::Print('ü'), Action::Print('x')]
+        );
+        assert_eq!(
+            parser.advance_bytes(b"\x1b)H\x1b~\xc3\xbb"),
+            vec![Action::Print('ä')]
         );
     }
 
