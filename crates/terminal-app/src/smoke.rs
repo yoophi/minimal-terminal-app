@@ -5,6 +5,7 @@ use std::thread;
 use std::time::Duration;
 
 use crate::logging;
+use crate::mouse;
 use crate::pty::PtyWriter;
 use crate::terminal_buffer::TerminalBuffer;
 
@@ -16,11 +17,13 @@ pub(crate) fn start_if_requested(buffer: Arc<Mutex<TerminalBuffer>>, writer: Pty
     let input = env::var("MINIMAL_TERMINAL_SMOKE_INPUT").ok();
     let followup_input = env::var("MINIMAL_TERMINAL_SMOKE_FOLLOWUP_INPUT").ok();
     let second_followup_input = env::var("MINIMAL_TERMINAL_SMOKE_SECOND_FOLLOWUP_INPUT").ok();
+    let mouse_report = env::var("MINIMAL_TERMINAL_SMOKE_MOUSE_REPORT").ok();
     let snapshot_path = env::var("MINIMAL_TERMINAL_SMOKE_SNAPSHOT_PATH").ok();
 
     if input.is_none()
         && followup_input.is_none()
         && second_followup_input.is_none()
+        && mouse_report.is_none()
         && snapshot_path.is_none()
     {
         return;
@@ -60,6 +63,18 @@ pub(crate) fn start_if_requested(buffer: Arc<Mutex<TerminalBuffer>>, writer: Pty
             }
         }
 
+        if let Some(report) = mouse_report {
+            thread::sleep(Duration::from_millis(env_u64(
+                "MINIMAL_TERMINAL_SMOKE_MOUSE_REPORT_DELAY_MS",
+                FOLLOWUP_INPUT_DELAY_MS,
+            )));
+            if let Some(bytes) = mouse_report_bytes(&buffer, &report) {
+                if let Err(error) = writer.write_all(&bytes) {
+                    logging::pty_error(&format!("smoke mouse report write failed: {error}"));
+                }
+            }
+        }
+
         thread::sleep(Duration::from_millis(env_u64(
             "MINIMAL_TERMINAL_SMOKE_SNAPSHOT_DELAY_MS",
             SNAPSHOT_DELAY_MS,
@@ -82,6 +97,33 @@ pub(crate) fn start_if_requested(buffer: Arc<Mutex<TerminalBuffer>>, writer: Pty
             std::process::exit(0);
         }
     });
+}
+
+fn mouse_report_bytes(buffer: &Arc<Mutex<TerminalBuffer>>, report: &str) -> Option<Vec<u8>> {
+    let modes = buffer
+        .lock()
+        .map(|buffer| buffer.snapshot(1).modes)
+        .unwrap_or_default();
+
+    if !modes.mouse_reporting {
+        logging::pty_error("smoke mouse report skipped: mouse reporting mode is disabled");
+        return None;
+    }
+
+    let bytes = match report {
+        "left-press" if modes.sgr_mouse => {
+            mouse::sgr_mouse_report(mouse::LEFT_BUTTON, 0, 1, 2, false)
+        }
+        "left-press" => mouse::legacy_mouse_report(mouse::LEFT_BUTTON, 0, 1, 2, false),
+        _ => {
+            logging::pty_error(&format!(
+                "smoke mouse report skipped: unknown report {report}"
+            ));
+            return None;
+        }
+    };
+
+    Some(bytes)
 }
 
 fn env_u64(name: &str, default: u64) -> u64 {

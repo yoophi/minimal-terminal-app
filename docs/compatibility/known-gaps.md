@@ -10,16 +10,17 @@
 
 예시:
 
-- runtime `vim`/`less` mouse smoke evidence
+- GUI synthetic event 기반 `vim`/`less` mouse smoke evidence
 
 중요한 이유:
 
 - `vim`, `less`, multiplexer 및 여러 TUI는 mouse selection, scrolling, pane interaction에 mouse reporting을 사용할 수 있다.
 - 현재 앱은 mouse drag를 native selection에만 사용한다.
+- Phase 045에서 app 내부 PTY의 mode-gated SGR mouse report readback은 자동화했다.
 
 권장 다음 작업:
 
-- `vim` 또는 `less` mouse smoke 결과를 기록한다.
+- GUI synthetic `NSEvent` 또는 수동 smoke로 `vim`/`less` mouse workflow 결과를 기록한다.
 
 ## Priority 2
 
@@ -176,6 +177,12 @@ Phase 024에서 SGR mouse mode가 꺼진 상태의 legacy X10-style mouse report
 상태: `supported`
 
 Phase 026에서 Shift, Option, Control modifier bit를 legacy 및 SGR mouse report code에 반영했다. Option은 xterm Meta modifier bit로 인코딩한다. runtime `vim`/`less` mouse smoke evidence는 Mouse Reporting gap으로 남긴다.
+
+### Mode-gated SGR Mouse Report App Smoke
+
+상태: `partially supported`
+
+Phase 045에서 `scripts/run-app-target-smokes.sh`에 `mouse-sgr-report` target을 추가했다. local verification environment에서 app 내부 PTY로 mouse reporting mode와 SGR mouse mode를 켠 뒤 smoke hook이 terminal buffer mode를 확인하고 SGR left press report를 썼다. shell readback marker `mouse-sgr-report:1b5b3c303b333b324d`를 확인했다. GUI synthetic `NSEvent`와 `vim`/`less` mouse workflow는 Mouse Reporting gap으로 계속 추적한다.
 
 ### OSC Title Update
 

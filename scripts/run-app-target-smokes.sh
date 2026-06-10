@@ -174,7 +174,69 @@ run_case_with_two_followups() {
   echo "app target smoke passed: ${name}"
 }
 
+run_case_with_mouse_report() {
+  local name="$1"
+  local input="$2"
+  local mouse_report="$3"
+  local marker="$4"
+  local snapshot_delay_ms="${5:-2500}"
+  local mouse_report_delay_ms="${6:-1000}"
+  local case_dir="${LOG_DIR}/${name}"
+  local snapshot_path="${case_dir}/snapshot.txt"
+  local stdout_path="${case_dir}/stdout.log"
+  local stderr_path="${case_dir}/stderr.log"
+
+  mkdir -p "${case_dir}"
+  rm -f "${snapshot_path}" "${stdout_path}" "${stderr_path}"
+
+  MINIMAL_TERMINAL_SMOKE_INPUT="${input}" \
+  MINIMAL_TERMINAL_SMOKE_MOUSE_REPORT="${mouse_report}" \
+  MINIMAL_TERMINAL_SMOKE_SNAPSHOT_PATH="${snapshot_path}" \
+  MINIMAL_TERMINAL_SMOKE_INPUT_DELAY_MS=500 \
+  MINIMAL_TERMINAL_SMOKE_MOUSE_REPORT_DELAY_MS="${mouse_report_delay_ms}" \
+  MINIMAL_TERMINAL_SMOKE_SNAPSHOT_DELAY_MS="${snapshot_delay_ms}" \
+  MINIMAL_TERMINAL_SMOKE_EXIT=1 \
+  "${APP_BINARY}" >"${stdout_path}" 2>"${stderr_path}" &
+  local pid=$!
+
+  local deadline=$((SECONDS + WAIT_SECONDS))
+  while kill -0 "${pid}" >/dev/null 2>&1 && [[ "${SECONDS}" -lt "${deadline}" ]]; do
+    sleep 0.2
+  done
+
+  if kill -0 "${pid}" >/dev/null 2>&1; then
+    kill "${pid}" >/dev/null 2>&1 || true
+    wait "${pid}" >/dev/null 2>&1 || true
+    echo "app target smoke failed: ${name} did not exit within ${WAIT_SECONDS}s" >&2
+    exit 1
+  fi
+
+  wait "${pid}"
+
+  if [[ ! -f "${snapshot_path}" ]]; then
+    echo "app target smoke failed: ${name} missing snapshot ${snapshot_path}" >&2
+    exit 1
+  fi
+
+  if ! grep -Fq "${marker}" "${snapshot_path}"; then
+    echo "app target smoke failed: ${name} marker not found: ${marker}" >&2
+    echo "snapshot: ${snapshot_path}" >&2
+    exit 1
+  fi
+
+  echo "app target smoke passed: ${name}"
+}
+
 ran=0
+
+run_case_with_mouse_report \
+  "mouse-sgr-report" \
+  $'stty raw -echo; printf "\\033[?1000h\\033[?1006h"; bytes="$(dd bs=1 count=9 2>/dev/null | od -An -tx1 | tr -d " \\n")"; stty sane; printf "\\nmouse-sgr-report:%s\\n" "$bytes"\n' \
+  "left-press" \
+  "mouse-sgr-report:1b5b3c303b333b324d" \
+  1500 \
+  1000
+ran=1
 
 if command -v fzf >/dev/null 2>&1; then
   fzf_path="$(command -v fzf)"
