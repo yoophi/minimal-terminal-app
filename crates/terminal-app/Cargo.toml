@@ -4,20 +4,32 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+libc = "0.2"
 objc2 = "0.6"
 objc2-app-kit = { version = "0.3", default-features = false, features = [
     "std",
+    "NSAttributedString",
     "NSApplication",
+    "NSColor",
+    "NSEvent",
+    "NSFont",
     "NSGraphics",
     "NSResponder",
     "NSRunningApplication",
+    "NSStringDrawing",
+    "NSView",
     "NSWindow",
+    "objc2-core-foundation",
 ] }
 objc2-foundation = { version = "0.3", default-features = false, features = [
     "std",
     "alloc",
+    "NSAttributedString",
+    "NSDictionary",
     "NSNotification",
     "NSObject",
     "NSGeometry",
     "NSString",
+    "NSTimer",
 ] }
+oslog = "0.2"

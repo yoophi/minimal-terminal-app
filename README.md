@@ -2,7 +2,7 @@
 
 macOS에서 사용할 안정성 우선의 터미널 에뮬레이터를 개발하는 Rust 프로젝트입니다.
 
-현재 단계는 macOS 네이티브 AppKit 기반의 빈 창 앱을 실행하는 최소 기반 코드입니다.
+현재 단계는 macOS 네이티브 AppKit 창에서 login shell 출력을 표시하는 최소 기반 코드입니다.
 
 ## Goals
 
@@ -36,11 +36,18 @@ scripts/bundle-macos-app.sh
 open 'target/debug/Minimal Terminal.app'
 ```
 
+## Logging
+
+macOS Console.app과 `log` CLI를 통한 로그 확인 방법은 [docs/LOGGING.md](docs/LOGGING.md)를 참고합니다.
+
 ## Project Layout
 
 ```text
 crates/
 └── terminal-app/      # macOS native AppKit application
+
+docs/
+└── LOGGING.md
 
 scripts/
 └── bundle-macos-app.sh
