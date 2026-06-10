@@ -275,7 +275,10 @@ define_class!(
                 return;
             }
 
-            self.ivars().selection.borrow_mut().begin(point);
+            self.ivars()
+                .selection
+                .borrow_mut()
+                .begin(self.absolute_grid_point_for_event(event));
             self.as_super().setNeedsDisplay(true);
         }
 
@@ -292,13 +295,12 @@ define_class!(
             let delta = selection_drag_autoscroll_delta(event_point.y, self.ivars().rows.get());
             if delta != 0 {
                 self.adjust_scrollback(delta);
-                self.ivars()
-                    .selection
-                    .borrow_mut()
-                    .shift_rows(delta, self.ivars().rows.get().saturating_sub(1));
             }
 
-            self.ivars().selection.borrow_mut().update(point);
+            self.ivars()
+                .selection
+                .borrow_mut()
+                .update(self.absolute_grid_point_for_event(event));
             self.as_super().setNeedsDisplay(true);
         }
 
@@ -309,7 +311,10 @@ define_class!(
                 return;
             }
 
-            self.ivars().selection.borrow_mut().update(point);
+            self.ivars()
+                .selection
+                .borrow_mut()
+                .update(self.absolute_grid_point_for_event(event));
             self.as_super().setNeedsDisplay(true);
         }
 
@@ -351,7 +356,12 @@ define_class!(
 
             let snapshot = self.current_snapshot(rows);
 
-            draw_selection_highlights(&snapshot, self.ivars().selection.borrow().range());
+            let selection_range = self
+                .ivars()
+                .selection
+                .borrow()
+                .viewport_range(snapshot.viewport_start_absolute_row, snapshot.lines.len());
+            draw_selection_highlights(&snapshot, selection_range);
             draw_terminal_text(&snapshot);
             draw_composition_text(&snapshot, &self.ivars().composition.borrow());
             if self.ivars().scrollback_offset.get() == 0 {
@@ -503,7 +513,9 @@ impl TerminalView {
         let Some(range) = self.ivars().selection.borrow().range() else {
             return;
         };
-        let snapshot = self.current_snapshot(self.ivars().rows.get().max(1));
+        let Some(snapshot) = self.full_snapshot() else {
+            return;
+        };
         let text = selected_text(&snapshot.lines, range);
         if text.is_empty() {
             return;
@@ -531,7 +543,16 @@ impl TerminalView {
                 cursor: terminal_core::Cursor::default(),
                 modes: TerminalModes::default(),
                 scrollback_len: 0,
+                viewport_start_absolute_row: 0,
             })
+    }
+
+    fn full_snapshot(&self) -> Option<TerminalSnapshot> {
+        self.ivars()
+            .buffer
+            .lock()
+            .ok()
+            .map(|buffer| buffer.combined_snapshot(0, usize::MAX))
     }
 
     fn current_modes(&self) -> TerminalModes {
@@ -579,6 +600,15 @@ impl TerminalView {
         }
     }
 
+    fn absolute_grid_point_for_event(&self, event: &NSEvent) -> GridPoint {
+        let point = self.grid_point_for_event(event);
+        let snapshot = self.current_snapshot(self.ivars().rows.get().max(1));
+        GridPoint {
+            row: snapshot.viewport_start_absolute_row + point.row,
+            col: point.col,
+        }
+    }
+
     fn cursor_screen_rect(&self) -> NSRect {
         let snapshot = self
             .ivars()
@@ -591,6 +621,7 @@ impl TerminalView {
                 cursor: terminal_core::Cursor::default(),
                 modes: TerminalModes::default(),
                 scrollback_len: 0,
+                viewport_start_absolute_row: 0,
             });
         let view_rect = cursor_rect(&snapshot);
         let Some(window) = self.as_super().window() else {

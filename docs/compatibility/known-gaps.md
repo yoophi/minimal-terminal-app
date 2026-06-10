@@ -23,23 +23,6 @@
 
 ## Priority 2
 
-### Cross-Scrollback Selection
-
-상태: `partially supported`
-
-중요한 이유:
-
-- 현재 selection/copy는 viewport snapshot 기준으로 동작한다.
-- Phase 014에서 scrollback과 live screen을 함께 포함하는 viewport copy는 지원했다.
-- Phase 025에서 drag 중 상하단 autoscroll과 viewport row 보정은 추가했다.
-- 여러 scrollback page를 장거리로 가로지르는 absolute selection address는 아직 모델링되어 있지 않다.
-
-권장 다음 작업:
-
-- 여러 page를 가로지르는 selection address를 absolute row 기반 모델로 확장한다.
-
-## Priority 3
-
 ### Environment-dependent App Smoke Target
 
 상태: `partially supported`
@@ -61,7 +44,7 @@
 - `fzf` interactive navigation smoke를 앱 내부에서 수행한다.
 - `git log` pager 진입, scroll, quit workflow를 앱 내부에서 수행한다.
 
-## Priority 4
+## Priority 3
 
 ### Full xterm Compatibility Coverage
 
@@ -94,7 +77,7 @@
 - 실패 항목을 cursor, erase, scrolling, reporting, character set, keyboard input, OSC 등 sequence family로 분해한다.
 - 통과/실패 결과를 matrix evidence와 known gap으로 연결한다.
 
-## Priority 5
+## Priority 4
 
 ### 대표 CLI/TUI Application Certification
 
@@ -183,3 +166,9 @@ Phase 026에서 Shift, Option, Control modifier bit를 legacy 및 SGR mouse repo
 상태: `supported`
 
 Phase 027에서 `OSC 0 ; title BEL`과 `OSC 2 ; title BEL` window title update를 구현했다. core parser가 pending title write를 큐잉하고 AppKit layer가 main thread에서 window title에 반영한다.
+
+### Cross-Scrollback Selection
+
+상태: `supported`
+
+Phase 030에서 `TerminalSnapshot`에 `viewport_start_absolute_row`를 추가하고 selection anchor/active를 absolute row 기반으로 저장하도록 변경했다. draw path는 현재 viewport와 겹치는 selection range만 투영하고, copy path는 retained scrollback과 live screen 전체 snapshot에서 absolute range를 추출한다.

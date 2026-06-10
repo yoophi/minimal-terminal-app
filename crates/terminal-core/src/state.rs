@@ -10,6 +10,7 @@ pub struct TerminalSnapshot {
     pub cursor: Cursor,
     pub modes: TerminalModes,
     pub scrollback_len: usize,
+    pub viewport_start_absolute_row: usize,
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -109,6 +110,7 @@ impl TerminalState {
             cursor: Cursor::new(self.cursor.row.saturating_sub(start), self.cursor.col),
             modes: self.modes,
             scrollback_len: self.grid.scrollback_len(),
+            viewport_start_absolute_row: self.grid.scrollback_len() + start,
         }
     }
 
@@ -139,6 +141,11 @@ impl TerminalState {
             cursor: Cursor::default(),
             modes: self.modes,
             scrollback_len: self.grid.scrollback_len(),
+            viewport_start_absolute_row: self
+                .grid
+                .scrollback_len()
+                .saturating_sub(offset_from_bottom)
+                .saturating_sub(max_visible_lines),
         }
     }
 
@@ -170,6 +177,7 @@ impl TerminalState {
             cursor,
             modes: self.modes,
             scrollback_len,
+            viewport_start_absolute_row: start,
         }
     }
 
@@ -633,9 +641,11 @@ mod tests {
 
         let snapshot = terminal.combined_snapshot(0, 3);
         assert_eq!(snapshot.lines, vec!["two", "three", "four"]);
+        assert_eq!(snapshot.viewport_start_absolute_row, 1);
 
         let snapshot = terminal.combined_snapshot(1, 3);
         assert_eq!(snapshot.lines, vec!["one", "two", "three"]);
+        assert_eq!(snapshot.viewport_start_absolute_row, 0);
     }
 
     #[test]

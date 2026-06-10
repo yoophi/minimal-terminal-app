@@ -22,15 +22,6 @@ impl SelectionState {
         }
     }
 
-    pub(crate) fn shift_rows(&mut self, delta: isize, max_row: usize) {
-        self.anchor = self
-            .anchor
-            .map(|point| shift_point_row(point, delta, max_row));
-        self.active = self
-            .active
-            .map(|point| shift_point_row(point, delta, max_row));
-    }
-
     pub(crate) fn clear(&mut self) {
         self.anchor = None;
         self.active = None;
@@ -45,17 +36,14 @@ impl SelectionState {
 
         Some(SelectionRange::new(anchor, active))
     }
-}
 
-fn shift_point_row(point: GridPoint, delta: isize, max_row: usize) -> GridPoint {
-    let row = if delta.is_positive() {
-        point.row.saturating_add(delta as usize)
-    } else {
-        point.row.saturating_sub(delta.unsigned_abs())
-    };
-    GridPoint {
-        row: row.min(max_row),
-        col: point.col,
+    pub(crate) fn viewport_range(
+        &self,
+        viewport_start_absolute_row: usize,
+        viewport_rows: usize,
+    ) -> Option<SelectionRange> {
+        let range = self.range()?;
+        range.viewport_range(viewport_start_absolute_row, viewport_rows)
     }
 }
 
@@ -72,6 +60,46 @@ impl SelectionRange {
         } else {
             Self { start: b, end: a }
         }
+    }
+
+    fn viewport_range(
+        &self,
+        viewport_start_absolute_row: usize,
+        viewport_rows: usize,
+    ) -> Option<Self> {
+        if viewport_rows == 0 {
+            return None;
+        }
+
+        let viewport_end_absolute_row = viewport_start_absolute_row
+            .saturating_add(viewport_rows)
+            .saturating_sub(1);
+        if self.end.row < viewport_start_absolute_row || self.start.row > viewport_end_absolute_row
+        {
+            return None;
+        }
+
+        let start = if self.start.row < viewport_start_absolute_row {
+            GridPoint { row: 0, col: 0 }
+        } else {
+            GridPoint {
+                row: self.start.row - viewport_start_absolute_row,
+                col: self.start.col,
+            }
+        };
+        let end = if self.end.row > viewport_end_absolute_row {
+            GridPoint {
+                row: viewport_rows - 1,
+                col: usize::MAX,
+            }
+        } else {
+            GridPoint {
+                row: self.end.row - viewport_start_absolute_row,
+                col: self.end.col,
+            }
+        };
+
+        Some(Self { start, end })
     }
 }
 
@@ -268,26 +296,52 @@ mod tests {
     }
 
     #[test]
-    fn shifts_selection_rows_when_viewport_scrolls() {
+    fn projects_absolute_selection_to_visible_viewport() {
         let mut state = SelectionState::default();
-        state.begin(GridPoint { row: 2, col: 1 });
-        state.update(GridPoint { row: 4, col: 3 });
+        state.begin(GridPoint { row: 10, col: 3 });
+        state.update(GridPoint { row: 25, col: 5 });
 
-        state.shift_rows(1, 9);
         assert_eq!(
-            state.range(),
+            state.viewport_range(18, 5),
             Some(SelectionRange::new(
-                GridPoint { row: 3, col: 1 },
-                GridPoint { row: 5, col: 3 },
+                GridPoint { row: 0, col: 0 },
+                GridPoint {
+                    row: 4,
+                    col: usize::MAX
+                },
             ))
         );
-
-        state.shift_rows(-10, 9);
         assert_eq!(
-            state.range(),
+            state.viewport_range(23, 5),
             Some(SelectionRange::new(
-                GridPoint { row: 0, col: 1 },
-                GridPoint { row: 0, col: 3 },
+                GridPoint { row: 0, col: 0 },
+                GridPoint { row: 2, col: 5 },
+            ))
+        );
+        assert_eq!(state.viewport_range(26, 5), None);
+    }
+
+    #[test]
+    fn preserves_absolute_selection_when_viewport_moves() {
+        let mut state = SelectionState::default();
+        state.begin(GridPoint { row: 102, col: 1 });
+        state.update(GridPoint { row: 108, col: 3 });
+
+        assert_eq!(
+            state.viewport_range(100, 5),
+            Some(SelectionRange::new(
+                GridPoint { row: 2, col: 1 },
+                GridPoint {
+                    row: 4,
+                    col: usize::MAX
+                },
+            ))
+        );
+        assert_eq!(
+            state.viewport_range(105, 5),
+            Some(SelectionRange::new(
+                GridPoint { row: 0, col: 0 },
+                GridPoint { row: 3, col: 3 },
             ))
         );
     }
