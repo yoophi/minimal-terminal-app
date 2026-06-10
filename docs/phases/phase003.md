@@ -47,6 +47,13 @@ Phase 003에서 다룰 작업은 다음과 같다.
 - ANSI erase mode 확장: `J`/`K`의 `0`, `1`, `2`, `3` mode
 - ANSI cursor save/restore 처리 추가: `ESC 7`, `ESC 8`, `CSI s`, `CSI u`
 - scrollback snapshot API 초안 추가
+- PageUp/PageDown 기반 scrollback paging 추가
+- `scrollWheel:` 기반 scrollback navigation 추가
+- Command 조합은 macOS 앱 shortcut으로 예약하고 PTY로 전달하지 않는 정책 추가
+- Option+Left/Right/Backspace는 terminal word navigation/delete로 전달하는 정책 추가
+- IME 확정 문자열은 UTF-8 text로 PTY에 전달하는 정책 추가
+- ANSI alternate screen 처리 추가: `?47`, `?1047`, `?1049`
+- bracketed paste/cursor visibility 등 기타 private mode는 상태를 깨지 않도록 ignore 처리
 
 현재 `terminal-core`가 처리하는 동작:
 
@@ -67,6 +74,8 @@ Phase 003에서 다룰 작업은 다음과 같다.
 - erase line/screen mode별 처리
 - cursor save/restore
 - scrollback snapshot 조회
+- alternate screen 진입 시 main screen 보존
+- alternate screen 종료 시 main screen 복원
 
 이번 단계의 의도는 완전한 terminal emulator를 만드는 것이 아니라, Phase 002의 문자열 버퍼를 테스트 가능한 grid/cursor 기반으로 교체하는 것이다.
 
@@ -92,6 +101,15 @@ cursor-check
 - terminal-core 단위 테스트로 한글 wide character cursor 이동과 backspace를 검증했다.
 - terminal-core 단위 테스트로 ANSI erase mode와 cursor save/restore를 검증했다.
 - terminal-core 단위 테스트로 scrollback snapshot 조회를 검증했다.
+- input encoder 단위 테스트로 Command 예약, Option navigation, IME 확정 문자열 전달 정책을 검증했다.
+- terminal-core 단위 테스트로 alternate screen 진입/복귀 시 main screen 보존을 검증했다.
+- 런타임 검증: `seq 1 80` 출력 후 scrollback UI가 이전 출력 구간을 표시할 수 있음을 확인했다.
+
+추가로 확인한 런타임 한계:
+
+- 현재 사용자 zsh 설정에서는 arrow key에 해당하는 line-editor byte가 literal control marker처럼 echo될 수 있다.
+- 앱은 arrow/Home/End/PageUp/PageDown 입력을 byte-level로 인코딩하고 전달한다.
+- shell line editor가 해당 byte를 실제 이동 명령으로 해석하는지는 사용자의 shell key binding에 의존한다.
 
 남은 표시 문제:
 
@@ -137,10 +155,18 @@ Phase 003에서는 input encoder를 별도 책임으로 둔다.
 - arrow keys `done`
 - Home/End `done`
 - PageUp/PageDown `done`
-- Option/Command 조합
-- IME composition
+- Option/Command 조합 `done`
+- IME composition `policy done`
 
 이 작업은 PTY writer에 직접 붙이기보다 `terminal-app/input.rs` 또는 별도 input adapter로 분리하는 것이 좋다. 현재는 `terminal-app/src/input.rs`에 최소 input encoder를 추가했다.
+
+입력 정책:
+
+- Command 조합은 앱 단축키 영역으로 예약하고 PTY로 보내지 않는다.
+- Option+Left/Right는 word navigation 용도로 `ESC b`/`ESC f`를 보낸다.
+- Option+Backspace는 `ESC DEL`을 보낸다.
+- Option+printable text와 IME 확정 문자열은 안정성을 위해 UTF-8 text로 그대로 보낸다.
+- 완전한 composition preedit UI는 `NSTextInputClient` 기반 후속 작업으로 분리한다.
 
 ## Proposed Module Shape
 
@@ -175,10 +201,12 @@ Phase 003의 최소 완료 기준:
 - Backspace가 화면과 shell 양쪽에서 일관되게 동작한다. `done`
 - Enter 입력 후 새 prompt가 정상적으로 표시된다. `done`
 - Ctrl-C가 foreground shell process로 전달된다. `done`
-- arrow key escape sequence가 shell line editor에 전달된다. `implemented`
+- arrow/navigation key sequence가 PTY로 전달된다. `done`
 - window resize 시 PTY size와 grid size가 동기화된다. `done`
 - Unicode wide character가 cursor/grid에서 올바른 cell 폭을 차지한다. `done`
 - scrollback 기본 모델이 scroll된 line을 보존한다. `done`
+- scrollback UI가 keyboard/wheel로 노출된다. `done`
+- alternate screen 진입/복귀가 main screen을 보존한다. `done`
 - `cargo test`로 terminal-core parser/grid/cursor 기본 동작을 검증한다. `done`
 
 ## Non-goals
@@ -204,12 +232,14 @@ Phase 002에서 확인한 중요한 교훈:
 
 ## Remaining Work
 
-다음 작업은 Phase 003 안에서 계속 진행한다.
+Phase 003 범위에서 필수로 남은 작업은 없다.
 
-- arrow key, Home/End, PageUp/PageDown의 실제 login shell 런타임 검증
-- Option/Command 조합, IME composition 처리 방침 결정
-- scrollback UI 노출 방식 결정
-- ANSI parser 범위 추가 확장
+후속 phase로 분리할 작업:
+
+- `NSTextInputClient` 기반 IME preedit/composition UI
+- selection/copy와 통합된 scrollback UX
+- 더 높은 xterm 호환성
+- 사용자 설정 가능한 Option/Command 키 정책
 
 ## Prioritization Notes
 
@@ -223,11 +253,11 @@ Phase 003 잔여 작업은 다음 순서로 처리했다.
 
 ## Phase 003 Closure
 
-Phase 003의 핵심 목표인 terminal core, cursor, 기본 input semantics는 구현과 테스트가 완료되었다.
+Phase 003의 목표인 terminal core, cursor, 기본 input semantics, resize, scrollback 초안은 구현과 테스트가 완료되었다.
 
-다음 항목은 Phase 003의 핵심 완료 조건을 넘어서며, 별도 후속 phase로 분리하는 것이 좋다.
+다음 항목은 Phase 003의 핵심 완료 조건을 넘어서는 후속 phase 범위다.
 
 - IME composition: AppKit `NSTextInputClient` 수준의 별도 설계가 필요하다.
-- scrollback UI: core snapshot API는 준비되었지만, keyboard/mouse gesture와 selection 정책이 필요하다.
+- scrollback UX 고도화: keyboard/wheel 노출은 완료했지만 selection/copy와의 통합 정책이 필요하다.
 - ANSI/VT 완성도 확대: xterm 호환성은 지속적인 parser 확장 작업이다.
-- Option/Command 조합: macOS UX 정책과 shell 전달 정책을 먼저 정해야 한다.
+- Option/Command 조합 고도화: 현재 기본 정책은 구현했지만 사용자 설정화가 필요하다.
