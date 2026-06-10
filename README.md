@@ -49,7 +49,8 @@ crates/
 docs/
 ├── phases/
 │   ├── phase001.md
-│   └── phase002.md
+│   ├── phase002.md
+│   └── phase003.md
 └── LOGGING.md
 
 scripts/

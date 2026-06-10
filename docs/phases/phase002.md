@@ -8,12 +8,17 @@ Phase 002는 빈 AppKit 창에 login shell 출력을 표시하기 위한 최소 
 
 - macOS Unified Logging 연동
 - PTY 기반 login shell 실행
+- 기본 PTY window size 설정
 - PTY 출력 reader thread
 - 단순 terminal output buffer
 - AppKit `TerminalView` 구현
 - login shell 출력 렌더링
 - 고정폭 폰트 기반 출력 표시
 - 키보드 입력을 PTY로 전달
+- PTY 첫 출력 및 누적 출력 진단 로그
+- 첫 키 입력 진단 로그
+- clipboard paste 기반 ASCII/한글 입력 확인
+- 입력 echo와 command output의 화면 표시 확인
 - Console.app 및 `/usr/bin/log` 사용 문서화
 
 관련 커밋:
@@ -90,6 +95,15 @@ PTY child 환경에는 다음 값도 설정한다.
 TERM=xterm-256color
 ```
 
+또한 `forkpty` 호출 시 기본 window size를 지정한다.
+
+```text
+rows=32
+cols=100
+```
+
+이 값을 넘기지 않으면 일부 shell prompt/theme 또는 terminal-aware 프로그램이 유효하지 않은 터미널 크기로 판단해 출력이 불안정해질 수 있다. Phase 002에서는 고정 기본값으로 시작하고, 실제 window resize와 PTY resize 동기화는 Phase 003 범위로 남긴다.
+
 ## 2. PTY 출력 읽기
 
 PTY master fd에서 shell output을 읽기 위해 background thread를 생성했다.
@@ -112,6 +126,8 @@ PTY master fd
 reader thread는 다음 상황을 로그로 남긴다.
 
 - reader thread 시작
+- 첫 PTY 출력 수신
+- 고출력 상황에서 드문 주기로 누적 read count 및 byte count
 - EOF 도달
 - read error
 - terminal buffer lock poison
@@ -127,9 +143,10 @@ Phase 002에서는 [terminal_buffer.rs](../../crates/terminal-app/src/terminal_b
 
 - `String::from_utf8_lossy`로 UTF-8 변환
 - `\n`은 line commit
-- `\r`은 현재 줄 clear
+- `\r`은 현재 줄이 비어 있으면 무시하고, 내용이 있으면 line commit
 - backspace/delete는 마지막 문자 제거
 - tab은 공백 4개로 변환
+- 연속 blank line은 화면 표시 시 compact
 - 일부 control character 무시
 - ANSI escape sequence는 매우 단순하게 skip
 
@@ -165,9 +182,12 @@ crates/terminal-app/src/terminal_view.rs
 - 검은 배경 그리기
 - `TerminalBuffer`에서 visible text 읽기
 - 흰색 텍스트로 draw
-- `NSFont::userFixedPitchFontOfSize`를 사용해 고정폭 폰트 적용
+- JetBrains Mono 계열 폰트를 우선 사용하고, 실패하면 `NSFont::userFixedPitchFontOfSize`로 fallback
+- foreground color와 font를 `drawAtPoint:withAttributes:`에 명시
 - keyDown 이벤트 수신
 - keyDown characters를 PTY writer로 전달
+- `paste:` action과 `Cmd+V`를 통해 clipboard 문자열을 PTY writer로 전달
+- 첫 keyDown 입력을 진단 로그로 기록
 - timer를 사용해 주기적으로 redraw 요청
 
 렌더링 흐름:
@@ -178,11 +198,25 @@ drawRect:
   -> set white foreground color
   -> set fixed-pitch font
   -> lock TerminalBuffer
-  -> visible_text(200)
-  -> draw NSString
+  -> visible_text(max_visible_lines)
+  -> line-by-line drawAtPoint
 ```
 
 현재 렌더링은 최소 구현이다. 고정폭 폰트는 적용했지만, 아직 cell 단위 renderer는 아니다. 즉 글자를 터미널 grid에 배치하는 것이 아니라 하나의 문자열 블록으로 그린다.
+
+검은 화면만 보이는 문제가 한 번 확인되었다. 원인은 PTY/login shell이 아니라 drawing attributes가 명확하지 않아 검은 배경 위에 텍스트가 보이지 않을 수 있는 렌더링 문제로 판단했다. 이를 해결하기 위해 foreground color와 font를 `withAttributes:`에 직접 넘기도록 수정했다.
+
+이후 입력한 내용이 화면에 보이지 않는 문제가 확인되었다. 이때는 출력 자체가 없는 문제가 아니라, login shell 아래에서 긴 `find` 프로세스가 실행되어 화면을 계속 채우고 있었다. 또한 PTY 기본 rows/cols가 설정되지 않은 점이 shell prompt 동작을 불안정하게 만들 수 있으므로 `forkpty`에 기본 window size를 전달하도록 보정했다.
+
+Phase 002의 입력 확인 기준은 다음과 같다.
+
+```text
+1. 앱을 새로 실행한다.
+2. shell prompt가 보이는지 확인한다.
+3. printable text를 입력했을 때 shell echo가 화면에 보이는지 확인한다.
+4. Enter 입력 후 command output과 새 prompt가 표시되는지 확인한다.
+5. Cmd+V paste로 ASCII와 한글 문자열이 PTY로 전달되는지 확인한다.
+```
 
 ## 5. UI 갱신 트리거
 
@@ -238,6 +272,13 @@ keyboard input
   -> PtyWriter.write_all
   -> PTY master fd
   -> login shell
+
+clipboard paste
+  -> TerminalView paste:
+  -> NSPasteboard stringForType(NSPasteboardTypeString)
+  -> PtyWriter.write_all
+  -> PTY master fd
+  -> login shell
 ```
 
 ## App Lifecycle Logging
@@ -277,6 +318,15 @@ pty
 [dev.minimal-terminal.app:app] applicationDidFinishLaunching completed
 [dev.minimal-terminal.app:app] windowWillClose
 [dev.minimal-terminal.app:app] applicationWillTerminate
+```
+
+현재 PTY 진단 로그:
+
+```text
+[dev.minimal-terminal.app:pty] pty first output received: bytes=...
+[dev.minimal-terminal.app:pty] pty output progress: reads=... total_bytes=...
+[dev.minimal-terminal.app:pty] terminal view first key input received: bytes=...
+[dev.minimal-terminal.app:pty] terminal view paste received: bytes=...
 ```
 
 로그 레벨은 lifecycle 이벤트가 Console.app에서 잘 보이도록 `default`를 사용했다. 초기에는 `info`를 사용했지만, `log show` 기본 조회에서 확인이 어렵다는 점을 확인하고 `default`로 조정했다.
@@ -336,6 +386,8 @@ open 'target/debug/Minimal Terminal.app'
 - `terminal-app` 프로세스 실행 확인
 - login shell child process 생성 확인
 - lifecycle 로그가 subsystem 기준으로 표시됨
+- PTY first output 로그 확인
+- clipboard paste를 통한 ASCII/한글 입력 shell 전달 확인
 
 확인된 로그 예:
 
@@ -350,6 +402,53 @@ terminal-app: [dev.minimal-terminal.app:pty] pty spawn succeeded: child_pid=3001
 terminal-app: [dev.minimal-terminal.app:pty] pty reader thread starting
 terminal-app: [dev.minimal-terminal.app:app] applicationDidFinishLaunching completed
 ```
+
+텍스트 입력 확인에는 현재 macOS 입력 소스의 영향을 줄이기 위해 clipboard paste 경로를 사용했다.
+
+검증 명령:
+
+```bash
+printf 'printf "hello\\n한글 테스트\\n" > /tmp/minimal-terminal-input-ok' | pbcopy
+osascript \
+  -e 'tell application "Minimal Terminal" to activate' \
+  -e 'delay 0.2' \
+  -e 'tell application "System Events" to keystroke "v" using command down' \
+  -e 'tell application "System Events" to key code 36'
+cat /tmp/minimal-terminal-input-ok
+```
+
+확인 결과:
+
+```text
+hello
+한글 테스트
+```
+
+관련 로그:
+
+```text
+[dev.minimal-terminal.app:pty] terminal view paste received: bytes=67
+[dev.minimal-terminal.app:pty] terminal view first key input received: bytes=1
+```
+
+2026-06-10 재확인 결과:
+
+```text
+[dev.minimal-terminal.app:pty] pty spawn succeeded: child_pid=74278 shell=/bin/zsh rows=32 cols=100
+[dev.minimal-terminal.app:pty] pty first output received: bytes=473
+[dev.minimal-terminal.app:pty] terminal view paste received: bytes=51
+[dev.minimal-terminal.app:pty] terminal view first key input received: bytes=1
+```
+
+화면에서도 다음 내용이 표시되는 것을 확인했다.
+
+```text
+echo visible-input-test; echo 한글표시테스트
+visible-input-test
+한글표시테스트
+```
+
+단, prompt와 command line 일부가 중복되거나 깨져 보이는 현상은 남아 있다. 이는 Phase 002의 `TerminalBuffer`가 ANSI cursor movement, prompt redraw, line editing sequence를 실제 terminal grid에 적용하지 않고 단순 문자열로 누적하기 때문이다. 이 문제는 Phase 003의 terminal-core/grid/cursor/parser 작업으로 넘긴다.
 
 ## Issues and Lessons
 
@@ -431,7 +530,25 @@ PTY reader thread는 background thread에서 동작한다. 여기서 AppKit view
 
 ## Remaining Work
 
-다음 단계에서 필요한 작업:
+Phase 002 안에서 마무리하거나 확인할 작업은 "PTY to screen pipeline이 실제로 동작하는지 확인 가능한 상태"까지로 제한한다.
+
+- 실제 창에서 login shell prompt가 보이는지 사용자 화면 기준 확인
+- `echo 한글 테스트` 또는 동등한 한글 출력 명령 결과가 표시되는지 확인
+- PTY first output 로그가 표시되는지 확인 완료
+- 첫 keyDown 입력 로그가 표시되는지 확인 완료
+- clipboard paste 기반 ASCII/한글 입력이 shell로 전달되는지 확인 완료
+- Backspace, Enter, Ctrl-C 같은 기본 입력이 현재 단순 `event.characters()` 전달만으로 충분한지 확인
+
+Phase 002의 완료 기준은 다음과 같다.
+
+- 앱 실행 시 검은 화면만 남지 않고 login shell prompt 또는 shell startup output이 보인다.
+- `/usr/bin/log`에서 `pty first output received` 로그를 확인할 수 있다.
+- printable text 입력이 PTY로 전달된다.
+- 첫 입력 시 `terminal view first key input received` 로그를 확인할 수 있다.
+- clipboard paste로 ASCII/한글 문자열이 PTY로 전달되고 shell 명령으로 실행된다.
+- 한글 입력 또는 한글 출력의 현재 동작을 확인하고 한계를 기록한다.
+
+Phase 003으로 넘기는 것이 적절한 작업은 "터미널답게 정확히 동작하는 상태 모델"과 관련된 작업이다.
 
 - `terminal-core` crate 생성
 - terminal grid/cell/cursor 모델 구현
@@ -444,6 +561,15 @@ PTY reader thread는 background thread에서 동작한다. 여기서 AppKit view
 - keyboard special key encoding
 - shell 종료 상태 표시
 - 에러 로그와 사용자 표시 상태 분리
+
+입력 커서 표시는 Phase 003으로 넘기는 것을 권장한다. 지금 Phase 002의 buffer는 문자열 블록이며 cursor row/column 개념이 없다. 임시로 문자열 끝에 커서 모양을 그릴 수는 있지만, shell prompt editing, ANSI cursor movement, backspace, multi-line input과 금방 어긋난다. 올바른 cursor는 terminal grid와 cursor state가 생긴 뒤 구현하는 편이 재작업이 적다.
+
+텍스트 입력은 두 단계로 나눈다.
+
+- Phase 002: printable text, Enter, clipboard paste 입력이 PTY로 전달되는지 확인하고, 첫 입력 진단 로그를 남긴다.
+- Phase 003: arrow keys, Backspace, Ctrl-C, Option/Command 조합, IME composition, cursor movement를 terminal-core/input encoder와 함께 정식 구현한다.
+
+따라서 이번 단계에서 입력 커서를 그리는 작업은 하지 않는다. 현재 구조에서 커서를 임시로 그리면 "보이는 커서"는 만들 수 있지만, shell이 실제로 생각하는 cursor 위치와 앱이 그리는 cursor 위치가 쉽게 어긋난다. 이 프로젝트는 안정성을 우선하므로, 눈속임에 가까운 cursor보다 terminal state 기반 cursor를 Phase 003에서 구현한다.
 
 ## Result
 

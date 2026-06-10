@@ -34,6 +34,7 @@ impl TerminalBuffer {
     pub fn visible_text(&self, max_visible_lines: usize) -> String {
         let mut lines = self.lines.clone();
         lines.push(self.current_line.clone());
+        let lines = compact_blank_lines(lines);
 
         let start = lines.len().saturating_sub(max_visible_lines);
         lines[start..].join("\n")
@@ -50,7 +51,8 @@ impl TerminalBuffer {
     fn push_printable_or_control(&mut self, ch: char) {
         match ch {
             '\u{1b}' => self.escape = EscapeState::Esc,
-            '\r' => self.current_line.clear(),
+            '\r' if self.current_line.is_empty() => {}
+            '\r' => self.commit_line(),
             '\n' => self.commit_line(),
             '\u{08}' | '\u{7f}' => {
                 self.current_line.pop();
@@ -87,3 +89,19 @@ impl TerminalBuffer {
     }
 }
 
+fn compact_blank_lines(lines: Vec<String>) -> Vec<String> {
+    let mut compacted = Vec::with_capacity(lines.len());
+    let mut previous_blank = false;
+
+    for line in lines {
+        let blank = line.is_empty();
+        if blank && previous_blank {
+            continue;
+        }
+
+        previous_blank = blank;
+        compacted.push(line);
+    }
+
+    compacted
+}

@@ -11,6 +11,10 @@ use std::thread;
 use crate::logging;
 use crate::terminal_buffer::TerminalBuffer;
 
+const DEFAULT_PTY_ROWS: libc::c_ushort = 32;
+const DEFAULT_PTY_COLS: libc::c_ushort = 100;
+const PTY_PROGRESS_LOG_READ_INTERVAL: u64 = 4096;
+
 #[derive(Clone, Debug)]
 pub struct PtyWriter {
     writer: Arc<Mutex<File>>,
@@ -34,12 +38,18 @@ pub fn spawn_login_shell(buffer: Arc<Mutex<TerminalBuffer>>) -> io::Result<PtyWr
     let login_argv0 = format!("-{shell_name}");
 
     let mut master = MaybeUninit::<libc::c_int>::uninit();
+    let mut winsize = libc::winsize {
+        ws_row: DEFAULT_PTY_ROWS,
+        ws_col: DEFAULT_PTY_COLS,
+        ws_xpixel: 0,
+        ws_ypixel: 0,
+    };
     let pid = unsafe {
         libc::forkpty(
             master.as_mut_ptr(),
             ptr::null_mut(),
             ptr::null_mut(),
-            ptr::null_mut(),
+            &mut winsize,
         )
     };
 
@@ -54,7 +64,9 @@ pub fn spawn_login_shell(buffer: Arc<Mutex<TerminalBuffer>>) -> io::Result<PtyWr
     }
 
     let master_fd = unsafe { master.assume_init() };
-    logging::pty_info(&format!("pty spawn succeeded: child_pid={pid} shell={shell}"));
+    logging::pty_info(&format!(
+        "pty spawn succeeded: child_pid={pid} shell={shell} rows={DEFAULT_PTY_ROWS} cols={DEFAULT_PTY_COLS}"
+    ));
 
     let reader_fd = duplicate_fd(master_fd)?;
     let reader = unsafe { File::from_raw_fd(reader_fd) };
@@ -94,6 +106,9 @@ fn start_reader_thread(pid: libc::pid_t, mut reader: File, buffer: Arc<Mutex<Ter
 
     thread::spawn(move || {
         let mut bytes = [0_u8; 8192];
+        let mut read_events = 0_u64;
+        let mut total_bytes = 0_u64;
+
         loop {
             match reader.read(&mut bytes) {
                 Ok(0) => {
@@ -101,6 +116,17 @@ fn start_reader_thread(pid: libc::pid_t, mut reader: File, buffer: Arc<Mutex<Ter
                     break;
                 }
                 Ok(n) => {
+                    read_events += 1;
+                    total_bytes += n as u64;
+
+                    if read_events == 1 {
+                        logging::pty_info(&format!("pty first output received: bytes={n}"));
+                    } else if read_events % PTY_PROGRESS_LOG_READ_INTERVAL == 0 {
+                        logging::pty_info(&format!(
+                            "pty output progress: reads={read_events} total_bytes={total_bytes}"
+                        ));
+                    }
+
                     if let Ok(mut buffer) = buffer.lock() {
                         buffer.append_bytes(&bytes[..n]);
                     } else {
