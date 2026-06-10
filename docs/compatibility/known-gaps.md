@@ -39,6 +39,7 @@
 - `htop`, `fzf`, `git log`는 command-level smoke를 통과했지만 app 내부 TUI interaction evidence는 아직 없다.
 - Phase 032에서 app 내부 PTY command output snapshot smoke를 자동화했다.
 - Phase 033에서 app 내부 `fzf --filter`와 non-pager `git log --oneline` snapshot smoke를 자동화했다.
+- Phase 034에서 설치된 `tmux`, `htop`, `claude`의 app-internal version snapshot smoke를 자동화했다. 현재 PATH에서 `codex-cli`는 찾지 못해 skip된다.
 - interactive key workflow는 아직 남아 있다.
 
 권장 다음 작업:
@@ -188,3 +189,9 @@ Phase 032에서 smoke 전용 환경 변수 기반 harness를 추가했다. `scri
 상태: `supported`
 
 Phase 033에서 `scripts/run-app-target-smokes.sh`를 추가했다. local verification environment에서 app 내부 PTY를 통해 `fzf --filter`와 non-pager `git log --oneline` snapshot smoke가 통과했다. `fzf` interactive navigation과 `git` pager workflow는 Environment-dependent App Smoke Target gap으로 계속 추적한다.
+
+### Representative CLI Version App Smoke
+
+상태: `supported`
+
+Phase 034에서 `scripts/run-app-target-smokes.sh`에 `tmux -V`, `htop --version`, `claude --version`, `codex-cli --version` target을 추가했다. 현재 local verification environment에서는 `tmux-version`, `htop-version`, `claude-version`이 app 내부 PTY snapshot smoke를 통과했고, `codex-cli-version`은 PATH에서 `codex-cli`를 찾지 못해 skip된다. 실제 interactive workflow는 대표 CLI/TUI Application Certification gap으로 계속 추적한다.

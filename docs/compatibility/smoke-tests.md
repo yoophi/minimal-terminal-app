@@ -161,6 +161,10 @@ scripts/run-app-target-smokes.sh
 
 - `fzf-filter`: `printf 'alpha\nbeta\n' | fzf --filter alpha`
 - `git-log`: `git log --oneline -1 --no-color`
+- `tmux-version`: `tmux -V`
+- `htop-version`: `htop --version`
+- `claude-version`: `claude --version`
+- `codex-cli-version`: `codex-cli --version`이 설치된 경우만 실행
 
 범위:
 

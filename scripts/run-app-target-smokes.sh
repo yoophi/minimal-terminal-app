@@ -66,7 +66,8 @@ run_case() {
 ran=0
 
 if command -v fzf >/dev/null 2>&1; then
-  run_case "fzf-filter" $'printf "alpha\\nbeta\\n" | fzf --filter alpha\n' "alpha"
+  fzf_path="$(command -v fzf)"
+  run_case "fzf-filter" "printf \"alpha\\nbeta\\n\" | ${fzf_path} --filter alpha"$'\n' "alpha"
   ran=1
 else
   echo "app target smoke skipped: fzf not found"
@@ -75,6 +76,38 @@ fi
 head_sha="$(git rev-parse --short HEAD)"
 run_case "git-log" $'git log --oneline -1 --no-color\n' "${head_sha}"
 ran=1
+
+if command -v tmux >/dev/null 2>&1; then
+  tmux_path="$(command -v tmux)"
+  run_case "tmux-version" "${tmux_path} -V"$'\n' "tmux "
+  ran=1
+else
+  echo "app target smoke skipped: tmux not found"
+fi
+
+if command -v htop >/dev/null 2>&1; then
+  htop_path="$(command -v htop)"
+  run_case "htop-version" "${htop_path} --version"$'\n' "htop"
+  ran=1
+else
+  echo "app target smoke skipped: htop not found"
+fi
+
+if command -v claude >/dev/null 2>&1; then
+  claude_path="$(command -v claude)"
+  run_case "claude-version" "${claude_path} --version"$'\n' "Claude Code"
+  ran=1
+else
+  echo "app target smoke skipped: claude not found"
+fi
+
+if command -v codex-cli >/dev/null 2>&1; then
+  codex_cli_path="$(command -v codex-cli)"
+  run_case "codex-cli-version" "${codex_cli_path} --version"$'\n' "codex-cli"
+  ran=1
+else
+  echo "app target smoke skipped: codex-cli not found"
+fi
 
 if [[ "${ran}" -eq 0 ]]; then
   echo "app target smoke skipped: no targets available"
