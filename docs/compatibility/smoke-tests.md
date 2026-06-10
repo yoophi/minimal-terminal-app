@@ -172,6 +172,7 @@ scripts/run-app-target-smokes.sh
 - `git-pager-horizontal-quit`: 긴 줄 형식의 `git log ... | less -S` 실행 후 follow-up Right Arrow와 `q`로 horizontal scroll 뒤 pager 종료 확인
 - `git-pager-mark-quit`: `git log ... | less` 실행 후 follow-up `m a`, `' a`, `q`로 mark 뒤 pager 종료 확인
 - `tmux-version`: `tmux -V`
+- `tmux-attached-session`: attached `tmux new-session` 실행 후 pane 입력과 shell 복원 확인
 - `htop-version`: `htop --version`
 - `htop-runtime`: `htop` full-screen redraw snapshot
 - `htop-quit`: `htop` 실행 후 follow-up `q`로 종료 확인

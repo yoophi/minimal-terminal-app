@@ -322,6 +322,13 @@ ran=1
 if command -v tmux >/dev/null 2>&1; then
   tmux_path="$(command -v tmux)"
   run_case "tmux-version" "${tmux_path} -V"$'\n' "tmux "
+  run_case_with_followup \
+    "tmux-attached-session" \
+    "tmux_socket=\"minimal-terminal-app-smoke-\$\$\"; ${tmux_path} -L \"\$tmux_socket\" new-session -s minimal-terminal-smoke 'printf \"tmux-pane-ready\\n\"; read -r line'; printf \"tmux-workflow-ok\\n\"; ${tmux_path} -L \"\$tmux_socket\" kill-server >/dev/null 2>&1 || true"$'\n' \
+    $'exit\r' \
+    "tmux-workflow-ok" \
+    2500 \
+    1200
   ran=1
 else
   echo "app target smoke skipped: tmux not found"
