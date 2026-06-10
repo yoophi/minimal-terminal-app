@@ -1,20 +1,22 @@
-use std::cell::{Cell, OnceCell};
+use std::cell::{Cell, OnceCell, RefCell};
 use std::sync::{Arc, Mutex};
 
 use objc2::rc::{autoreleasepool, Retained};
-use objc2::runtime::AnyObject;
+use objc2::runtime::{AnyObject, Sel};
 use objc2::{define_class, msg_send, sel, ClassType, DefinedClass, MainThreadOnly};
 use objc2_app_kit::{
     NSBackgroundColorAttributeName, NSColor, NSEvent, NSFont, NSFontAttributeName,
     NSForegroundColorAttributeName, NSPasteboard, NSPasteboardTypeString, NSRectFill, NSResponder,
-    NSUnderlineStyleAttributeName, NSView, NSWindow,
+    NSTextInputClient, NSUnderlineStyleAttributeName, NSView, NSWindow,
 };
 use objc2_foundation::{
-    MainThreadMarker, NSMutableDictionary, NSNumber, NSObjectProtocol, NSPoint, NSRect, NSString,
+    NSArray, NSAttributedString, NSAttributedStringKey, MainThreadMarker, NSMutableDictionary,
+    NSNumber, NSObjectProtocol, NSNotFound, NSPoint, NSRange, NSRangePointer, NSRect, NSString,
     NSTimer,
 };
 use terminal_core::{Color, Style, StyledLine, TerminalSnapshot};
 
+use crate::composition::{CompositionState, TextRange};
 use crate::input;
 use crate::logging;
 use crate::pty::PtyWriter;
@@ -43,6 +45,7 @@ pub(crate) struct TerminalViewIvars {
     rows: Cell<usize>,
     cols: Cell<usize>,
     scrollback_offset: Cell<usize>,
+    composition: RefCell<CompositionState>,
 }
 
 define_class!(
@@ -52,6 +55,7 @@ define_class!(
     pub(crate) struct TerminalView;
 
     unsafe impl NSObjectProtocol for TerminalView {}
+    unsafe impl NSTextInputClient for TerminalView {}
 
     impl TerminalView {
         #[unsafe(method(isFlipped))]
@@ -76,6 +80,11 @@ define_class!(
                     return;
                 }
 
+                if should_use_text_input(event) {
+                    self.interpret_text_input_event(event);
+                    return;
+                }
+
                 let Some(characters) = event.characters() else {
                     return;
                 };
@@ -97,6 +106,124 @@ define_class!(
 
                 self.ivars().scrollback_offset.set(0);
             });
+        }
+
+        #[unsafe(method(insertText:replacementRange:))]
+        fn insert_text_replacement_range(&self, string: &AnyObject, _replacement_range: NSRange) {
+            autoreleasepool(|pool| {
+                let Some(text) = text_from_input_object(string, pool) else {
+                    return;
+                };
+
+                if text.is_empty() {
+                    return;
+                }
+
+                self.ivars().composition.borrow_mut().clear();
+                self.write_text_to_pty(&text, "insertText");
+                self.ivars().scrollback_offset.set(0);
+                self.as_super().setNeedsDisplay(true);
+            });
+        }
+
+        #[unsafe(method(doCommandBySelector:))]
+        fn do_command_by_selector(&self, selector: Sel) {
+            if selector == sel!(deleteBackward:) {
+                self.ivars().composition.borrow_mut().clear();
+                if let Err(error) = self.ivars().writer.write_all(&[0x7f]) {
+                    logging::pty_error(&format!("pty write failed from deleteBackward: {error}"));
+                }
+                self.as_super().setNeedsDisplay(true);
+            }
+        }
+
+        #[unsafe(method(setMarkedText:selectedRange:replacementRange:))]
+        fn set_marked_text_selected_range_replacement_range(
+            &self,
+            string: &AnyObject,
+            selected_range: NSRange,
+            _replacement_range: NSRange,
+        ) {
+            autoreleasepool(|pool| {
+                let Some(text) = text_from_input_object(string, pool) else {
+                    return;
+                };
+
+                self.ivars().composition.borrow_mut().set_marked_text(
+                    text,
+                    TextRange {
+                        location: selected_range.location,
+                        length: selected_range.length,
+                    },
+                );
+                self.as_super().setNeedsDisplay(true);
+            });
+        }
+
+        #[unsafe(method(unmarkText))]
+        fn unmark_text(&self) {
+            self.ivars().composition.borrow_mut().clear();
+            self.as_super().setNeedsDisplay(true);
+        }
+
+        #[unsafe(method(selectedRange))]
+        fn selected_range(&self) -> NSRange {
+            let range = self.ivars().composition.borrow().selected_range();
+            NSRange::new(range.location, range.length)
+        }
+
+        #[unsafe(method(markedRange))]
+        fn marked_range(&self) -> NSRange {
+            let range = self.ivars().composition.borrow().marked_range();
+            if range.location == usize::MAX {
+                NSRange::new(NSNotFound as usize, 0)
+            } else {
+                NSRange::new(range.location, range.length)
+            }
+        }
+
+        #[unsafe(method(hasMarkedText))]
+        fn has_marked_text(&self) -> bool {
+            self.ivars().composition.borrow().has_marked_text()
+        }
+
+        #[unsafe(method(attributedSubstringForProposedRange:actualRange:))]
+        fn attributed_substring_for_proposed_range_actual_range(
+            &self,
+            _range: NSRange,
+            actual_range: NSRangePointer,
+        ) -> *mut NSAttributedString {
+            unsafe {
+                if !actual_range.is_null() {
+                    *actual_range = NSRange::new(NSNotFound as usize, 0);
+                }
+            }
+            std::ptr::null_mut()
+        }
+
+        #[unsafe(method(validAttributesForMarkedText))]
+        fn valid_attributes_for_marked_text(&self) -> *mut NSArray<NSAttributedStringKey> {
+            let attributes: Retained<NSArray<NSAttributedStringKey>> = NSArray::from_slice(&[]);
+            Retained::autorelease_return(attributes)
+        }
+
+        #[unsafe(method(firstRectForCharacterRange:actualRange:))]
+        fn first_rect_for_character_range_actual_range(
+            &self,
+            range: NSRange,
+            actual_range: NSRangePointer,
+        ) -> NSRect {
+            unsafe {
+                if !actual_range.is_null() {
+                    *actual_range = range;
+                }
+            }
+            self.cursor_screen_rect()
+        }
+
+        #[unsafe(method(characterIndexForPoint:))]
+        fn character_index_for_point(&self, _point: NSPoint) -> usize {
+            0
         }
 
         #[unsafe(method(scrollWheel:))]
@@ -143,6 +270,7 @@ define_class!(
                 });
 
             draw_terminal_text(&snapshot);
+            draw_composition_text(&snapshot, &self.ivars().composition.borrow());
             if self.ivars().scrollback_offset.get() == 0 {
                 draw_cursor(&snapshot);
             }
@@ -170,6 +298,7 @@ impl TerminalView {
             rows: Cell::new(0),
             cols: Cell::new(0),
             scrollback_offset: Cell::new(0),
+            composition: RefCell::new(CompositionState::default()),
         });
         let view: Retained<Self> = unsafe { msg_send![super(view), initWithFrame: frame] };
 
@@ -213,6 +342,44 @@ impl TerminalView {
         }
 
         self.ivars().scrollback_offset.set(0);
+    }
+
+    fn write_text_to_pty(&self, text: &str, source: &str) {
+        if !self.ivars().logged_first_key_input.replace(true) {
+            logging::pty_info(&format!(
+                "terminal view first text input received: source={source} bytes={}",
+                text.len()
+            ));
+        }
+
+        if let Err(error) = self.ivars().writer.write_all(text.as_bytes()) {
+            logging::pty_error(&format!("pty write failed from {source}: {error}"));
+        }
+    }
+
+    fn interpret_text_input_event(&self, event: &NSEvent) {
+        let events = NSArray::from_slice(&[event]);
+        let responder: &NSResponder = self.as_super().as_super();
+        responder.interpretKeyEvents(&events);
+    }
+
+    fn cursor_screen_rect(&self) -> NSRect {
+        let snapshot = self
+            .ivars()
+            .buffer
+            .lock()
+            .map(|buffer| buffer.snapshot(self.ivars().rows.get().max(1)))
+            .unwrap_or_else(|_| TerminalSnapshot {
+                lines: Vec::new(),
+                styled_lines: Vec::new(),
+                cursor: terminal_core::Cursor::default(),
+                scrollback_len: 0,
+            });
+        let view_rect = cursor_rect(&snapshot);
+        let Some(window) = self.as_super().window() else {
+            return view_rect;
+        };
+        window.convertRectToScreen(view_rect)
     }
 
     fn apply_resize_if_needed(&self, rows: usize, cols: usize) {
@@ -281,6 +448,22 @@ fn is_command_v(event: &NSEvent) -> bool {
     key_code == 9 && flags.contains(objc2_app_kit::NSEventModifierFlags::Command)
 }
 
+fn should_use_text_input(event: &NSEvent) -> bool {
+    let flags = event.modifierFlags();
+    if flags.intersects(
+        objc2_app_kit::NSEventModifierFlags::Command
+            | objc2_app_kit::NSEventModifierFlags::Control
+            | objc2_app_kit::NSEventModifierFlags::Option,
+    ) {
+        return false;
+    }
+
+    !matches!(
+        event.keyCode(),
+        KEY_PAGE_UP | KEY_PAGE_DOWN | 51 | 117 | 115 | 119 | 123 | 124 | 125 | 126
+    )
+}
+
 fn draw_background(rect: NSRect) {
     NSColor::blackColor().setFill();
     NSRectFill(rect);
@@ -294,8 +477,28 @@ fn draw_terminal_text(snapshot: &TerminalSnapshot) {
 
     for (index, line) in snapshot.styled_lines.iter().enumerate() {
         let y = PADDING_Y + (index as f64 * LINE_HEIGHT);
-        draw_styled_line(line, y);
+            draw_styled_line(line, y);
     }
+}
+
+fn draw_composition_text(snapshot: &TerminalSnapshot, composition: &CompositionState) {
+    if !composition.has_marked_text() {
+        return;
+    }
+
+    let mut style = Style {
+        underline: true,
+        ..Style::default()
+    };
+    style.foreground = Some(Color::Indexed(11));
+    let attributes = terminal_text_attributes(style);
+    let rect = cursor_rect(snapshot);
+    draw_text_at(
+        composition.marked_text(),
+        rect.origin.x,
+        rect.origin.y - 2.0,
+        &attributes,
+    );
 }
 
 fn draw_plain_terminal_text(lines: &[String]) {
@@ -333,13 +536,18 @@ fn draw_text_at(text: &str, x: f64, y: f64, attributes: &NSMutableDictionary) {
 }
 
 fn draw_cursor(snapshot: &TerminalSnapshot) {
+    let rect = cursor_rect(snapshot);
+    NSColor::whiteColor().setFill();
+    NSRectFill(rect);
+}
+
+fn cursor_rect(snapshot: &TerminalSnapshot) -> NSRect {
     let x = PADDING_X + (snapshot.cursor.col as f64 * CELL_WIDTH);
     let y = PADDING_Y + (snapshot.cursor.row as f64 * LINE_HEIGHT) + 2.0;
-    NSColor::whiteColor().setFill();
-    NSRectFill(NSRect::new(
+    NSRect::new(
         NSPoint::new(x, y),
         objc2_foundation::NSSize::new(CURSOR_WIDTH, CURSOR_HEIGHT),
-    ));
+    )
 }
 
 fn terminal_text_attributes(style: Style) -> Retained<NSMutableDictionary> {
@@ -545,4 +753,20 @@ fn terminal_dimensions(bounds: NSRect) -> (usize, usize) {
     let rows = (available_height / LINE_HEIGHT).floor().max(1.0) as usize;
     let cols = (available_width / CELL_WIDTH).floor().max(1.0) as usize;
     (rows, cols)
+}
+
+fn text_from_input_object(
+    object: &AnyObject,
+    pool: objc2::rc::AutoreleasePool<'_>,
+) -> Option<String> {
+    if let Some(string) = object.downcast_ref::<NSString>() {
+        return Some(unsafe { string.to_str(pool) }.to_string());
+    }
+
+    if let Some(attributed) = object.downcast_ref::<NSAttributedString>() {
+        let string = attributed.string();
+        return Some(unsafe { string.to_str(pool) }.to_string());
+    }
+
+    None
 }

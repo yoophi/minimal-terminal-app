@@ -14,6 +14,7 @@ objc2-app-kit = { version = "0.3", default-features = false, features = [
     "NSEvent",
     "NSFont",
     "NSGraphics",
+    "NSTextInputClient",
     "NSPasteboard",
     "NSResponder",
     "NSRunningApplication",
@@ -25,11 +26,13 @@ objc2-app-kit = { version = "0.3", default-features = false, features = [
 objc2-foundation = { version = "0.3", default-features = false, features = [
     "std",
     "alloc",
+    "NSArray",
     "NSAttributedString",
     "NSDictionary",
     "NSNotification",
     "NSObject",
     "NSGeometry",
+    "NSRange",
     "NSString",
     "NSTimer",
 ] }
