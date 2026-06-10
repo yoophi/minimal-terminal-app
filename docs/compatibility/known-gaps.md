@@ -86,6 +86,30 @@
 
 ## Priority 5
 
+### 미확인 App Smoke Target
+
+상태: `unknown`
+
+대상:
+
+- `htop`
+- `fzf`
+- `git log --oneline --graph --decorate`
+
+중요한 이유:
+
+- Phase 008 matrix에는 대표 app smoke target이 포함되어 있지만, 이 항목들은 아직 runtime evidence가 없다.
+- `htop`과 `fzf`는 로컬 설치 여부에 따라 확인 가능성이 달라진다.
+- `git log --oneline --graph --decorate`는 history가 충분한 repository에서 확인해야 의미가 있다.
+
+권장 다음 작업:
+
+- 로컬에 설치된 도구부터 `docs/compatibility/smoke-tests.md` 절차로 확인한다.
+- 통과하면 `matrix.md`의 상태와 evidence를 갱신한다.
+- 실패하면 실패 증상을 이 문서의 구체적인 gap으로 승격한다.
+
+## Priority 6
+
 ### Full xterm Compatibility Coverage
 
 상태: `not supported`
@@ -99,4 +123,3 @@
 - `docs/compatibility/matrix.md`를 sequence family별로 계속 확장한다.
 - smoke test 실패에서 나온 unknown row를 우선순위에 따라 승격한다.
 - 새로 지원하는 sequence마다 작은 parser/grid fixture를 우선 추가한다.
-

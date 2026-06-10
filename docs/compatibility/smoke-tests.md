@@ -7,7 +7,7 @@
 앱을 빌드하고 실행한다.
 
 ```sh
-cargo test
+scripts/run-compatibility-core.sh
 scripts/bundle-macos-app.sh
 open 'target/debug/Minimal Terminal.app'
 ```
@@ -121,6 +121,23 @@ top
 - bracketed paste를 켜는 editor에서 paste boundary가 동작한다.
 - TUI 진입/종료 후에도 color/style rendering이 유지된다.
 
+## 선택 App Smoke
+
+로컬에 설치되어 있거나 확인 가능한 경우 다음 명령도 실행한다.
+
+```sh
+htop
+fzf
+git log --oneline --graph --decorate
+```
+
+기대 결과:
+
+- 화면이 읽을 수 있는 형태로 갱신된다.
+- arrow/navigation key가 프로그램 안에서 동작한다.
+- 종료 후 shell 화면이 복원된다.
+- 실패하면 `known-gaps.md`의 미확인 app smoke target을 구체적인 gap으로 승격한다.
+
 ## 실패 처리
 
 Smoke 테스트가 실패하면 다음 순서로 반영한다.
@@ -129,4 +146,3 @@ Smoke 테스트가 실패하면 다음 순서로 반영한다.
 2. `docs/compatibility/known-gaps.md`에 구체적인 gap을 기록한다.
 3. terminal-core로 축소 가능한 동작이면 parser/grid fixture를 추가한다.
 4. GUI 전용 동작은 자동화 경로가 생길 때까지 이 문서에 남긴다.
-

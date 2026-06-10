@@ -58,13 +58,17 @@ docs/
 │   ├── phase007.md
 │   └── phase008.md
 ├── compatibility/
+│   ├── csi.md
+│   ├── standards-and-tests.md
 │   ├── matrix.md
 │   ├── smoke-tests.md
-│   └── known-gaps.md
+│   ├── known-gaps.md
+│   └── regression-runner.md
 └── LOGGING.md
 
 scripts/
-└── bundle-macos-app.sh
+├── bundle-macos-app.sh
+└── run-compatibility-core.sh
 
 GOAL.md               # project goal and MVP scope
 ARCHITECTURE.md       # proposed architecture
@@ -76,4 +80,4 @@ ARCHITECTURE.md       # proposed architecture
 - Phase 005: Korean IME composition and text input stability are implemented.
 - Phase 006: Selection, copy, and scrollback UX are implemented for the current visible snapshot.
 - Phase 007: First TUI compatibility expansion is implemented.
-- Phase 008: Compatibility matrix, smoke test protocol, known gap tracking, and core compatibility evidence tests are implemented. GUI/runtime smoke scenarios remain manual.
+- Phase 008: Compatibility matrix, smoke test protocol, known gap tracking, CSI/reference documentation, regression runner, and core compatibility evidence tests are implemented. GUI/runtime smoke scenarios remain manual.

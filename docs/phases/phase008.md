@@ -80,9 +80,15 @@ Phase 008에서 다룰 작업은 다음과 같다.
 ```text
 docs/
 └── compatibility/
+    ├── csi.md
+    ├── standards-and-tests.md
     ├── matrix.md
     ├── smoke-tests.md
-    └── known-gaps.md
+    ├── known-gaps.md
+    └── regression-runner.md
+
+scripts/
+└── run-compatibility-core.sh
 
 crates/
 └── terminal-core/
@@ -91,7 +97,7 @@ crates/
         └── compatibility.rs
 ```
 
-`matrix.md`는 사람이 읽는 상태판이다. `compatibility.rs`는 자동화 가능한 parser/grid behavior를 검증한다. `smoke-tests.md`는 macOS AppKit runtime에서 사람이 확인해야 하는 항목을 기록한다.
+`matrix.md`는 사람이 읽는 상태판이다. `compatibility.rs`는 자동화 가능한 parser/grid behavior를 검증한다. `smoke-tests.md`는 macOS AppKit runtime에서 사람이 확인해야 하는 항목을 기록한다. `run-compatibility-core.sh`는 자동화 가능한 core regression 검증을 반복 실행하는 최소 runner다.
 
 ## Proposed Work Breakdown
 
@@ -191,9 +197,14 @@ Phase 008 완료 기준:
 - `docs/compatibility/matrix.md`가 생성되어 있다. `done`
 - `docs/compatibility/smoke-tests.md`가 생성되어 있다. `done`
 - `docs/compatibility/known-gaps.md`가 생성되어 있다. `done`
+- `docs/compatibility/csi.md`가 생성되어 있다. `done`
+- `docs/compatibility/standards-and-tests.md`가 생성되어 있다. `done`
+- `docs/compatibility/regression-runner.md`가 생성되어 있다. `done`
+- `scripts/run-compatibility-core.sh`가 생성되어 있다. `done`
 - Phase 004-007 결과가 matrix에 반영되어 있다. `done`
 - supported 항목마다 test 또는 runtime evidence가 있다. `done`
 - unknown/partially supported 항목이 known gaps로 정리되어 있다. `done`
+- regression command runner 초안이 검토되어 자동화 범위와 수동 smoke 범위가 분리되어 있다. `done`
 - 다음 compatibility 작업 우선순위가 matrix 기반으로 제안되어 있다. `done`
 - `cargo test`가 통과한다. `done`
 
@@ -206,9 +217,12 @@ Status: matrix documentation and automated core evidence are implemented. GUI/ru
 - `docs/compatibility/matrix.md`를 추가해 ANSI/VT sequence, runtime behavior, app smoke status를 한 곳에서 추적한다.
 - `docs/compatibility/smoke-tests.md`를 추가해 AppKit runtime, IME, pasteboard, TUI smoke 절차를 반복 가능하게 정리했다.
 - `docs/compatibility/known-gaps.md`를 추가해 Phase 007에서 넘긴 mouse reporting, device status report, cursor style, full xterm coverage gap을 우선순위와 함께 기록했다.
+- `docs/compatibility/csi.md`와 `docs/compatibility/standards-and-tests.md`를 추가해 CSI 용어, 준수 이유, 표준/테스트 판단 근거를 문서화했다.
+- `docs/compatibility/regression-runner.md`와 `scripts/run-compatibility-core.sh`를 추가해 자동화 가능한 core regression 검증 범위를 정의했다.
 - `crates/terminal-core/tests/compatibility.rs`를 추가해 matrix의 핵심 supported row가 `TerminalState` 공개 API로 검증되도록 했다.
 - `README.md`의 현재 단계와 project layout을 Phase 008 기준으로 갱신했다.
 
 검증:
 
 - `cargo test`
+- `scripts/run-compatibility-core.sh`
