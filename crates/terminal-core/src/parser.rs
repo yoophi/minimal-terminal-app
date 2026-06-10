@@ -71,6 +71,7 @@ pub(crate) struct Parser {
     g2_charset: Charset,
     g3_charset: Charset,
     active_charset: ActiveCharset,
+    single_shift_charset: Option<ActiveCharset>,
 }
 
 impl Default for Parser {
@@ -82,6 +83,7 @@ impl Default for Parser {
             g2_charset: Charset::Ascii,
             g3_charset: Charset::Ascii,
             active_charset: ActiveCharset::G0,
+            single_shift_charset: None,
         }
     }
 }
@@ -116,6 +118,7 @@ impl Parser {
             g2_charset: self.g2_charset,
             g3_charset: self.g3_charset,
             active_charset: self.active_charset,
+            single_shift_charset: self.single_shift_charset,
         };
         self.parser.advance(&mut performer, bytes);
         self.g0_charset = performer.g0_charset;
@@ -123,6 +126,7 @@ impl Parser {
         self.g2_charset = performer.g2_charset;
         self.g3_charset = performer.g3_charset;
         self.active_charset = performer.active_charset;
+        self.single_shift_charset = performer.single_shift_charset;
         performer.actions
     }
 }
@@ -135,11 +139,16 @@ struct ActionCollector {
     g2_charset: Charset,
     g3_charset: Charset,
     active_charset: ActiveCharset,
+    single_shift_charset: Option<ActiveCharset>,
 }
 
 impl vte::Perform for ActionCollector {
     fn print(&mut self, ch: char) {
-        let charset = match self.active_charset {
+        let active_charset = self
+            .single_shift_charset
+            .take()
+            .unwrap_or(self.active_charset);
+        let charset = match active_charset {
             ActiveCharset::G0 => self.g0_charset,
             ActiveCharset::G1 => self.g1_charset,
             ActiveCharset::G2 => self.g2_charset,
@@ -205,6 +214,14 @@ impl vte::Perform for ActionCollector {
             }
             ([], b'o') => {
                 self.active_charset = ActiveCharset::G3;
+                return;
+            }
+            ([], b'N') => {
+                self.single_shift_charset = Some(ActiveCharset::G2);
+                return;
+            }
+            ([], b'O') => {
+                self.single_shift_charset = Some(ActiveCharset::G3);
                 return;
             }
             ([b'('], b'0') => {
@@ -627,6 +644,20 @@ mod tests {
             vec![Action::Print('└'), Action::Print('─'), Action::Print('┘')]
         );
         assert_eq!(parser.advance_bytes(b"\x0fx"), vec![Action::Print('x')]);
+    }
+
+    #[test]
+    fn maps_g2_and_g3_dec_special_graphics_with_single_shift() {
+        let mut parser = Parser::default();
+
+        assert_eq!(
+            parser.advance_bytes(b"\x1b*0\x1b+0\x1bNlx"),
+            vec![Action::Print('┌'), Action::Print('x')]
+        );
+        assert_eq!(
+            parser.advance_bytes(b"\x1bOmx"),
+            vec![Action::Print('└'), Action::Print('x')]
+        );
     }
 
     #[test]
