@@ -236,6 +236,7 @@ Phase 003 범위에서 필수로 남은 작업은 없다.
 
 후속 phase로 분리할 작업:
 
+- Phase 004: `vte` adapter, SGR style model, parser fixture/golden test, AppKit style-aware rendering
 - `NSTextInputClient` 기반 IME preedit/composition UI
 - selection/copy와 통합된 scrollback UX
 - 더 높은 xterm 호환성
@@ -259,5 +260,5 @@ Phase 003의 목표인 terminal core, cursor, 기본 input semantics, resize, sc
 
 - IME composition: AppKit `NSTextInputClient` 수준의 별도 설계가 필요하다.
 - scrollback UX 고도화: keyboard/wheel 노출은 완료했지만 selection/copy와의 통합 정책이 필요하다.
-- ANSI/VT 완성도 확대: xterm 호환성은 지속적인 parser 확장 작업이다.
+- ANSI/VT 완성도 확대: Phase 004에서 `vte` adapter와 SGR style model을 먼저 도입하고, xterm 호환성은 지속적인 parser 확장 작업으로 다룬다.
 - Option/Command 조합 고도화: 현재 기본 정책은 구현했지만 사용자 설정화가 필요하다.
