@@ -96,6 +96,7 @@ enum Charset {
     British,
     DecSpecialGraphics,
     Finnish,
+    French,
     German,
 }
 
@@ -272,6 +273,10 @@ impl vte::Perform for ActionCollector {
                 self.g0_charset = Charset::Finnish;
                 return;
             }
+            ([b'('], b'R' | b'f') => {
+                self.g0_charset = Charset::French;
+                return;
+            }
             ([b'('], b'K') => {
                 self.g0_charset = Charset::German;
                 return;
@@ -290,6 +295,10 @@ impl vte::Perform for ActionCollector {
             }
             ([b')'], b'C') => {
                 self.g1_charset = Charset::Finnish;
+                return;
+            }
+            ([b')'], b'R' | b'f') => {
+                self.g1_charset = Charset::French;
                 return;
             }
             ([b')'], b'K') => {
@@ -312,6 +321,10 @@ impl vte::Perform for ActionCollector {
                 self.g2_charset = Charset::Finnish;
                 return;
             }
+            ([b'*'], b'R' | b'f') => {
+                self.g2_charset = Charset::French;
+                return;
+            }
             ([b'*'], b'K') => {
                 self.g2_charset = Charset::German;
                 return;
@@ -330,6 +343,10 @@ impl vte::Perform for ActionCollector {
             }
             ([b'+'], b'C') => {
                 self.g3_charset = Charset::Finnish;
+                return;
+            }
+            ([b'+'], b'R' | b'f') => {
+                self.g3_charset = Charset::French;
                 return;
             }
             ([b'+'], b'K') => {
@@ -380,6 +397,21 @@ fn map_printable_char(ch: char, charset: Charset) -> char {
             '|' => 'ö',
             '}' => 'å',
             '~' => 'ü',
+            _ => ch,
+        };
+    }
+
+    if charset == Charset::French {
+        return match ch {
+            '#' => '£',
+            '@' => 'à',
+            '[' => '°',
+            '\\' => 'ç',
+            ']' => '§',
+            '{' => 'é',
+            '|' => 'ù',
+            '}' => 'è',
+            '~' => '¨',
             _ => ch,
         };
     }
@@ -872,6 +904,36 @@ mod tests {
         assert_eq!(
             parser.advance_bytes(b"\x1b)C\x1b~\xc3\xbb"),
             vec![Action::Print('ä')]
+        );
+    }
+
+    #[test]
+    fn maps_french_nrcs_charset() {
+        let mut parser = Parser::default();
+
+        assert_eq!(
+            parser.advance_bytes(b"\x1b(R#@[\\] {|}~\x1b(B#"),
+            vec![
+                Action::Print('£'),
+                Action::Print('à'),
+                Action::Print('°'),
+                Action::Print('ç'),
+                Action::Print('§'),
+                Action::Print(' '),
+                Action::Print('é'),
+                Action::Print('ù'),
+                Action::Print('è'),
+                Action::Print('¨'),
+                Action::Print('#'),
+            ]
+        );
+        assert_eq!(
+            parser.advance_bytes(b"\x1b*f\x1bN~x"),
+            vec![Action::Print('¨'), Action::Print('x')]
+        );
+        assert_eq!(
+            parser.advance_bytes(b"\x1b)R\x1b~\xc3\xbb"),
+            vec![Action::Print('é')]
         );
     }
 
