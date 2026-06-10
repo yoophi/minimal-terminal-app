@@ -37,14 +37,14 @@ fn encode_key(key_code: u16, flags: NSEventModifierFlags, input: &str) -> Option
         KEY_RETURN => Some(b"\r".to_vec()),
         KEY_BACKSPACE => Some(vec![0x7f]),
         KEY_FORWARD_DELETE => Some(b"\x1b[3~".to_vec()),
-        KEY_HOME => Some(b"\x1b[H".to_vec()),
-        KEY_END => Some(b"\x1b[F".to_vec()),
+        KEY_HOME => Some(vec![0x01]),
+        KEY_END => Some(vec![0x05]),
         KEY_PAGE_UP => Some(b"\x1b[5~".to_vec()),
         KEY_PAGE_DOWN => Some(b"\x1b[6~".to_vec()),
-        KEY_UP => Some(b"\x1b[A".to_vec()),
-        KEY_DOWN => Some(b"\x1b[B".to_vec()),
-        KEY_RIGHT => Some(b"\x1b[C".to_vec()),
-        KEY_LEFT => Some(b"\x1b[D".to_vec()),
+        KEY_UP => Some(vec![0x10]),
+        KEY_DOWN => Some(vec![0x0e]),
+        KEY_RIGHT => Some(vec![0x06]),
+        KEY_LEFT => Some(vec![0x02]),
         _ if input.is_empty() => None,
         _ => Some(input.as_bytes().to_vec()),
     }
@@ -56,12 +56,7 @@ fn encode_option_key(key_code: u16, input: &str) -> Option<Vec<u8>> {
         KEY_RIGHT => Some(b"\x1bf".to_vec()),
         KEY_BACKSPACE => Some(vec![0x1b, 0x7f]),
         _ if input.is_empty() => None,
-        _ => {
-            let mut bytes = Vec::with_capacity(1 + input.len());
-            bytes.push(0x1b);
-            bytes.extend_from_slice(input.as_bytes());
-            Some(bytes)
-        }
+        _ => Some(input.as_bytes().to_vec()),
     }
 }
 
@@ -124,11 +119,11 @@ mod tests {
     }
 
     #[test]
-    fn encodes_arrow_keys_as_csi_sequences() {
-        assert_eq!(encode_key_code(KEY_UP, ""), Some(b"\x1b[A".to_vec()));
-        assert_eq!(encode_key_code(KEY_DOWN, ""), Some(b"\x1b[B".to_vec()));
-        assert_eq!(encode_key_code(KEY_RIGHT, ""), Some(b"\x1b[C".to_vec()));
-        assert_eq!(encode_key_code(KEY_LEFT, ""), Some(b"\x1b[D".to_vec()));
+    fn encodes_arrow_keys_as_shell_line_editor_controls() {
+        assert_eq!(encode_key_code(KEY_UP, ""), Some(vec![0x10]));
+        assert_eq!(encode_key_code(KEY_DOWN, ""), Some(vec![0x0e]));
+        assert_eq!(encode_key_code(KEY_RIGHT, ""), Some(vec![0x06]));
+        assert_eq!(encode_key_code(KEY_LEFT, ""), Some(vec![0x02]));
     }
 
     #[test]
@@ -143,8 +138,8 @@ mod tests {
             encode_key_code(KEY_FORWARD_DELETE, ""),
             Some(b"\x1b[3~".to_vec())
         );
-        assert_eq!(encode_key_code(KEY_HOME, ""), Some(b"\x1b[H".to_vec()));
-        assert_eq!(encode_key_code(KEY_END, ""), Some(b"\x1b[F".to_vec()));
+        assert_eq!(encode_key_code(KEY_HOME, ""), Some(vec![0x01]));
+        assert_eq!(encode_key_code(KEY_END, ""), Some(vec![0x05]));
         assert_eq!(encode_key_code(KEY_PAGE_UP, ""), Some(b"\x1b[5~".to_vec()));
         assert_eq!(
             encode_key_code(KEY_PAGE_DOWN, ""),
@@ -164,7 +159,7 @@ mod tests {
     fn encodes_option_as_meta_prefix() {
         assert_eq!(
             encode_modified_key(0, NSEventModifierFlags::Option, "x"),
-            Some(b"\x1bx".to_vec())
+            Some(b"x".to_vec())
         );
         assert_eq!(
             encode_modified_key(KEY_LEFT, NSEventModifierFlags::Option, ""),
