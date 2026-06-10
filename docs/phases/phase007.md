@@ -146,3 +146,65 @@ Phase 007 완료 기준:
 - Phase 007에서 추가한 sequence가 fixture/golden test로 검증된다.
 - `cargo test`가 통과한다.
 - 알려진 미지원 항목이 Phase 008 matrix 후보로 기록된다.
+
+## Implementation Update - 2026-06-10
+
+Status: implementation complete for the first compatibility expansion. 장기 호환성 검증은 Phase 008 matrix에서 계속 추적한다.
+
+구현된 내용:
+
+- terminal-core에 `TerminalModes`를 추가했다.
+- `CSI ? 25 h/l` cursor visibility mode를 처리한다.
+- renderer가 hidden cursor 상태를 반영해 cursor block을 그리지 않는다.
+- `CSI ? 2004 h/l` bracketed paste mode를 처리한다.
+- bracketed paste mode가 켜진 상태에서 paste하면 `ESC[200~` / `ESC[201~` wrapper를 적용한다.
+- `CSI ? 1 h/l` application cursor keys mode를 처리한다.
+- application cursor keys mode에서 arrow key를 `ESC OA`, `ESC OB`, `ESC OC`, `ESC OD`로 보낸다.
+- scroll region `CSI top;bottom r`을 처리한다.
+- TUI에서 자주 쓰는 editing sequence를 추가했다.
+  - `CSI @` insert blank characters
+  - `CSI P` delete characters
+  - `CSI X` erase characters
+  - `CSI L` insert lines
+  - `CSI M` delete lines
+- scroll region 내부 newline/scroll 동작을 grid/state 테스트로 고정했다.
+
+관련 커밋:
+
+- `02ca228 Expand TUI terminal modes`
+- `5368cab Support TUI editing and scroll region sequences`
+
+검증:
+
+- `cargo test`
+- parser private mode 테스트
+- TUI editing sequence parser 테스트
+- cursor visibility, bracketed paste, application cursor mode state 테스트
+- scroll region, insert/delete line, insert/delete/erase character state 테스트
+- 앱 번들 빌드와 런타임 시작 확인
+
+Phase 008 matrix에 넘길 반복 smoke target:
+
+```sh
+printf 'one\ntwo\nthree\n' | less
+vim /tmp/minimal-terminal-smoke.txt
+top
+```
+
+확인 포인트:
+
+- alternate screen 진입과 종료 후 main screen 복원
+- full-screen redraw
+- cursor visibility 전환
+- arrow key 입력
+- bracketed paste boundary
+- color/style rendering 유지
+- scroll region을 사용하는 화면 갱신이 깨지지 않는지 확인
+
+Known follow-up candidates:
+
+- mouse reporting
+- device status report 응답
+- cursor style sequence
+- full xterm compatibility coverage
+- 자동화 가능한 compatibility fixture 확대

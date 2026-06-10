@@ -131,3 +131,43 @@ Phase 006 완료 기준:
 - ANSI styled text를 선택해도 plain text copy가 정상 동작한다.
 - `cargo test`가 통과한다.
 - 실제 앱에서 selection/copy smoke scenario가 통과한다.
+
+## Implementation Update - 2026-06-10
+
+Status: implementation complete. 반복 검증은 Phase 008 compatibility matrix에 편입한다.
+
+구현된 내용:
+
+- `crates/terminal-app/src/selection.rs`에 grid coordinate 기반 selection state를 추가했다.
+- `mouseDown:`, `mouseDragged:`, `mouseUp:`에서 view 좌표를 terminal row/col로 변환해 selection range를 갱신한다.
+- 현재 보이는 `TerminalSnapshot` 기준으로 selected plain text를 추출한다.
+- trailing blank를 정리하고, 여러 줄 선택 시 newline을 삽입한다.
+- 한글 wide character selection/copy에서 continuation cell을 중복 복사하지 않도록 처리했다.
+- 선택 영역 highlight를 text rendering보다 먼저 그려 ANSI styled text 위에서도 선택 상태가 보이게 했다.
+- `Cmd-C`는 selection이 있을 때 macOS pasteboard에 plain text를 저장한다.
+- `Ctrl-C`는 command modifier가 없으면 기존 PTY interrupt 입력 경로를 유지한다.
+
+관련 커밋:
+
+- `b0bbc76 Add terminal selection and copy`
+
+검증:
+
+- `cargo test`
+- selection range normalization 테스트
+- multi-line selected text 추출 테스트
+- wide character copy 회귀 테스트
+- 앱 번들 빌드와 런타임 시작 확인
+
+반복 확인할 수동 smoke scenario:
+
+```sh
+printf 'one\ntwo\n한글\n'
+```
+
+확인 포인트:
+
+- 마우스 drag로 출력 텍스트가 highlight된다.
+- `Cmd-C` 후 다른 앱 또는 shell에 paste하면 선택한 plain text가 들어간다.
+- `Ctrl-C`는 shell interrupt로 동작하고 copy shortcut과 충돌하지 않는다.
+- styled/color text를 선택해도 plain text로 복사된다.

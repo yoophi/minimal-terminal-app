@@ -169,3 +169,50 @@ Phase 005 완료 기준:
 - 한글 wide character 입력/삭제 후 cursor 위치가 어긋나지 않는다.
 - `cargo test`가 통과한다.
 - 실제 앱에서 한글 입력/삭제 smoke scenario가 통과한다.
+
+## Implementation Update - 2026-06-10
+
+Status: implementation complete. 반복 검증은 Phase 008 compatibility matrix에 편입한다.
+
+구현된 내용:
+
+- `crates/terminal-app/src/composition.rs`에 IME composition state를 추가했다.
+- `TerminalView`가 `NSTextInputClient`를 구현하도록 연결했다.
+- printable text 입력은 `keyDown:`에서 직접 PTY로 보내지 않고 `interpretKeyEvents:`를 통해 AppKit text input path로 보낸다.
+- `setMarkedText:selectedRange:replacementRange:`에서 조합 중 문자열을 view state에 저장한다.
+- `insertText:replacementRange:`에서 확정 문자열만 UTF-8 bytes로 PTY에 전달한다.
+- 조합 중 문자열은 terminal grid에 쓰지 않고 cursor 위치 위에 overlay로 렌더링한다.
+- 조합 중 `deleteBackward:`는 composition을 우선 정리하고, 조합이 없는 일반 Backspace는 기존 PTY input path를 유지한다.
+- wide character 삭제 회귀 테스트는 terminal-core의 기존 cursor/grid 테스트와 함께 유지한다.
+
+런타임 안정성 보강:
+
+- 최초 구현에서는 `NSTextInputClient` required method가 클래스 impl에는 있었지만 protocol impl 블록에는 등록되지 않아 앱 시작 시 abort가 발생했다.
+- `attributedSubstringForProposedRange:actualRange:`와 `validAttributesForMarkedText`는 객체 반환 메서드이므로 `objc2`의 `method_id` 방식으로 등록했다.
+- IME 관련 required selector를 `unsafe impl NSTextInputClient for TerminalView` 블록 안으로 이동해 `objc2` debug protocol verification을 통과하도록 수정했다.
+
+관련 커밋:
+
+- `3b79596 Add IME composition state`
+- `76f9a0a Connect NSTextInputClient for IME input`
+- `f320e07 Fix NSTextInputClient runtime registration`
+
+검증:
+
+- `cargo test`
+- `scripts/bundle-macos-app.sh`
+- `target/debug/Minimal Terminal.app/Contents/MacOS/terminal-app` 직접 실행 후 2초 이상 생존 확인
+
+반복 확인할 수동 smoke scenario:
+
+```sh
+echo 한글
+printf 'abc한글123\n'
+```
+
+확인 포인트:
+
+- 한글 조합 중 preedit 문자열이 cursor 위치에 보인다.
+- 확정 전에는 PTY로 조기 전달되지 않는다.
+- 확정 후 shell input line에 한글이 표시된다.
+- 한글과 ASCII를 섞어 입력한 뒤 Backspace/Delete를 눌러 cursor 위치가 어긋나지 않는지 확인한다.
