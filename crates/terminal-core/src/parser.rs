@@ -100,6 +100,7 @@ enum Charset {
     French,
     German,
     Italian,
+    NorwegianDanish,
     Spanish,
     Swedish,
 }
@@ -301,6 +302,10 @@ impl vte::Perform for ActionCollector {
                 self.g0_charset = Charset::Spanish;
                 return;
             }
+            ([b'('], b'`' | b'E' | b'6') => {
+                self.g0_charset = Charset::NorwegianDanish;
+                return;
+            }
             ([b')'], b'0') => {
                 self.g1_charset = Charset::DecSpecialGraphics;
                 return;
@@ -339,6 +344,10 @@ impl vte::Perform for ActionCollector {
             }
             ([b')'], b'Z') => {
                 self.g1_charset = Charset::Spanish;
+                return;
+            }
+            ([b')'], b'`' | b'E' | b'6') => {
+                self.g1_charset = Charset::NorwegianDanish;
                 return;
             }
             ([b'*'], b'0') => {
@@ -381,6 +390,10 @@ impl vte::Perform for ActionCollector {
                 self.g2_charset = Charset::Spanish;
                 return;
             }
+            ([b'*'], b'`' | b'E' | b'6') => {
+                self.g2_charset = Charset::NorwegianDanish;
+                return;
+            }
             ([b'+'], b'0') => {
                 self.g3_charset = Charset::DecSpecialGraphics;
                 return;
@@ -419,6 +432,10 @@ impl vte::Perform for ActionCollector {
             }
             ([b'+'], b'Z') => {
                 self.g3_charset = Charset::Spanish;
+                return;
+            }
+            ([b'+'], b'`' | b'E' | b'6') => {
+                self.g3_charset = Charset::NorwegianDanish;
                 return;
             }
             ([b'(' | b')' | b'*' | b'+'], _) => return,
@@ -527,6 +544,22 @@ fn map_printable_char(ch: char, charset: Charset) -> char {
             '|' => 'ò',
             '}' => 'è',
             '~' => 'ì',
+            _ => ch,
+        };
+    }
+
+    if charset == Charset::NorwegianDanish {
+        return match ch {
+            '@' => 'Ä',
+            '[' => 'Æ',
+            '\\' => 'Ø',
+            ']' => 'Å',
+            '^' => 'Ü',
+            '`' => 'ä',
+            '{' => 'æ',
+            '|' => 'ø',
+            '}' => 'å',
+            '~' => 'ü',
             _ => ch,
         };
     }
@@ -1183,6 +1216,36 @@ mod tests {
         assert_eq!(
             parser.advance_bytes(b"\x1b)H\x1b~\xc3\xbb"),
             vec![Action::Print('ä')]
+        );
+    }
+
+    #[test]
+    fn maps_norwegian_danish_nrcs_charset() {
+        let mut parser = Parser::default();
+
+        assert_eq!(
+            parser.advance_bytes(b"\x1b(E@[\\]^`{|}~\x1b(B@"),
+            vec![
+                Action::Print('Ä'),
+                Action::Print('Æ'),
+                Action::Print('Ø'),
+                Action::Print('Å'),
+                Action::Print('Ü'),
+                Action::Print('ä'),
+                Action::Print('æ'),
+                Action::Print('ø'),
+                Action::Print('å'),
+                Action::Print('ü'),
+                Action::Print('@'),
+            ]
+        );
+        assert_eq!(
+            parser.advance_bytes(b"\x1b*6\x1bN~x"),
+            vec![Action::Print('ü'), Action::Print('x')]
+        );
+        assert_eq!(
+            parser.advance_bytes(b"\x1b)`\x1b~\xc3\xbb"),
+            vec![Action::Print('æ')]
         );
     }
 
