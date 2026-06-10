@@ -737,6 +737,15 @@ mod tests {
     }
 
     #[test]
+    fn renders_jis_roman_charset() {
+        let mut terminal = TerminalState::new(4, 20);
+
+        terminal.append_bytes(b"\x1b(J\\~\x1b(B\\");
+
+        assert_eq!(terminal.snapshot(4).lines[0], "¥‾\\");
+    }
+
+    #[test]
     fn renders_spanish_nrcs_charset() {
         let mut terminal = TerminalState::new(4, 20);
 

@@ -103,6 +103,7 @@ enum Charset {
     Greek,
     Hebrew,
     Italian,
+    JisRoman,
     NorwegianDanish,
     Portuguese,
     Russian,
@@ -330,6 +331,10 @@ impl vte::Perform for ActionCollector {
                 self.g0_charset = Charset::Italian;
                 return;
             }
+            ([b'('], b'J') => {
+                self.g0_charset = Charset::JisRoman;
+                return;
+            }
             ([b'('], b'Z') => {
                 self.g0_charset = Charset::Spanish;
                 return;
@@ -404,6 +409,10 @@ impl vte::Perform for ActionCollector {
             }
             ([b')'], b'Y') => {
                 self.g1_charset = Charset::Italian;
+                return;
+            }
+            ([b')'], b'J') => {
+                self.g1_charset = Charset::JisRoman;
                 return;
             }
             ([b')'], b'Z') => {
@@ -482,6 +491,10 @@ impl vte::Perform for ActionCollector {
                 self.g2_charset = Charset::Italian;
                 return;
             }
+            ([b'*'], b'J') => {
+                self.g2_charset = Charset::JisRoman;
+                return;
+            }
             ([b'*'], b'Z') => {
                 self.g2_charset = Charset::Spanish;
                 return;
@@ -556,6 +569,10 @@ impl vte::Perform for ActionCollector {
             }
             ([b'+'], b'Y') => {
                 self.g3_charset = Charset::Italian;
+                return;
+            }
+            ([b'+'], b'J') => {
+                self.g3_charset = Charset::JisRoman;
                 return;
             }
             ([b'+'], b'Z') => {
@@ -714,6 +731,14 @@ fn map_printable_char(ch: char, charset: Charset) -> char {
             '|' => 'ò',
             '}' => 'è',
             '~' => 'ì',
+            _ => ch,
+        };
+    }
+
+    if charset == Charset::JisRoman {
+        return match ch {
+            '\\' => '¥',
+            '~' => '‾',
             _ => ch,
         };
     }
@@ -1442,6 +1467,24 @@ mod tests {
         assert_eq!(
             parser.advance_bytes(b"\x1b)Y\x1b~\xc3\xbb"),
             vec![Action::Print('à')]
+        );
+    }
+
+    #[test]
+    fn maps_jis_roman_charset() {
+        let mut parser = Parser::default();
+
+        assert_eq!(
+            parser.advance_bytes(b"\x1b(J\\~\x1b(B\\"),
+            vec![Action::Print('¥'), Action::Print('‾'), Action::Print('\\'),]
+        );
+        assert_eq!(
+            parser.advance_bytes(b"\x1b*J\x1bN~x"),
+            vec![Action::Print('‾'), Action::Print('x')]
+        );
+        assert_eq!(
+            parser.advance_bytes(b"\x1b)J\x1b~\xc3\x9c"),
+            vec![Action::Print('¥')]
         );
     }
 
