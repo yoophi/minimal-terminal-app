@@ -100,6 +100,7 @@ enum Charset {
     DecSupplementalGraphics,
     DecSpecialGraphics,
     DecTechnical,
+    DecTurkishSupplemental,
     Dutch,
     Finnish,
     French,
@@ -341,6 +342,10 @@ impl vte::Perform for ActionCollector {
                 self.g0_charset = Charset::Turkish;
                 return;
             }
+            ([b'(', b'%'], b'0') => {
+                self.g0_charset = Charset::DecTurkishSupplemental;
+                return;
+            }
             ([b'(', b'&'], b'5') => {
                 self.g0_charset = Charset::Russian;
                 return;
@@ -443,6 +448,10 @@ impl vte::Perform for ActionCollector {
             }
             ([b')', b'%'], b'2') => {
                 self.g1_charset = Charset::Turkish;
+                return;
+            }
+            ([b')', b'%'], b'0') => {
+                self.g1_charset = Charset::DecTurkishSupplemental;
                 return;
             }
             ([b')', b'&'], b'5') => {
@@ -549,6 +558,10 @@ impl vte::Perform for ActionCollector {
                 self.g2_charset = Charset::Turkish;
                 return;
             }
+            ([b'*', b'%'], b'0') => {
+                self.g2_charset = Charset::DecTurkishSupplemental;
+                return;
+            }
             ([b'*', b'&'], b'5') => {
                 self.g2_charset = Charset::Russian;
                 return;
@@ -653,6 +666,10 @@ impl vte::Perform for ActionCollector {
                 self.g3_charset = Charset::Turkish;
                 return;
             }
+            ([b'+', b'%'], b'0') => {
+                self.g3_charset = Charset::DecTurkishSupplemental;
+                return;
+            }
             ([b'+', b'&'], b'5') => {
                 self.g3_charset = Charset::Russian;
                 return;
@@ -705,6 +722,24 @@ impl vte::Perform for ActionCollector {
 }
 
 fn map_printable_char(ch: char, charset: Charset) -> char {
+    if charset == Charset::DecTurkishSupplemental {
+        return match ch {
+            '$' | '&' | ',' | '-' | '/' | '4' | '8' => '␦',
+            '.' => 'İ',
+            '>' => 'ı',
+            'P' => 'Ğ',
+            'W' => 'Œ',
+            ']' => 'Ÿ',
+            '^' => 'Ş',
+            'p' => 'ğ',
+            'w' => 'œ',
+            '}' => 'ÿ',
+            '~' => 'ş',
+            '!'..='~' => char::from_u32(ch as u32 + 0x80).unwrap_or(ch),
+            _ => ch,
+        };
+    }
+
     if charset == Charset::DecHebrewSupplemental {
         return match ch {
             '!' => '¡',
@@ -1942,6 +1977,43 @@ mod tests {
         assert_eq!(
             parser.advance_bytes(b"\x1b)\"4\x1b~\xc3\xa0"),
             vec![Action::Print('א')]
+        );
+    }
+
+    #[test]
+    fn maps_dec_turkish_supplemental_charset() {
+        let mut parser = Parser::default();
+
+        assert_eq!(
+            parser.advance_bytes(b"\x1b(%0!\"#%.>PW]^_`pw}~$\x1b(B!"),
+            vec![
+                Action::Print('¡'),
+                Action::Print('¢'),
+                Action::Print('£'),
+                Action::Print('¥'),
+                Action::Print('İ'),
+                Action::Print('ı'),
+                Action::Print('Ğ'),
+                Action::Print('Œ'),
+                Action::Print('Ÿ'),
+                Action::Print('Ş'),
+                Action::Print('ß'),
+                Action::Print('à'),
+                Action::Print('ğ'),
+                Action::Print('œ'),
+                Action::Print('ÿ'),
+                Action::Print('ş'),
+                Action::Print('␦'),
+                Action::Print('!'),
+            ]
+        );
+        assert_eq!(
+            parser.advance_bytes(b"\x1b*%0\x1bN.x"),
+            vec![Action::Print('İ'), Action::Print('x')]
+        );
+        assert_eq!(
+            parser.advance_bytes(b"\x1b)%0\x1b~\xc2\xa1"),
+            vec![Action::Print('¡')]
         );
     }
 
