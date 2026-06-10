@@ -101,4 +101,4 @@ ARCHITECTURE.md       # proposed architecture
 - Phase 008: Compatibility matrix, smoke test protocol, known gap tracking, CSI/reference documentation, regression runner, and core compatibility evidence tests are implemented. GUI/runtime smoke scenarios remain manual.
 - Phase 009: Compatibility documentation consistency checks are implemented.
 - Phase 010-015: App logic tests, DSR, cursor style, SGR mouse reporting, combined scrollback selection, and local app smoke automation are implemented.
-- Phase 016-020: TUI replay fixtures, app smoke unknown resolution, xterm/vttest compatibility expansion, representative app certification tracking, and secondary device attributes are implemented.
+- Phase 016-021: TUI replay fixtures, app smoke unknown resolution, xterm/vttest compatibility expansion, representative app certification tracking, secondary device attributes, and function/modified key encoding are implemented.

@@ -22,7 +22,7 @@ Phase 009-018은 1-5번의 많은 부분을 구현하거나 검증 대상으로 
 
 | 대상 | Phase 019 확인 결과 | 남는 리스크 |
 | --- | --- | --- |
-| `vim` | replay evidence와 기존 smoke target이 있어 `partially supported`. | function key, modifier key, mouse, edge-case redraw |
+| `vim` | replay evidence와 기존 smoke target이 있어 `partially supported`. | remaining modifier key variants, mouse, edge-case redraw |
 | `emacs -nw` | local PATH에서 `emacs` 미확인, `not supported`. | 설치 후 Meta/Option key, 복잡한 key chord, mouse 확인 필요 |
 | `tmux` | `tmux 3.6b` version smoke 통과, `partially supported`. | pane redraw, mouse mode, alternate screen nesting, resize, secondary DA |
 | `claude` / `claude-code` | `2.1.170 (Claude Code)` version smoke 통과, `partially supported`. | raw input, paste, resize, spinner/redraw, Ctrl/Alt 조합, 인증/네트워크 분리 |
@@ -36,7 +36,7 @@ Phase 009-018은 1-5번의 많은 부분을 구현하거나 검증 대상으로 
 
 - DA/secondary DA, DSR 같은 terminal response sequence
 - Shift/Option/Control 조합 key encoding
-- function key와 application keypad
+- application keypad와 remaining modifier key variants
 - mouse reporting과 native selection 충돌
 - alternate screen 안에서 다시 다른 TUI를 실행하는 nested workflow
 - resize 후 cursor, pane, prompt redraw
