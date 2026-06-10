@@ -9,7 +9,6 @@ pub struct TerminalSnapshot {
     pub scrollback_len: usize,
 }
 
-#[derive(Clone, Debug)]
 pub struct TerminalState {
     grid: Grid,
     cursor: Cursor,
@@ -37,11 +36,8 @@ impl TerminalState {
     }
 
     pub fn append_bytes(&mut self, bytes: &[u8]) {
-        let text = String::from_utf8_lossy(bytes);
-        for ch in text.chars() {
-            if let Some(action) = self.parser.advance(ch) {
-                self.apply(action);
-            }
+        for action in self.parser.advance_bytes(bytes) {
+            self.apply(action);
         }
     }
 

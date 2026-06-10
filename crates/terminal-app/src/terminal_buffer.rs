@@ -3,7 +3,6 @@ use terminal_core::{TerminalSnapshot, TerminalState};
 const DEFAULT_ROWS: usize = 32;
 const DEFAULT_COLS: usize = 100;
 
-#[derive(Debug)]
 pub struct TerminalBuffer {
     terminal: TerminalState,
 }

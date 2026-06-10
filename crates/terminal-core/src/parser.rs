@@ -34,122 +34,90 @@ pub(crate) enum ScreenClearMode {
     Entire,
 }
 
-#[derive(Clone, Debug, Default)]
+#[derive(Default)]
 pub(crate) struct Parser {
-    state: ParserState,
-    csi: String,
-}
-
-#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
-enum ParserState {
-    #[default]
-    Ground,
-    Escape,
-    Csi,
-    Osc,
-    OscEscape,
-    Charset,
+    parser: vte::Parser,
 }
 
 impl Parser {
+    #[cfg(test)]
     pub(crate) fn advance(&mut self, ch: char) -> Option<Action> {
-        match self.state {
-            ParserState::Ground => self.advance_ground(ch),
-            ParserState::Escape => self.advance_escape(ch),
-            ParserState::Csi => self.advance_csi(ch),
-            ParserState::Osc => self.advance_osc(ch),
-            ParserState::OscEscape => self.advance_osc_escape(ch),
-            ParserState::Charset => self.advance_charset(ch),
-        }
+        let mut bytes = [0; 4];
+        let encoded = ch.encode_utf8(&mut bytes);
+        self.advance_bytes(encoded.as_bytes()).pop()
     }
 
-    fn advance_ground(&mut self, ch: char) -> Option<Action> {
-        match ch {
-            '\u{1b}' => {
-                self.state = ParserState::Escape;
-                None
-            }
-            '\r' => Some(Action::CarriageReturn),
-            '\n' => Some(Action::Newline),
-            '\u{08}' | '\u{7f}' => Some(Action::Backspace),
-            '\t' => Some(Action::Tab),
-            ch if ch.is_control() => Some(Action::Ignore),
-            ch => Some(Action::Print(ch)),
-        }
-    }
-
-    fn advance_escape(&mut self, ch: char) -> Option<Action> {
-        match ch {
-            '[' => {
-                self.csi.clear();
-                self.state = ParserState::Csi;
-                None
-            }
-            ']' => {
-                self.state = ParserState::Osc;
-                None
-            }
-            '(' | ')' | '*' | '+' => {
-                self.state = ParserState::Charset;
-                None
-            }
-            '7' => {
-                self.state = ParserState::Ground;
-                Some(Action::SaveCursor)
-            }
-            '8' => {
-                self.state = ParserState::Ground;
-                Some(Action::RestoreCursor)
-            }
-            _ => {
-                self.state = ParserState::Ground;
-                Some(Action::Ignore)
-            }
-        }
-    }
-
-    fn advance_csi(&mut self, ch: char) -> Option<Action> {
-        if ('@'..='~').contains(&ch) {
-            let action = parse_csi(&self.csi, ch);
-            self.csi.clear();
-            self.state = ParserState::Ground;
-            Some(action)
-        } else {
-            self.csi.push(ch);
-            None
-        }
-    }
-
-    fn advance_osc(&mut self, ch: char) -> Option<Action> {
-        match ch {
-            '\u{07}' => self.state = ParserState::Ground,
-            '\u{1b}' => self.state = ParserState::OscEscape,
-            _ => {}
-        }
-        None
-    }
-
-    fn advance_osc_escape(&mut self, ch: char) -> Option<Action> {
-        self.state = if ch == '\\' {
-            ParserState::Ground
-        } else {
-            ParserState::Osc
-        };
-        None
-    }
-
-    fn advance_charset(&mut self, _ch: char) -> Option<Action> {
-        self.state = ParserState::Ground;
-        None
+    pub(crate) fn advance_bytes(&mut self, bytes: &[u8]) -> Vec<Action> {
+        let mut performer = ActionCollector::default();
+        self.parser.advance(&mut performer, bytes);
+        performer.actions
     }
 }
 
-fn parse_csi(params: &str, final_byte: char) -> Action {
-    if params.starts_with('?') {
-        return parse_private_csi(params, final_byte);
+#[derive(Debug, Default)]
+struct ActionCollector {
+    actions: Vec<Action>,
+}
+
+impl vte::Perform for ActionCollector {
+    fn print(&mut self, ch: char) {
+        let action = match ch {
+            '\u{08}' | '\u{7f}' => Action::Backspace,
+            ch if ch.is_control() => Action::Ignore,
+            ch => Action::Print(ch),
+        };
+        self.actions.push(action);
     }
 
-    let numbers = parse_numbers(params);
+    fn execute(&mut self, byte: u8) {
+        let action = match byte {
+            b'\r' => Action::CarriageReturn,
+            b'\n' => Action::Newline,
+            0x08 | 0x7f => Action::Backspace,
+            b'\t' => Action::Tab,
+            _ => Action::Ignore,
+        };
+        self.actions.push(action);
+    }
+
+    fn csi_dispatch(
+        &mut self,
+        params: &vte::Params,
+        intermediates: &[u8],
+        ignore: bool,
+        action: char,
+    ) {
+        if ignore {
+            self.actions.push(Action::Ignore);
+            return;
+        }
+
+        self.actions
+            .push(parse_csi(&params_to_numbers(params), intermediates, action));
+    }
+
+    fn esc_dispatch(&mut self, intermediates: &[u8], ignore: bool, byte: u8) {
+        if ignore {
+            self.actions.push(Action::Ignore);
+            return;
+        }
+
+        let action = match (intermediates, byte) {
+            ([], b'7') => Action::SaveCursor,
+            ([], b'8') => Action::RestoreCursor,
+            // Character set designations are parsed but ignored for now.
+            ([b'(' | b')' | b'*' | b'+'], _) => return,
+            _ => Action::Ignore,
+        };
+        self.actions.push(action);
+    }
+}
+
+fn parse_csi(numbers: &[usize], intermediates: &[u8], final_byte: char) -> Action {
+    if intermediates == b"?" {
+        return parse_private_csi(numbers, final_byte);
+    }
+
     match final_byte {
         'A' => Action::CursorUp(first_or_default(&numbers, 1)),
         'B' => Action::CursorDown(first_or_default(&numbers, 1)),
@@ -179,8 +147,7 @@ fn parse_csi(params: &str, final_byte: char) -> Action {
     }
 }
 
-fn parse_private_csi(params: &str, final_byte: char) -> Action {
-    let numbers = parse_numbers(params);
+fn parse_private_csi(numbers: &[usize], final_byte: char) -> Action {
     match final_byte {
         'h' if contains_any(&numbers, &[47, 1047, 1049]) => Action::EnterAlternateScreen,
         'l' if contains_any(&numbers, &[47, 1047, 1049]) => Action::ExitAlternateScreen,
@@ -189,17 +156,10 @@ fn parse_private_csi(params: &str, final_byte: char) -> Action {
     }
 }
 
-fn parse_numbers(params: &str) -> Vec<usize> {
+fn params_to_numbers(params: &vte::Params) -> Vec<usize> {
     params
-        .trim_start_matches('?')
-        .split(';')
-        .filter_map(|part| {
-            if part.is_empty() {
-                Some(0)
-            } else {
-                part.parse().ok()
-            }
-        })
+        .iter()
+        .map(|param| param.first().copied().unwrap_or(0) as usize)
         .collect()
 }
 
