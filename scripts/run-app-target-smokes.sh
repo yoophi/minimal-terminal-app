@@ -136,6 +136,13 @@ fi
 
 head_sha="$(git rev-parse --short HEAD)"
 run_case "git-log" $'git log --oneline -1 --no-color\n' "${head_sha}"
+run_case_with_followup \
+  "git-pager-quit" \
+  $'git log --oneline --graph --decorate -100 --color=never | less; printf "git-pager-quit-ok\\n"\n' \
+  "q" \
+  "git-pager-quit-ok" \
+  1500 \
+  1000
 ran=1
 
 if command -v tmux >/dev/null 2>&1; then
