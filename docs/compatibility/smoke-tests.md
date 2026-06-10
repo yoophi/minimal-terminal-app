@@ -163,6 +163,7 @@ scripts/run-app-target-smokes.sh
 - `fzf-filter`: `printf 'alpha\nbeta\n' | fzf --filter alpha`
 - `fzf-interactive`: `printf 'alpha\nbeta\n' | fzf` 실행 후 query input `b`로 interactive redraw 확인
 - `fzf-select`: `printf 'alpha\nbeta\n' | fzf` 실행 후 query input `b`와 Enter로 선택 결과 확인
+- `fzf-multi-select`: `printf 'alpha\nbeta\n' | fzf -m` 실행 후 query input `b`, Tab, Enter로 multi-select 결과 확인
 - `git-log`: `git log --oneline -1 --no-color`
 - `git-pager-quit`: `git log ... | less` 실행 후 follow-up `q`로 pager 종료 확인
 - `git-pager-page-quit`: `git log ... | less` 실행 후 follow-up Space와 `q`로 page navigation 뒤 pager 종료 확인

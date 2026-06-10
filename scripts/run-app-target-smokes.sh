@@ -257,6 +257,15 @@ if command -v fzf >/dev/null 2>&1; then
     1500 \
     1000 \
     700
+  run_case_with_two_followups \
+    "fzf-multi-select" \
+    "selected=\"\$(printf \"alpha\\nbeta\\n\" | ${fzf_path} -m)\"; printf \"fzf-multi:%s\\n\" \"\$selected\""$'\n' \
+    "b" \
+    $'\t\r' \
+    "fzf-multi:beta" \
+    1500 \
+    1000 \
+    700
   ran=1
 else
   echo "app target smoke skipped: fzf not found"
