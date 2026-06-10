@@ -108,6 +108,7 @@ enum Charset {
     German,
     Greek,
     Hebrew,
+    IsoLatin1Supplemental,
     Italian,
     JisKatakana,
     JisRoman,
@@ -494,6 +495,10 @@ impl vte::Perform for ActionCollector {
                 self.g1_charset = Charset::NorwegianDanish;
                 return;
             }
+            ([b'-'], b'A') => {
+                self.g1_charset = Charset::IsoLatin1Supplemental;
+                return;
+            }
             ([b'*'], b'0') => {
                 self.g2_charset = Charset::DecSpecialGraphics;
                 return;
@@ -600,6 +605,10 @@ impl vte::Perform for ActionCollector {
             }
             ([b'*'], b'`' | b'E' | b'6') => {
                 self.g2_charset = Charset::NorwegianDanish;
+                return;
+            }
+            ([b'.'], b'A') => {
+                self.g2_charset = Charset::IsoLatin1Supplemental;
                 return;
             }
             ([b'+'], b'0') => {
@@ -710,7 +719,11 @@ impl vte::Perform for ActionCollector {
                 self.g3_charset = Charset::NorwegianDanish;
                 return;
             }
-            ([b'(' | b')' | b'*' | b'+'], _) => return,
+            ([b'/'], b'A') => {
+                self.g3_charset = Charset::IsoLatin1Supplemental;
+                return;
+            }
+            ([b'(' | b')' | b'*' | b'+' | b'-' | b'.' | b'/'], _) => return,
             _ => Action::Ignore,
         };
         self.actions.push(action);
@@ -722,6 +735,13 @@ impl vte::Perform for ActionCollector {
 }
 
 fn map_printable_char(ch: char, charset: Charset) -> char {
+    if charset == Charset::IsoLatin1Supplemental {
+        return match ch {
+            ' '..='\u{7f}' => char::from_u32(ch as u32 + 0x80).unwrap_or(ch),
+            _ => ch,
+        };
+    }
+
     if charset == Charset::DecTurkishSupplemental {
         return match ch {
             '$' | '&' | ',' | '-' | '/' | '4' | '8' => '␦',
@@ -1765,6 +1785,29 @@ mod tests {
         assert_eq!(
             parser.advance_bytes(b"\x1b)%5\x1b~\xc2\xa1"),
             vec![Action::Print('¡')]
+        );
+    }
+
+    #[test]
+    fn maps_iso_latin1_supplemental_charset() {
+        let mut parser = Parser::default();
+
+        assert_eq!(
+            parser.advance_bytes(b"\x1b-A\x1b~\xc2\xa0\xc2\xa1\xc2\xa3\xc3\xbf"),
+            vec![
+                Action::Print('\u{a0}'),
+                Action::Print('¡'),
+                Action::Print('£'),
+                Action::Print('ÿ'),
+            ]
+        );
+        assert_eq!(
+            parser.advance_bytes(b"\x1b.A\x1b}\xc2\xa2"),
+            vec![Action::Print('¢')]
+        );
+        assert_eq!(
+            parser.advance_bytes(b"\x1b/A\x1b|\xc2\xa4"),
+            vec![Action::Print('¤')]
         );
     }
 

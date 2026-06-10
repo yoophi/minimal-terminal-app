@@ -746,6 +746,15 @@ mod tests {
     }
 
     #[test]
+    fn renders_iso_latin1_supplemental_charset() {
+        let mut terminal = TerminalState::new(4, 20);
+
+        terminal.append_bytes(b"\x1b-A\x1b~\xc2\xa1\xc2\xa3\xc2\xa4\xc3\xbf");
+
+        assert_eq!(terminal.snapshot(4).lines[0], "¡£¤ÿ");
+    }
+
+    #[test]
     fn renders_british_nrcs_charset() {
         let mut terminal = TerminalState::new(4, 20);
 
