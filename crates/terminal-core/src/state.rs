@@ -737,6 +737,15 @@ mod tests {
     }
 
     #[test]
+    fn renders_spanish_nrcs_charset() {
+        let mut terminal = TerminalState::new(4, 20);
+
+        terminal.append_bytes(b"\x1b(Z#@[\\] {|}~\x1b(B#");
+
+        assert_eq!(terminal.snapshot(4).lines[0], "£§¡Ñ¿ °ñç~#");
+    }
+
+    #[test]
     fn queues_cursor_position_report_responses() {
         let mut terminal = TerminalState::new(4, 10);
 
