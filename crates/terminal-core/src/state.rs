@@ -746,6 +746,15 @@ mod tests {
     }
 
     #[test]
+    fn renders_jis_katakana_charset() {
+        let mut terminal = TerminalState::new(4, 24);
+
+        terminal.append_bytes(b"\x1b(I!&1@Z[]^_\x1b(B!");
+
+        assert_eq!(terminal.snapshot(4).lines[0], "｡ｦｱﾀﾚﾛﾝﾞﾟ!");
+    }
+
+    #[test]
     fn renders_spanish_nrcs_charset() {
         let mut terminal = TerminalState::new(4, 20);
 

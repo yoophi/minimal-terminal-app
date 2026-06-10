@@ -103,6 +103,7 @@ enum Charset {
     Greek,
     Hebrew,
     Italian,
+    JisKatakana,
     JisRoman,
     NorwegianDanish,
     Portuguese,
@@ -331,6 +332,10 @@ impl vte::Perform for ActionCollector {
                 self.g0_charset = Charset::Italian;
                 return;
             }
+            ([b'('], b'I') => {
+                self.g0_charset = Charset::JisKatakana;
+                return;
+            }
             ([b'('], b'J') => {
                 self.g0_charset = Charset::JisRoman;
                 return;
@@ -409,6 +414,10 @@ impl vte::Perform for ActionCollector {
             }
             ([b')'], b'Y') => {
                 self.g1_charset = Charset::Italian;
+                return;
+            }
+            ([b')'], b'I') => {
+                self.g1_charset = Charset::JisKatakana;
                 return;
             }
             ([b')'], b'J') => {
@@ -491,6 +500,10 @@ impl vte::Perform for ActionCollector {
                 self.g2_charset = Charset::Italian;
                 return;
             }
+            ([b'*'], b'I') => {
+                self.g2_charset = Charset::JisKatakana;
+                return;
+            }
             ([b'*'], b'J') => {
                 self.g2_charset = Charset::JisRoman;
                 return;
@@ -569,6 +582,10 @@ impl vte::Perform for ActionCollector {
             }
             ([b'+'], b'Y') => {
                 self.g3_charset = Charset::Italian;
+                return;
+            }
+            ([b'+'], b'I') => {
+                self.g3_charset = Charset::JisKatakana;
                 return;
             }
             ([b'+'], b'J') => {
@@ -739,6 +756,14 @@ fn map_printable_char(ch: char, charset: Charset) -> char {
         return match ch {
             '\\' => '¥',
             '~' => '‾',
+            _ => ch,
+        };
+    }
+
+    if charset == Charset::JisKatakana {
+        return match ch {
+            '!'..='_' => char::from_u32(0xff61 + (ch as u32 - '!' as u32)).unwrap_or(ch),
+            '`'..='}' => '␦',
             _ => ch,
         };
     }
@@ -1485,6 +1510,35 @@ mod tests {
         assert_eq!(
             parser.advance_bytes(b"\x1b)J\x1b~\xc3\x9c"),
             vec![Action::Print('¥')]
+        );
+    }
+
+    #[test]
+    fn maps_jis_katakana_charset() {
+        let mut parser = Parser::default();
+
+        assert_eq!(
+            parser.advance_bytes(b"\x1b(I!&1@Z[]^_\x1b(B!"),
+            vec![
+                Action::Print('｡'),
+                Action::Print('ｦ'),
+                Action::Print('ｱ'),
+                Action::Print('ﾀ'),
+                Action::Print('ﾚ'),
+                Action::Print('ﾛ'),
+                Action::Print('ﾝ'),
+                Action::Print('ﾞ'),
+                Action::Print('ﾟ'),
+                Action::Print('!'),
+            ]
+        );
+        assert_eq!(
+            parser.advance_bytes(b"\x1b*I\x1bN_x"),
+            vec![Action::Print('ﾟ'), Action::Print('x')]
+        );
+        assert_eq!(
+            parser.advance_bytes(b"\x1b)I\x1b~\xc2\xa1"),
+            vec![Action::Print('｡')]
         );
     }
 
