@@ -46,11 +46,12 @@
 - Phase 041에서 app 내부 `htop` quit workflow를 자동화했다.
 - Phase 042에서 app 내부 `git log ... | less` pager page navigation 뒤 quit workflow를 자동화했다.
 - Phase 043에서 app 내부 `fzf` Enter selection workflow를 자동화했다.
+- Phase 044에서 app 내부 `htop` F10 function key quit workflow를 자동화했다.
 - interactive key workflow는 아직 남아 있다.
 
 권장 다음 작업:
 
-- `htop` function key workflow를 앱 내부에서 수행한다.
+- `htop` mouse 또는 추가 function key workflow를 앱 내부에서 수행한다.
 - `fzf` multi-select, preview, shell integration workflow를 앱 내부에서 수행한다.
 - `git log` pager search/mark/horizontal scroll workflow를 앱 내부에서 수행한다.
 
@@ -252,4 +253,10 @@ Phase 042에서 `scripts/run-app-target-smokes.sh`에 `git-pager-page-quit` targ
 
 상태: `partially supported`
 
-Phase 041에서 `scripts/run-app-target-smokes.sh`에 `htop-quit` target을 추가했다. local verification environment에서 app 내부 PTY로 `htop`을 실행하고 follow-up `q` 입력 뒤 shell marker `htop-quit-ok`를 확인했다. function key workflow는 Environment-dependent App Smoke Target gap으로 계속 추적한다.
+Phase 041에서 `scripts/run-app-target-smokes.sh`에 `htop-quit` target을 추가했다. local verification environment에서 app 내부 PTY로 `htop`을 실행하고 follow-up `q` 입력 뒤 shell marker `htop-quit-ok`를 확인했다.
+
+### htop F10 Function Key App Smoke
+
+상태: `partially supported`
+
+Phase 044에서 `scripts/run-app-target-smokes.sh`에 `htop-f10-quit` target을 추가했다. local verification environment에서 app 내부 PTY로 `htop`을 실행하고 follow-up F10 sequence `ESC [ 21 ~` 입력 뒤 shell marker `htop-f10-ok`를 확인했다. mouse와 추가 function key workflow는 Environment-dependent App Smoke Target gap으로 계속 추적한다.

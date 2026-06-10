@@ -239,6 +239,13 @@ if command -v htop >/dev/null 2>&1; then
     "htop-quit-ok" \
     2000 \
     1200
+  run_case_with_followup \
+    "htop-f10-quit" \
+    "${htop_path}; printf \"htop-f10-ok\\n\""$'\n' \
+    $'\e[21~' \
+    "htop-f10-ok" \
+    2000 \
+    1200
   ran=1
 else
   echo "app target smoke skipped: htop not found"
