@@ -69,23 +69,39 @@ terminal-app
 
 Console.app 대신 터미널에서 실시간 로그를 확인할 수 있다.
 
-subsystem 기준:
+우리 앱이 직접 남긴 로그만 보려면 subsystem 기준으로 필터링한다.
 
 ```bash
-log stream --style compact --predicate 'subsystem == "dev.minimal-terminal.app"'
+/usr/bin/log stream --style compact --predicate 'subsystem == "dev.minimal-terminal.app"'
 ```
 
-프로세스 기준:
+최근 10분 동안의 우리 앱 로그를 확인하려면 다음 명령을 사용한다.
 
 ```bash
-log stream --style compact --predicate 'process == "terminal-app"'
+/usr/bin/log show --last 10m --style compact --predicate 'subsystem == "dev.minimal-terminal.app"'
 ```
 
-최근 10분 로그 확인:
+앱 lifecycle 로그만 보려면 `app` category를 사용한다.
 
 ```bash
-log show --last 10m --style compact --predicate 'subsystem == "dev.minimal-terminal.app"'
+/usr/bin/log stream --style compact --predicate 'subsystem == "dev.minimal-terminal.app" AND category == "app"'
 ```
+
+PTY 관련 로그만 보려면 `pty` category를 사용한다.
+
+```bash
+/usr/bin/log stream --style compact --predicate 'subsystem == "dev.minimal-terminal.app" AND category == "pty"'
+```
+
+프로세스 기준으로도 필터링할 수 있다.
+
+```bash
+/usr/bin/log stream --style compact --predicate 'process == "terminal-app"'
+```
+
+단, 프로세스 기준 필터는 AppKit, CoreFoundation, LaunchServices, Metal 등 macOS 프레임워크가 같은 프로세스에서 남긴 로그까지 함께 보여준다. 우리 앱에서 직접 남긴 로그만 보고 싶으면 subsystem 기준 필터를 우선 사용한다.
+
+일부 셸 환경에서는 `log`가 다른 명령이나 alias와 충돌할 수 있으므로 문서에서는 `/usr/bin/log` 경로를 명시한다.
 
 ## Rust 코드에서 로그 남기기
 
