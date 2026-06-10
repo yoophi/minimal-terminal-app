@@ -61,6 +61,7 @@
 권장 다음 작업:
 
 - 아직 확인하지 않은 modifier key variants를 앱별 smoke로 검증한다.
+- G1/G2/G3 locking shift, single shift, locale-specific charset 같은 DEC Special Graphics 밖의 charset 동작을 별도 검토한다.
 - 새로 지원하는 sequence마다 작은 parser/grid fixture를 우선 추가한다.
 
 ### vttest Runtime Coverage
@@ -195,3 +196,9 @@ Phase 033에서 `scripts/run-app-target-smokes.sh`를 추가했다. local verifi
 상태: `supported`
 
 Phase 034에서 `scripts/run-app-target-smokes.sh`에 `tmux -V`, `htop --version`, `claude --version`, `codex-cli --version` target을 추가했다. 현재 local verification environment에서는 `tmux-version`, `htop-version`, `claude-version`이 app 내부 PTY snapshot smoke를 통과했고, `codex-cli-version`은 PATH에서 `codex-cli`를 찾지 못해 skip된다. 실제 interactive workflow는 대표 CLI/TUI Application Certification gap으로 계속 추적한다.
+
+### DEC Special Graphics Charset
+
+상태: `partially supported`
+
+Phase 035에서 `ESC ( 0`과 `ESC ( B` G0 charset switching을 구현했다. 대표 DEC Special Graphics line drawing 문자는 Unicode box drawing 문자로 매핑한다. G1/G2/G3 locking shift, single shift, locale-specific charset은 full xterm compatibility gap으로 남긴다.

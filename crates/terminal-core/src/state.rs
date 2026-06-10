@@ -642,6 +642,18 @@ mod tests {
     }
 
     #[test]
+    fn renders_dec_special_graphics_line_drawing() {
+        let mut terminal = TerminalState::new(4, 20);
+
+        terminal.append_bytes(b"\x1b(0lqk\r\nx x\r\nmqj\x1b(B ascii");
+
+        let snapshot = terminal.snapshot(4);
+        assert_eq!(snapshot.lines[0], "┌─┐");
+        assert_eq!(snapshot.lines[1], "│ │");
+        assert_eq!(snapshot.lines[2], "└─┘ ascii");
+    }
+
+    #[test]
     fn queues_cursor_position_report_responses() {
         let mut terminal = TerminalState::new(4, 10);
 

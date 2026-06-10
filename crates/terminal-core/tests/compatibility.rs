@@ -13,6 +13,18 @@ fn basic_terminal_sequences_have_core_evidence() {
 }
 
 #[test]
+fn dec_special_graphics_have_core_evidence() {
+    let mut terminal = TerminalState::new(4, 20);
+
+    terminal.append_bytes(b"\x1b(0lqk\r\nx x\r\nmqj\x1b(B ascii");
+
+    assert_eq!(
+        terminal.snapshot(4).lines,
+        vec!["┌─┐", "│ │", "└─┘ ascii", ""]
+    );
+}
+
+#[test]
 fn style_sequences_have_snapshot_evidence() {
     let mut terminal = TerminalState::new(3, 32);
 
