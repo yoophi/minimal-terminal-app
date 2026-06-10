@@ -19,6 +19,7 @@ mod composition;
 mod input;
 mod logging;
 mod pty;
+mod selection;
 mod terminal_buffer;
 mod terminal_view;
 

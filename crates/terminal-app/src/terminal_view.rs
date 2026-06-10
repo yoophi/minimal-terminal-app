@@ -10,8 +10,8 @@ use objc2_app_kit::{
     NSTextInputClient, NSUnderlineStyleAttributeName, NSView, NSWindow,
 };
 use objc2_foundation::{
-    NSArray, NSAttributedString, NSAttributedStringKey, MainThreadMarker, NSMutableDictionary,
-    NSNumber, NSObjectProtocol, NSNotFound, NSPoint, NSRange, NSRangePointer, NSRect, NSString,
+    MainThreadMarker, NSArray, NSAttributedString, NSAttributedStringKey, NSMutableDictionary,
+    NSNotFound, NSNumber, NSObjectProtocol, NSPoint, NSRange, NSRangePointer, NSRect, NSString,
     NSTimer,
 };
 use terminal_core::{Color, Style, StyledLine, TerminalSnapshot};
@@ -20,6 +20,7 @@ use crate::composition::{CompositionState, TextRange};
 use crate::input;
 use crate::logging;
 use crate::pty::PtyWriter;
+use crate::selection::{selected_text, GridPoint, SelectionRange, SelectionState};
 use crate::terminal_buffer::TerminalBuffer;
 
 const PADDING_X: f64 = 12.0;
@@ -46,6 +47,7 @@ pub(crate) struct TerminalViewIvars {
     cols: Cell<usize>,
     scrollback_offset: Cell<usize>,
     composition: RefCell<CompositionState>,
+    selection: RefCell<SelectionState>,
 }
 
 define_class!(
@@ -71,6 +73,11 @@ define_class!(
         #[unsafe(method(keyDown:))]
         fn key_down(&self, event: &NSEvent) {
             autoreleasepool(|pool| {
+                if is_command_c(event) {
+                    self.copy_selection_to_clipboard();
+                    return;
+                }
+
                 if is_command_v(event) {
                     self.paste_text_from_clipboard(pool);
                     return;
@@ -104,8 +111,30 @@ define_class!(
                     logging::pty_error(&format!("pty write failed from keyDown: {error}"));
                 }
 
+                self.ivars().selection.borrow_mut().clear();
                 self.ivars().scrollback_offset.set(0);
             });
+        }
+
+        #[unsafe(method(mouseDown:))]
+        fn mouse_down(&self, event: &NSEvent) {
+            let point = self.grid_point_for_event(event);
+            self.ivars().selection.borrow_mut().begin(point);
+            self.as_super().setNeedsDisplay(true);
+        }
+
+        #[unsafe(method(mouseDragged:))]
+        fn mouse_dragged(&self, event: &NSEvent) {
+            let point = self.grid_point_for_event(event);
+            self.ivars().selection.borrow_mut().update(point);
+            self.as_super().setNeedsDisplay(true);
+        }
+
+        #[unsafe(method(mouseUp:))]
+        fn mouse_up(&self, event: &NSEvent) {
+            let point = self.grid_point_for_event(event);
+            self.ivars().selection.borrow_mut().update(point);
+            self.as_super().setNeedsDisplay(true);
         }
 
         #[unsafe(method(insertText:replacementRange:))]
@@ -250,25 +279,9 @@ define_class!(
             let (rows, cols) = terminal_dimensions(bounds);
             self.apply_resize_if_needed(rows, cols);
 
-            let snapshot = self
-                .ivars()
-                .buffer
-                .lock()
-                .map(|buffer| {
-                    let offset = self.ivars().scrollback_offset.get();
-                    if offset == 0 {
-                        buffer.snapshot(rows)
-                    } else {
-                        buffer.scrollback_snapshot(offset.saturating_sub(rows), rows)
-                    }
-                })
-                .unwrap_or_else(|_| TerminalSnapshot {
-                    lines: vec!["terminal buffer unavailable".to_string()],
-                    styled_lines: Vec::new(),
-                    cursor: terminal_core::Cursor::default(),
-                    scrollback_len: 0,
-                });
+            let snapshot = self.current_snapshot(rows);
 
+            draw_selection_highlights(&snapshot, self.ivars().selection.borrow().range());
             draw_terminal_text(&snapshot);
             draw_composition_text(&snapshot, &self.ivars().composition.borrow());
             if self.ivars().scrollback_offset.get() == 0 {
@@ -299,6 +312,7 @@ impl TerminalView {
             cols: Cell::new(0),
             scrollback_offset: Cell::new(0),
             composition: RefCell::new(CompositionState::default()),
+            selection: RefCell::new(SelectionState::default()),
         });
         let view: Retained<Self> = unsafe { msg_send![super(view), initWithFrame: frame] };
 
@@ -341,6 +355,7 @@ impl TerminalView {
             logging::pty_error(&format!("pty write failed from paste: {error}"));
         }
 
+        self.ivars().selection.borrow_mut().clear();
         self.ivars().scrollback_offset.set(0);
     }
 
@@ -361,6 +376,57 @@ impl TerminalView {
         let events = NSArray::from_slice(&[event]);
         let responder: &NSResponder = self.as_super().as_super();
         responder.interpretKeyEvents(&events);
+    }
+
+    fn copy_selection_to_clipboard(&self) {
+        let Some(range) = self.ivars().selection.borrow().range() else {
+            return;
+        };
+        let snapshot = self.current_snapshot(self.ivars().rows.get().max(1));
+        let text = selected_text(&snapshot.lines, range);
+        if text.is_empty() {
+            return;
+        }
+
+        let pasteboard = NSPasteboard::generalPasteboard();
+        pasteboard.clearContents();
+        pasteboard.setString_forType(&NSString::from_str(&text), unsafe {
+            &*NSPasteboardTypeString
+        });
+        logging::pty_info(&format!("terminal selection copied: bytes={}", text.len()));
+    }
+
+    fn current_snapshot(&self, rows: usize) -> TerminalSnapshot {
+        self.ivars()
+            .buffer
+            .lock()
+            .map(|buffer| {
+                let offset = self.ivars().scrollback_offset.get();
+                if offset == 0 {
+                    buffer.snapshot(rows)
+                } else {
+                    buffer.scrollback_snapshot(offset.saturating_sub(rows), rows)
+                }
+            })
+            .unwrap_or_else(|_| TerminalSnapshot {
+                lines: vec!["terminal buffer unavailable".to_string()],
+                styled_lines: Vec::new(),
+                cursor: terminal_core::Cursor::default(),
+                scrollback_len: 0,
+            })
+    }
+
+    fn grid_point_for_event(&self, event: &NSEvent) -> GridPoint {
+        let point = self
+            .as_super()
+            .convertPoint_fromView(event.locationInWindow(), None);
+        let row = ((point.y - PADDING_Y) / LINE_HEIGHT).floor().max(0.0) as usize;
+        let col = ((point.x - PADDING_X) / CELL_WIDTH).floor().max(0.0) as usize;
+
+        GridPoint {
+            row: row.min(self.ivars().rows.get().saturating_sub(1)),
+            col: col.min(self.ivars().cols.get()),
+        }
     }
 
     fn cursor_screen_rect(&self) -> NSRect {
@@ -448,6 +514,12 @@ fn is_command_v(event: &NSEvent) -> bool {
     key_code == 9 && flags.contains(objc2_app_kit::NSEventModifierFlags::Command)
 }
 
+fn is_command_c(event: &NSEvent) -> bool {
+    let flags = event.modifierFlags();
+    let key_code = event.keyCode();
+    key_code == 8 && flags.contains(objc2_app_kit::NSEventModifierFlags::Command)
+}
+
 fn should_use_text_input(event: &NSEvent) -> bool {
     let flags = event.modifierFlags();
     if flags.intersects(
@@ -477,7 +549,42 @@ fn draw_terminal_text(snapshot: &TerminalSnapshot) {
 
     for (index, line) in snapshot.styled_lines.iter().enumerate() {
         let y = PADDING_Y + (index as f64 * LINE_HEIGHT);
-            draw_styled_line(line, y);
+        draw_styled_line(line, y);
+    }
+}
+
+fn draw_selection_highlights(snapshot: &TerminalSnapshot, range: Option<SelectionRange>) {
+    let Some(range) = range else {
+        return;
+    };
+
+    NSColor::selectedTextBackgroundColor().setFill();
+    for row in range.start.row..=range.end.row {
+        let Some(line) = snapshot.lines.get(row) else {
+            continue;
+        };
+        let line_width = display_width(line);
+        let start_col = if row == range.start.row {
+            range.start.col.min(line_width)
+        } else {
+            0
+        };
+        let end_col = if row == range.end.row {
+            range.end.col.min(line_width)
+        } else {
+            line_width
+        };
+        if end_col <= start_col {
+            continue;
+        }
+
+        let x = PADDING_X + (start_col as f64 * CELL_WIDTH);
+        let y = PADDING_Y + (row as f64 * LINE_HEIGHT);
+        let width = (end_col - start_col) as f64 * CELL_WIDTH;
+        NSRectFill(NSRect::new(
+            NSPoint::new(x, y),
+            objc2_foundation::NSSize::new(width, LINE_HEIGHT),
+        ));
     }
 }
 
