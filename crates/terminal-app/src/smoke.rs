@@ -83,8 +83,12 @@ pub(crate) fn start_if_requested(buffer: Arc<Mutex<TerminalBuffer>>, writer: Pty
                 FOLLOWUP_INPUT_DELAY_MS,
             )));
             if let Some(bytes) = mouse_report_bytes(&buffer, &report) {
-                if let Err(error) = writer.write_all(&bytes) {
-                    logging::pty_error(&format!("smoke mouse report write failed: {error}"));
+                for chunk in bytes {
+                    if let Err(error) = writer.write_all(&chunk) {
+                        logging::pty_error(&format!("smoke mouse report write failed: {error}"));
+                        break;
+                    }
+                    thread::sleep(Duration::from_millis(50));
                 }
             }
         }
@@ -113,7 +117,7 @@ pub(crate) fn start_if_requested(buffer: Arc<Mutex<TerminalBuffer>>, writer: Pty
     });
 }
 
-fn mouse_report_bytes(buffer: &Arc<Mutex<TerminalBuffer>>, report: &str) -> Option<Vec<u8>> {
+fn mouse_report_bytes(buffer: &Arc<Mutex<TerminalBuffer>>, report: &str) -> Option<Vec<Vec<u8>>> {
     let modes = buffer
         .lock()
         .map(|buffer| buffer.snapshot(1).modes)
@@ -126,9 +130,31 @@ fn mouse_report_bytes(buffer: &Arc<Mutex<TerminalBuffer>>, report: &str) -> Opti
 
     let bytes = match report {
         "left-press" if modes.sgr_mouse => {
-            mouse::sgr_mouse_report(mouse::LEFT_BUTTON, 0, 1, 2, false)
+            vec![mouse::sgr_mouse_report(mouse::LEFT_BUTTON, 0, 1, 2, false)]
         }
-        "left-press" => mouse::legacy_mouse_report(mouse::LEFT_BUTTON, 0, 1, 2, false),
+        "left-press" => vec![mouse::legacy_mouse_report(
+            mouse::LEFT_BUTTON,
+            0,
+            1,
+            2,
+            false,
+        )],
+        "wheel-down" if modes.sgr_mouse => {
+            vec![mouse::sgr_mouse_report(mouse::WHEEL_DOWN, 0, 1, 2, false)]
+        }
+        "wheel-down" => vec![mouse::legacy_mouse_report(
+            mouse::WHEEL_DOWN,
+            0,
+            1,
+            2,
+            false,
+        )],
+        "wheel-down-5" if modes.sgr_mouse => (0..5)
+            .map(|_| mouse::sgr_mouse_report(mouse::WHEEL_DOWN, 0, 1, 2, false))
+            .collect(),
+        "wheel-down-5" => (0..5)
+            .map(|_| mouse::legacy_mouse_report(mouse::WHEEL_DOWN, 0, 1, 2, false))
+            .collect(),
         _ => {
             logging::pty_error(&format!(
                 "smoke mouse report skipped: unknown report {report}"

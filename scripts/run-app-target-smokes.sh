@@ -402,6 +402,13 @@ if command -v less >/dev/null 2>&1; then
     "less-basic-ok" \
     1500 \
     1000
+  run_case_with_mouse_report \
+    "less-mouse-wheel-down" \
+    "seq -f \"less-mouse-line-%03g\" 1 120 | ${less_path} --mouse --wheel-lines=10"$'\n' \
+    "wheel-down-5" \
+    "less-mouse-line-045" \
+    2200 \
+    1200
   ran=1
 else
   echo "app target smoke skipped: less not found"

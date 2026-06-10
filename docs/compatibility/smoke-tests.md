@@ -123,6 +123,8 @@ top
 - cursor visibility 전환 후 stale cursor block이 남지 않는다.
 - bracketed paste를 켜는 editor에서 paste boundary가 동작한다.
 - TUI 진입/종료 후에도 color/style rendering이 유지된다.
+- 자동 smoke: `less-basic-quit`은 app 내부 PTY에서 direct pager quit 후 shell marker를 확인한다.
+- 자동 smoke: `less-mouse-wheel-down`은 `less --mouse`가 smoke hook mouse wheel reports를 받아 화면을 이동시키는지 확인한다.
 
 ## 선택 App Smoke
 
@@ -171,6 +173,7 @@ scripts/run-app-target-smokes.sh
 - `vim-edit-write-quit`: `vim --clean -Nu NONE -n <tempfile>` 실행 후 insert, write, quit, shell 복원 확인
 - `vim-mouse-left-press`: clean `vim`에서 `mouse=a`, SGR mouse mode를 켠 뒤 smoke hook SGR left press가 `<LeftMouse>` mapping을 실행하는지 확인
 - `less-basic-quit`: `printf 'one\ntwo\nthree\n' | less` 실행 후 follow-up `q`로 pager 종료 확인
+- `less-mouse-wheel-down`: `less --mouse --wheel-lines=10` 실행 후 smoke hook wheel-down reports로 pager 화면 이동 확인
 - `git-log`: `git log --oneline -1 --no-color`
 - `git-pager-quit`: `git log ... | less` 실행 후 follow-up `q`로 pager 종료 확인
 - `git-pager-page-quit`: `git log ... | less` 실행 후 follow-up Space와 `q`로 page navigation 뒤 pager 종료 확인
@@ -201,7 +204,7 @@ scripts/run-app-target-smokes.sh
 
 - GUI focus 기반 keyboard automation
 - `htop`, `fzf`, `git log` 같은 전체 interactive TUI 내부 key workflow
-- mouse interaction workflow
+- native GUI event에서 시작되는 mouse interaction workflow
 
 ## Representative App Certification Smoke
 
