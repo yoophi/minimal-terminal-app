@@ -773,6 +773,15 @@ mod tests {
     }
 
     #[test]
+    fn renders_iso_hebrew_supplemental_charset() {
+        let mut terminal = TerminalState::new(4, 20);
+
+        terminal.append_bytes(b"\x1b-H\x1b~\xc2\xa1\xc2\xaa\xc3\x9f\xc3\xa0\xc3\xba\xc3\xbb");
+
+        assert_eq!(terminal.snapshot(4).lines[0], "␦×‗את␦");
+    }
+
+    #[test]
     fn renders_british_nrcs_charset() {
         let mut terminal = TerminalState::new(4, 20);
 
