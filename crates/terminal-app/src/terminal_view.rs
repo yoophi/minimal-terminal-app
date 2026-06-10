@@ -25,6 +25,8 @@ const LINE_HEIGHT: f64 = 18.0;
 const CELL_WIDTH: f64 = 8.4;
 const CURSOR_WIDTH: f64 = 8.0;
 const CURSOR_HEIGHT: f64 = 16.0;
+const KEY_PAGE_UP: u16 = 116;
+const KEY_PAGE_DOWN: u16 = 121;
 const TERMINAL_FONT_NAMES: &[&str] = &[
     "JetBrainsMonoNFM-Regular",
     "JetBrainsMonoNF-Regular",
@@ -38,6 +40,7 @@ pub(crate) struct TerminalViewIvars {
     logged_first_key_input: Cell<bool>,
     rows: Cell<usize>,
     cols: Cell<usize>,
+    scrollback_offset: Cell<usize>,
 }
 
 define_class!(
@@ -67,6 +70,10 @@ define_class!(
                     return;
                 }
 
+                if self.handle_scrollback_key(event) {
+                    return;
+                }
+
                 let Some(characters) = event.characters() else {
                     return;
                 };
@@ -85,6 +92,8 @@ define_class!(
                 if let Err(error) = self.ivars().writer.write_all(&bytes) {
                     logging::pty_error(&format!("pty write failed from keyDown: {error}"));
                 }
+
+                self.ivars().scrollback_offset.set(0);
             });
         }
 
@@ -106,7 +115,14 @@ define_class!(
                 .ivars()
                 .buffer
                 .lock()
-                .map(|buffer| buffer.snapshot(rows))
+                .map(|buffer| {
+                    let offset = self.ivars().scrollback_offset.get();
+                    if offset == 0 {
+                        buffer.snapshot(rows)
+                    } else {
+                        buffer.scrollback_snapshot(offset.saturating_sub(rows), rows)
+                    }
+                })
                 .unwrap_or_else(|_| TerminalSnapshot {
                     lines: vec!["terminal buffer unavailable".to_string()],
                     cursor: terminal_core::Cursor::default(),
@@ -114,7 +130,9 @@ define_class!(
                 });
 
             draw_terminal_text(&snapshot);
-            draw_cursor(&snapshot);
+            if self.ivars().scrollback_offset.get() == 0 {
+                draw_cursor(&snapshot);
+            }
         }
 
         #[unsafe(method(redrawTimerFired:))]
@@ -138,6 +156,7 @@ impl TerminalView {
             logged_first_key_input: Cell::new(false),
             rows: Cell::new(0),
             cols: Cell::new(0),
+            scrollback_offset: Cell::new(0),
         });
         let view: Retained<Self> = unsafe { msg_send![super(view), initWithFrame: frame] };
 
@@ -179,6 +198,8 @@ impl TerminalView {
         if let Err(error) = self.ivars().writer.write_all(input.as_bytes()) {
             logging::pty_error(&format!("pty write failed from paste: {error}"));
         }
+
+        self.ivars().scrollback_offset.set(0);
     }
 
     fn apply_resize_if_needed(&self, rows: usize, cols: usize) {
@@ -197,6 +218,40 @@ impl TerminalView {
         self.ivars().rows.set(rows);
         self.ivars().cols.set(cols);
         logging::pty_info(&format!("terminal resized: rows={rows} cols={cols}"));
+    }
+
+    fn handle_scrollback_key(&self, event: &NSEvent) -> bool {
+        match event.keyCode() {
+            KEY_PAGE_UP => {
+                self.scroll_page_up();
+                true
+            }
+            KEY_PAGE_DOWN => {
+                self.scroll_page_down();
+                true
+            }
+            _ => false,
+        }
+    }
+
+    fn scroll_page_up(&self) {
+        let rows = self.ivars().rows.get().max(1);
+        let max_offset = self
+            .ivars()
+            .buffer
+            .lock()
+            .map(|buffer| buffer.scrollback_len())
+            .unwrap_or(0);
+        let next_offset = (self.ivars().scrollback_offset.get() + rows).min(max_offset);
+        self.ivars().scrollback_offset.set(next_offset);
+        self.as_super().setNeedsDisplay(true);
+    }
+
+    fn scroll_page_down(&self) {
+        let rows = self.ivars().rows.get().max(1);
+        let next_offset = self.ivars().scrollback_offset.get().saturating_sub(rows);
+        self.ivars().scrollback_offset.set(next_offset);
+        self.as_super().setNeedsDisplay(true);
     }
 }
 
