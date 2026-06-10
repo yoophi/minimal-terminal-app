@@ -381,6 +381,13 @@ if command -v vim >/dev/null 2>&1; then
     "vim-workflow-ok:hello from vim" \
     2500 \
     1200
+  run_case_with_mouse_report \
+    "vim-mouse-left-press" \
+    "tmp=\"/tmp/minimal-terminal-vim-mouse-smoke.txt\"; rm -f \"\$tmp\"; ${vim_path} --clean -Nu NONE -n -c 'set mouse=a ttymouse=sgr' -c 'nnoremap <LeftMouse> :call writefile([\"vim-mouse-ok\"], \"/tmp/minimal-terminal-vim-mouse-smoke.txt\")<CR>:qa!<CR>'; cat \"\$tmp\" 2>/dev/null; rm -f \"\$tmp\""$'\n' \
+    "left-press" \
+    "vim-mouse-ok" \
+    2500 \
+    1800
   ran=1
 else
   echo "app target smoke skipped: vim not found"
