@@ -4,6 +4,7 @@ use crate::cursor::CursorStyle;
 use crate::style::{Color, Style};
 
 const MAX_OSC52_DECODED_BYTES: usize = 1024 * 1024;
+const MAX_OSC52_SELECTOR_BYTES: usize = 64;
 const MAX_OSC_TITLE_BYTES: usize = 4096;
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -34,6 +35,7 @@ pub(crate) enum Action {
     PrimaryDeviceAttributes,
     SecondaryDeviceAttributes,
     SetClipboard(String),
+    ClipboardQueryDenied(String),
     SetWindowTitle(String),
     DeviceStatusReport,
     CursorPositionReport,
@@ -157,7 +159,11 @@ fn parse_osc(params: &[&[u8]]) -> Action {
     }
 
     let payload = params[2];
-    if payload == b"?" || payload.len() > MAX_OSC52_DECODED_BYTES.saturating_mul(2) {
+    if payload == b"?" {
+        return parse_osc52_query(params[1]);
+    }
+
+    if payload.len() > MAX_OSC52_DECODED_BYTES.saturating_mul(2) {
         return Action::Ignore;
     }
 
@@ -170,6 +176,17 @@ fn parse_osc(params: &[&[u8]]) -> Action {
 
     match String::from_utf8(decoded) {
         Ok(text) => Action::SetClipboard(text),
+        Err(_) => Action::Ignore,
+    }
+}
+
+fn parse_osc52_query(selector: &[u8]) -> Action {
+    if selector.is_empty() || selector.len() > MAX_OSC52_SELECTOR_BYTES {
+        return Action::Ignore;
+    }
+
+    match std::str::from_utf8(selector) {
+        Ok(selector) => Action::ClipboardQueryDenied(selector.to_string()),
         Err(_) => Action::Ignore,
     }
 }
@@ -417,7 +434,7 @@ mod tests {
         );
         assert_eq!(
             parser.advance_bytes(b"\x1b]52;c;?\x07"),
-            vec![Action::Ignore]
+            vec![Action::ClipboardQueryDenied("c".to_string())]
         );
         assert_eq!(
             parser.advance_bytes(b"\x1b]52;c;not-base64\x07"),

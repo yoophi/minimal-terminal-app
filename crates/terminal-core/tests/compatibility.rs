@@ -101,6 +101,19 @@ fn osc52_clipboard_write_has_core_evidence() {
 }
 
 #[test]
+fn osc52_clipboard_query_is_denied_without_readback() {
+    let mut terminal = TerminalState::new(4, 10);
+
+    terminal.append_bytes(b"\x1b]52;c;?\x07");
+
+    assert_eq!(
+        terminal.take_pending_responses(),
+        b"\x1b]52;c;\x07".to_vec()
+    );
+    assert!(terminal.take_pending_clipboard_writes().is_empty());
+}
+
+#[test]
 fn osc_title_write_has_core_evidence() {
     let mut terminal = TerminalState::new(4, 10);
 

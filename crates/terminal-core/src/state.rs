@@ -247,6 +247,9 @@ impl TerminalState {
                 self.pending_responses.extend_from_slice(b"\x1b[>0;0;0c")
             }
             Action::SetClipboard(text) => self.pending_clipboard_writes.push(text),
+            Action::ClipboardQueryDenied(selector) => self
+                .pending_responses
+                .extend_from_slice(format!("\x1b]52;{selector};\x07").as_bytes()),
             Action::SetWindowTitle(title) => self.pending_title_writes.push(title),
             Action::DeviceStatusReport => self.pending_responses.extend_from_slice(b"\x1b[0n"),
             Action::CursorPositionReport => {
@@ -608,6 +611,19 @@ mod tests {
         assert_eq!(
             terminal.take_pending_clipboard_writes(),
             vec!["hello".to_string()]
+        );
+        assert!(terminal.take_pending_clipboard_writes().is_empty());
+    }
+
+    #[test]
+    fn denies_osc52_clipboard_query_without_readback() {
+        let mut terminal = TerminalState::new(4, 10);
+
+        terminal.append_bytes(b"\x1b]52;c;?\x07");
+
+        assert_eq!(
+            terminal.take_pending_responses(),
+            b"\x1b]52;c;\x07".to_vec()
         );
         assert!(terminal.take_pending_clipboard_writes().is_empty());
     }

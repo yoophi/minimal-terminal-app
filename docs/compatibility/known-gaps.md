@@ -57,7 +57,6 @@
 권장 다음 작업:
 
 - 아직 확인하지 않은 modifier key variants를 앱별 smoke로 검증한다.
-- OSC 52 query/readback과 세부 보안 정책은 별도 설계한다.
 - 새로 지원하는 sequence마다 작은 parser/grid fixture를 우선 추가한다.
 
 ### vttest Runtime Coverage
@@ -143,11 +142,13 @@ Phase 021에서 F1-F12, Shift/Option/Control modifier가 붙은 navigation/funct
 
 Phase 022에서 `ESC =`, `ESC >` application keypad mode와 numeric keypad SS3 encoding을 구현했다. `TerminalModes`가 application keypad mode를 추적하고, app input layer가 keypad 0-9, decimal, enter, plus, minus, multiply, divide, equals를 application keypad sequence로 보낸다.
 
-### OSC 52 Clipboard Write
+### OSC 52 Clipboard Write and Query Policy
 
-상태: `partially supported`
+상태: `supported`
 
-Phase 023에서 OSC 52 clipboard write를 구현했다. core parser가 `OSC 52 ; Pc ; Pd` payload를 base64 decode해 pending clipboard write로 큐잉하고, AppKit layer가 main thread에서 pasteboard write를 수행한다. clipboard query/readback, prompt/permission policy, size policy tuning은 full xterm gap으로 남긴다.
+Phase 023에서 OSC 52 clipboard write를 구현했다. core parser가 `OSC 52 ; Pc ; Pd` payload를 base64 decode해 pending clipboard write로 큐잉하고, AppKit layer가 main thread에서 pasteboard write를 수행한다.
+
+Phase 031에서 `OSC 52 ; Pc ; ?` query를 deny-by-default 정책으로 처리하도록 명시했다. terminal core는 local clipboard를 읽지 않고 `OSC 52 ; Pc ; BEL` empty response를 큐잉한다. 실제 clipboard readback과 prompt/permission UI는 보안상 non-goal이다.
 
 ### Legacy Mouse Encoding
 
