@@ -14,7 +14,15 @@ pub struct TerminalState {
     grid: Grid,
     cursor: Cursor,
     saved_cursor: Cursor,
+    main_screen: Option<ScreenState>,
     parser: Parser,
+}
+
+#[derive(Clone, Debug)]
+struct ScreenState {
+    grid: Grid,
+    cursor: Cursor,
+    saved_cursor: Cursor,
 }
 
 impl TerminalState {
@@ -23,6 +31,7 @@ impl TerminalState {
             grid: Grid::new(rows, cols),
             cursor: Cursor::default(),
             saved_cursor: Cursor::default(),
+            main_screen: None,
             parser: Parser::default(),
         }
     }
@@ -110,6 +119,8 @@ impl TerminalState {
                     self.saved_cursor.col,
                 );
             }
+            Action::EnterAlternateScreen => self.enter_alternate_screen(),
+            Action::ExitAlternateScreen => self.exit_alternate_screen(),
             Action::CursorPosition { row, col } => {
                 self.grid.move_cursor(&mut self.cursor, row, col)
             }
@@ -123,6 +134,35 @@ impl TerminalState {
             }
             Action::Ignore => {}
         }
+    }
+
+    fn enter_alternate_screen(&mut self) {
+        if self.main_screen.is_some() {
+            self.grid.clear_screen(&mut self.cursor);
+            return;
+        }
+
+        let main_screen = ScreenState {
+            grid: self.grid.clone(),
+            cursor: self.cursor,
+            saved_cursor: self.saved_cursor,
+        };
+        let rows = self.grid.rows();
+        let cols = self.grid.cols();
+        self.grid = Grid::new(rows, cols);
+        self.cursor = Cursor::default();
+        self.saved_cursor = Cursor::default();
+        self.main_screen = Some(main_screen);
+    }
+
+    fn exit_alternate_screen(&mut self) {
+        let Some(main_screen) = self.main_screen.take() else {
+            return;
+        };
+
+        self.grid = main_screen.grid;
+        self.cursor = main_screen.cursor;
+        self.saved_cursor = main_screen.saved_cursor;
     }
 }
 
@@ -242,6 +282,21 @@ mod tests {
         let snapshot = terminal.scrollback_snapshot(0, 10);
         assert_eq!(snapshot.lines, vec!["one"]);
         assert_eq!(snapshot.scrollback_len, 1);
+    }
+
+    #[test]
+    fn alternate_screen_restores_main_screen() {
+        let mut terminal = TerminalState::new(3, 16);
+        terminal.append_bytes(b"main");
+        terminal.append_bytes(b"\x1b[?1049halt");
+
+        let alternate = terminal.snapshot(3);
+        assert_eq!(alternate.lines[0], "alt");
+
+        terminal.append_bytes(b"\x1b[?1049l");
+        let restored = terminal.snapshot(3);
+        assert_eq!(restored.lines[0], "main");
+        assert_eq!(restored.cursor, Cursor::new(0, 4));
     }
 
     #[test]

@@ -9,6 +9,8 @@ pub(crate) enum Action {
     ClearScreen(ScreenClearMode),
     SaveCursor,
     RestoreCursor,
+    EnterAlternateScreen,
+    ExitAlternateScreen,
     CursorPosition { row: usize, col: usize },
     CursorUp(usize),
     CursorDown(usize),
@@ -143,6 +145,10 @@ impl Parser {
 }
 
 fn parse_csi(params: &str, final_byte: char) -> Action {
+    if params.starts_with('?') {
+        return parse_private_csi(params, final_byte);
+    }
+
     let numbers = parse_numbers(params);
     match final_byte {
         'A' => Action::CursorUp(first_or_default(&numbers, 1)),
@@ -173,6 +179,16 @@ fn parse_csi(params: &str, final_byte: char) -> Action {
     }
 }
 
+fn parse_private_csi(params: &str, final_byte: char) -> Action {
+    let numbers = parse_numbers(params);
+    match final_byte {
+        'h' if contains_any(&numbers, &[47, 1047, 1049]) => Action::EnterAlternateScreen,
+        'l' if contains_any(&numbers, &[47, 1047, 1049]) => Action::ExitAlternateScreen,
+        'h' | 'l' => Action::Ignore,
+        _ => Action::Ignore,
+    }
+}
+
 fn parse_numbers(params: &str) -> Vec<usize> {
     params
         .trim_start_matches('?')
@@ -192,6 +208,10 @@ fn first_or_default(numbers: &[usize], default: usize) -> usize {
         Some(0) | None => default,
         Some(value) => value,
     }
+}
+
+fn contains_any(numbers: &[usize], targets: &[usize]) -> bool {
+    numbers.iter().any(|number| targets.contains(number))
 }
 
 #[cfg(test)]
@@ -264,5 +284,40 @@ mod tests {
         assert_eq!(parser.advance('7'), Some(Action::SaveCursor));
         assert_eq!(parser.advance('\u{1b}'), None);
         assert_eq!(parser.advance('8'), Some(Action::RestoreCursor));
+    }
+
+    #[test]
+    fn parses_alternate_screen_private_modes() {
+        let mut parser = Parser::default();
+        assert_eq!(parser.advance('\u{1b}'), None);
+        assert_eq!(parser.advance('['), None);
+        assert_eq!(parser.advance('?'), None);
+        assert_eq!(parser.advance('1'), None);
+        assert_eq!(parser.advance('0'), None);
+        assert_eq!(parser.advance('4'), None);
+        assert_eq!(parser.advance('9'), None);
+        assert_eq!(parser.advance('h'), Some(Action::EnterAlternateScreen));
+
+        assert_eq!(parser.advance('\u{1b}'), None);
+        assert_eq!(parser.advance('['), None);
+        assert_eq!(parser.advance('?'), None);
+        assert_eq!(parser.advance('1'), None);
+        assert_eq!(parser.advance('0'), None);
+        assert_eq!(parser.advance('4'), None);
+        assert_eq!(parser.advance('9'), None);
+        assert_eq!(parser.advance('l'), Some(Action::ExitAlternateScreen));
+    }
+
+    #[test]
+    fn ignores_other_private_modes() {
+        let mut parser = Parser::default();
+        assert_eq!(parser.advance('\u{1b}'), None);
+        assert_eq!(parser.advance('['), None);
+        assert_eq!(parser.advance('?'), None);
+        assert_eq!(parser.advance('2'), None);
+        assert_eq!(parser.advance('0'), None);
+        assert_eq!(parser.advance('0'), None);
+        assert_eq!(parser.advance('4'), None);
+        assert_eq!(parser.advance('h'), Some(Action::Ignore));
     }
 }
