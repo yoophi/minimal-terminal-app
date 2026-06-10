@@ -800,6 +800,15 @@ mod tests {
     }
 
     #[test]
+    fn renders_greek_nrcs_charset() {
+        let mut terminal = TerminalState::new(4, 32);
+
+        terminal.append_bytes(b"\x1b(\">abcdefghijklmnopqrstuvwx\x1b(Ba");
+
+        assert_eq!(terminal.snapshot(4).lines[0], "ΑΒΓΔΕΖΗΘΙΚΛΜΝΧΟΠΡΣΤΥΦΞΨΩa");
+    }
+
+    #[test]
     fn queues_cursor_position_report_responses() {
         let mut terminal = TerminalState::new(4, 10);
 
