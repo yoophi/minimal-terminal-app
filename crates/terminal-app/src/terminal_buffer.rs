@@ -14,8 +14,9 @@ impl TerminalBuffer {
         }
     }
 
-    pub fn append_bytes(&mut self, bytes: &[u8]) {
+    pub fn append_bytes(&mut self, bytes: &[u8]) -> Vec<u8> {
         self.terminal.append_bytes(bytes);
+        self.terminal.take_pending_responses()
     }
 
     pub fn snapshot(&self, max_visible_lines: usize) -> TerminalSnapshot {

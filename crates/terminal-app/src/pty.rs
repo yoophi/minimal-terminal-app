@@ -91,11 +91,13 @@ pub fn spawn_login_shell(buffer: Arc<Mutex<TerminalBuffer>>) -> io::Result<PtyWr
     let reader = unsafe { File::from_raw_fd(reader_fd) };
     let writer = unsafe { File::from_raw_fd(master_fd) };
 
-    start_reader_thread(pid, reader, buffer);
-
-    Ok(PtyWriter {
+    let writer = PtyWriter {
         writer: Arc::new(Mutex::new(writer)),
-    })
+    };
+
+    start_reader_thread(pid, reader, buffer, writer.clone());
+
+    Ok(writer)
 }
 
 fn duplicate_fd(fd: RawFd) -> io::Result<RawFd> {
@@ -120,7 +122,12 @@ fn exec_login_shell(shell: &str, login_argv0: &str) -> ! {
     }
 }
 
-fn start_reader_thread(pid: libc::pid_t, mut reader: File, buffer: Arc<Mutex<TerminalBuffer>>) {
+fn start_reader_thread(
+    pid: libc::pid_t,
+    mut reader: File,
+    buffer: Arc<Mutex<TerminalBuffer>>,
+    writer: PtyWriter,
+) {
     logging::pty_info("pty reader thread starting");
 
     thread::spawn(move || {
@@ -146,11 +153,17 @@ fn start_reader_thread(pid: libc::pid_t, mut reader: File, buffer: Arc<Mutex<Ter
                         ));
                     }
 
-                    if let Ok(mut buffer) = buffer.lock() {
-                        buffer.append_bytes(&bytes[..n]);
+                    let responses = if let Ok(mut buffer) = buffer.lock() {
+                        buffer.append_bytes(&bytes[..n])
                     } else {
                         logging::pty_error("terminal buffer lock poisoned");
                         break;
+                    };
+
+                    if !responses.is_empty() {
+                        if let Err(error) = writer.write_all(&responses) {
+                            logging::pty_error(&format!("pty DSR response write failed: {error}"));
+                        }
                     }
                 }
                 Err(error) if error.kind() == io::ErrorKind::Interrupted => {}

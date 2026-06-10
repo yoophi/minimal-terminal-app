@@ -65,9 +65,27 @@ Phase 011에서 다룰 작업:
 
 ## Acceptance Criteria
 
-- `CSI 5 n`, `CSI 6 n` parser/state test가 있다.
-- PTY response path가 구현되어 있다.
-- `docs/compatibility/matrix.md`의 Device Status Report row가 갱신되어 있다.
-- `docs/compatibility/known-gaps.md`에서 해당 gap이 제거되거나 제한이 명확히 낮춰져 있다.
-- `cargo test`와 `scripts/run-compatibility-core.sh`가 통과한다.
+- `CSI 5 n`, `CSI 6 n` parser/state test가 있다. `done`
+- PTY response path가 구현되어 있다. `done`
+- `docs/compatibility/matrix.md`의 Device Status Report row가 갱신되어 있다. `done`
+- `docs/compatibility/known-gaps.md`에서 해당 gap이 제거되거나 제한이 명확히 낮춰져 있다. `done`
+- `cargo test`와 `scripts/run-compatibility-core.sh`가 통과한다. `done`
 
+## Implementation Update - 2026-06-10
+
+Status: implementation complete.
+
+구현된 내용:
+
+- parser에 `CSI 5n`, `CSI 6n` action을 추가했다.
+- `TerminalState`에 pending response queue와 `take_pending_responses()`를 추가했다.
+- `CSI 5n`은 `ESC[0n`으로 응답한다.
+- `CSI 6n`은 현재 cursor 위치를 1-based `ESC[row;colR`로 응답한다.
+- app PTY reader thread가 buffer append 후 response를 writer로 전달한다.
+- parser/state/compatibility test를 추가했다.
+- matrix와 known gaps를 갱신했다.
+
+검증:
+
+- `scripts/run-compatibility-core.sh`
+- `cargo test`

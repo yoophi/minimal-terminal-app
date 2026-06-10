@@ -51,3 +51,15 @@ fn tui_private_modes_and_editing_sequences_have_core_evidence() {
     terminal.append_bytes(b"\x1b[2;4r\x1b[4;1H\nx");
     assert_eq!(terminal.snapshot(5).lines, vec!["abdef", "", "", "x", ""]);
 }
+
+#[test]
+fn device_status_reports_have_core_evidence() {
+    let mut terminal = TerminalState::new(4, 10);
+
+    terminal.append_bytes(b"\x1b[5n\x1b[3;6H\x1b[6n");
+
+    assert_eq!(
+        terminal.take_pending_responses(),
+        b"\x1b[0n\x1b[3;6R".to_vec()
+    );
+}

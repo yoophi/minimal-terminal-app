@@ -4,28 +4,6 @@
 
 ## Priority 1
 
-### Device Status Report 응답
-
-상태: `not supported`
-
-예시:
-
-- `CSI 5 n`
-- `CSI 6 n`
-
-중요한 이유:
-
-- 일부 shell, editor, terminal-aware tool은 terminal 상태나 cursor 위치를 질의한다.
-- 이 기능은 단순 parser 처리만으로는 부족하며, terminal이 PTY로 응답을 써야 한다.
-
-권장 다음 작업:
-
-- DSR 요청을 나타내는 parser action을 추가한다.
-- terminal-core state에서 PTY writer로 응답을 전달하는 통제된 경로를 추가한다.
-- cursor position 응답을 core test와 runtime smoke command로 검증한다.
-
-## Priority 2
-
 ### Mouse Reporting
 
 상태: `not supported`
@@ -47,7 +25,7 @@
 - native selection과 TUI mouse reporting 사이의 우선순위를 정한다.
 - mouse mode가 켜진 상태에서 AppKit mouse event를 terminal mouse report로 encode한다.
 
-## Priority 3
+## Priority 2
 
 ### Cursor Style Sequence
 
@@ -68,7 +46,7 @@
 - cursor style sequence variant를 parse한다.
 - AppKit cursor rendering을 갱신하고 state test를 추가한다.
 
-## Priority 4
+## Priority 3
 
 ### Cross-Scrollback Selection
 
@@ -84,7 +62,7 @@
 - visible row 좌표 대신 안정적인 buffer address space 기준 selection 좌표를 정의한다.
 - 현재 visible selection 동작은 첫 fallback으로 유지한다.
 
-## Priority 5
+## Priority 4
 
 ### 미확인 App Smoke Target
 
@@ -108,7 +86,7 @@
 - 통과하면 `matrix.md`의 상태와 evidence를 갱신한다.
 - 실패하면 실패 증상을 이 문서의 구체적인 gap으로 승격한다.
 
-## Priority 6
+## Priority 5
 
 ### Full xterm Compatibility Coverage
 
@@ -124,7 +102,7 @@
 - smoke test 실패에서 나온 unknown row를 우선순위에 따라 승격한다.
 - 새로 지원하는 sequence마다 작은 parser/grid fixture를 우선 추가한다.
 
-## Priority 7
+## Priority 6
 
 ### 대표 CLI/TUI Application Certification
 
@@ -151,3 +129,11 @@
 - 통과한 workflow만 `matrix.md`에 `supported`로 표시한다.
 - 실패는 앱 이름이 아니라 구체적인 sequence/input/rendering gap으로 분해한다.
 - 자세한 판단 기준은 `docs/compatibility/app-readiness.md`를 따른다.
+
+## Resolved
+
+### Device Status Report 응답
+
+상태: `supported`
+
+Phase 011에서 `CSI 5 n`, `CSI 6 n` parser action, core response queue, app PTY response path를 구현했다. 현재 지원 범위는 `CSI 5n`의 `ESC[0n` 응답과 `CSI 6n`의 1-based cursor position report 응답이다.

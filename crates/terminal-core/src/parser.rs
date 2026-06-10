@@ -21,6 +21,8 @@ pub(crate) enum Action {
     SetApplicationCursorKeys(bool),
     SetBracketedPaste(bool),
     SetCursorVisible(bool),
+    DeviceStatusReport,
+    CursorPositionReport,
     CursorPosition { row: usize, col: usize },
     CursorUp(usize),
     CursorDown(usize),
@@ -155,6 +157,11 @@ fn parse_csi(numbers: &[usize], intermediates: &[u8], final_byte: char) -> Actio
         },
         'L' => Action::InsertLines(first_or_default(&numbers, 1)),
         'M' => Action::DeleteLines(first_or_default(&numbers, 1)),
+        'n' => match first_or_default(&numbers, 0) {
+            5 => Action::DeviceStatusReport,
+            6 => Action::CursorPositionReport,
+            _ => Action::Ignore,
+        },
         'P' => Action::DeleteChars(first_or_default(&numbers, 1)),
         'X' => Action::EraseChars(first_or_default(&numbers, 1)),
         'r' => parse_scroll_region(&numbers),
@@ -442,5 +449,19 @@ mod tests {
             parser.advance_bytes(b"\x1b[2;4r"),
             vec![Action::SetScrollRegion(Some((1, 3)))]
         );
+    }
+
+    #[test]
+    fn parses_device_status_reports() {
+        let mut parser = Parser::default();
+        assert_eq!(
+            parser.advance_bytes(b"\x1b[5n"),
+            vec![Action::DeviceStatusReport]
+        );
+        assert_eq!(
+            parser.advance_bytes(b"\x1b[6n"),
+            vec![Action::CursorPositionReport]
+        );
+        assert_eq!(parser.advance_bytes(b"\x1b[9n"), vec![Action::Ignore]);
     }
 }

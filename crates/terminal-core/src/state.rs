@@ -36,6 +36,7 @@ pub struct TerminalState {
     current_style: Style,
     modes: TerminalModes,
     scroll_region: Option<(usize, usize)>,
+    pending_responses: Vec<u8>,
     main_screen: Option<ScreenState>,
     parser: Parser,
 }
@@ -59,6 +60,7 @@ impl TerminalState {
             current_style: Style::default(),
             modes: TerminalModes::default(),
             scroll_region: None,
+            pending_responses: Vec::new(),
             main_screen: None,
             parser: Parser::default(),
         }
@@ -68,6 +70,10 @@ impl TerminalState {
         for action in self.parser.advance_bytes(bytes) {
             self.apply(action);
         }
+    }
+
+    pub fn take_pending_responses(&mut self) -> Vec<u8> {
+        std::mem::take(&mut self.pending_responses)
     }
 
     pub fn snapshot(&self, max_visible_lines: usize) -> TerminalSnapshot {
@@ -171,6 +177,12 @@ impl TerminalState {
             }
             Action::SetBracketedPaste(enabled) => self.modes.bracketed_paste = enabled,
             Action::SetCursorVisible(visible) => self.modes.cursor_visible = visible,
+            Action::DeviceStatusReport => self.pending_responses.extend_from_slice(b"\x1b[0n"),
+            Action::CursorPositionReport => {
+                self.pending_responses.extend_from_slice(
+                    format!("\x1b[{};{}R", self.cursor.row + 1, self.cursor.col + 1).as_bytes(),
+                );
+            }
             Action::CursorPosition { row, col } => {
                 self.grid.move_cursor(&mut self.cursor, row, col)
             }
@@ -475,5 +487,24 @@ mod tests {
             snapshot.styled_lines[0].spans[1].style.background,
             Some(Color::Rgb(1, 2, 3))
         );
+    }
+
+    #[test]
+    fn queues_device_status_report_responses() {
+        let mut terminal = TerminalState::new(4, 10);
+
+        terminal.append_bytes(b"\x1b[5n");
+
+        assert_eq!(terminal.take_pending_responses(), b"\x1b[0n".to_vec());
+        assert!(terminal.take_pending_responses().is_empty());
+    }
+
+    #[test]
+    fn queues_cursor_position_report_responses() {
+        let mut terminal = TerminalState::new(4, 10);
+
+        terminal.append_bytes(b"\x1b[2;4H\x1b[6n");
+
+        assert_eq!(terminal.take_pending_responses(), b"\x1b[2;4R".to_vec());
     }
 }
