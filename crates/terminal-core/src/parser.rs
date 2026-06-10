@@ -242,30 +242,56 @@ impl Parser {
 }
 
 const C1_CSI: u8 = 0x9b;
+const C1_OSC: u8 = 0x9d;
 const C1_SS2: u8 = 0x8e;
 const C1_SS3: u8 = 0x8f;
+const C1_ST: u8 = 0x9c;
 
 fn contains_c1_shim_byte(bytes: &[u8]) -> bool {
     bytes
         .iter()
-        .any(|&byte| matches!(byte, C1_CSI | C1_SS2 | C1_SS3))
+        .any(|&byte| matches!(byte, C1_CSI | C1_OSC | C1_SS2 | C1_SS3 | C1_ST))
 }
 
 fn normalize_c1_shim_bytes(bytes: &[u8]) -> Vec<u8> {
-    let extra_bytes = bytes
-        .iter()
-        .filter(|&&byte| matches!(byte, C1_CSI | C1_SS2 | C1_SS3))
-        .count();
-    let mut normalized = Vec::with_capacity(bytes.len() + extra_bytes);
-    for &byte in bytes {
+    let mut normalized = Vec::with_capacity(bytes.len() * 2);
+    let mut index = 0;
+    while index < bytes.len() {
+        let byte = bytes[index];
+        if let Some(width) = valid_utf8_sequence_width(&bytes[index..]) {
+            normalized.extend_from_slice(&bytes[index..index + width]);
+            index += width;
+            continue;
+        }
+
         match byte {
             C1_CSI => normalized.extend_from_slice(b"\x1b["),
+            C1_OSC => normalized.extend_from_slice(b"\x1b]"),
             C1_SS2 => normalized.extend_from_slice(b"\x1bN"),
             C1_SS3 => normalized.extend_from_slice(b"\x1bO"),
+            C1_ST => normalized.extend_from_slice(b"\x1b\\"),
             _ => normalized.push(byte),
         }
+        index += 1;
     }
     normalized
+}
+
+fn valid_utf8_sequence_width(bytes: &[u8]) -> Option<usize> {
+    let first = *bytes.first()?;
+    let width = match first {
+        0x00..=0x7f => return Some(1),
+        0xc2..=0xdf => 2,
+        0xe0..=0xef => 3,
+        0xf0..=0xf4 => 4,
+        _ => return None,
+    };
+
+    if bytes.len() < width {
+        return None;
+    }
+
+    std::str::from_utf8(&bytes[..width]).ok().map(|_| width)
 }
 
 #[derive(Debug)]
@@ -1919,6 +1945,25 @@ mod tests {
             vec![Action::SetWindowTitle("minimal terminal".to_string())]
         );
         assert_eq!(parser.advance_bytes(b"\x1b]2;\x07"), vec![Action::Ignore]);
+    }
+
+    #[test]
+    fn parses_8_bit_c1_osc_with_st() {
+        let mut parser = Parser::default();
+        assert_eq!(
+            parser.advance_bytes(b"\x9d2;minimal terminal\x9c"),
+            vec![
+                Action::SetWindowTitle("minimal terminal".to_string()),
+                Action::Ignore
+            ]
+        );
+        assert_eq!(
+            parser.advance_bytes(b"\x9d52;c;?\x9c"),
+            vec![
+                Action::ClipboardQueryDenied("c".to_string()),
+                Action::Ignore
+            ]
+        );
     }
 
     #[test]

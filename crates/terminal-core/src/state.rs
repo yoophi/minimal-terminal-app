@@ -640,6 +640,22 @@ mod tests {
     }
 
     #[test]
+    fn handles_8_bit_c1_osc_with_st() {
+        let mut terminal = TerminalState::new(4, 10);
+
+        terminal.append_bytes(b"\x9d2;minimal terminal\x9c\x9d52;c;?\x9c");
+
+        assert_eq!(
+            terminal.take_pending_title_writes(),
+            vec!["minimal terminal".to_string()]
+        );
+        assert_eq!(
+            terminal.take_pending_responses(),
+            b"\x1b]52;c;\x07".to_vec()
+        );
+    }
+
+    #[test]
     fn queues_osc_title_write() {
         let mut terminal = TerminalState::new(4, 10);
 

@@ -151,6 +151,12 @@ Phase 096에서 8-bit C1 `0x9B` CSI introducer가 `ESC [` 형태와 같은 parse
 
 Phase 097에서 8-bit C1 `0x8E` SS2와 `0x8F` SS3가 기존 `ESC N`, `ESC O` single shift 경로와 같은 G2/G3 charset mapping을 사용하도록 구현하고 자동 evidence를 추가했다. 다른 C1 control family 전체 지원은 full xterm compatibility gap으로 남긴다.
 
+### 8-bit C1 OSC/ST
+
+상태: `supported`
+
+Phase 098에서 8-bit C1 `0x9D` OSC introducer와 `0x9C` ST terminator가 기존 `ESC ]` 및 `ESC \` 경로와 같은 OSC title, OSC 52 query-deny 처리를 사용하도록 구현하고 자동 evidence를 추가했다. 다른 C1 control family 전체 지원은 full xterm compatibility gap으로 남긴다.
+
 ### Cursor Style Sequence
 
 상태: `supported`
