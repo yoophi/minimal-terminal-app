@@ -329,6 +329,13 @@ if command -v tmux >/dev/null 2>&1; then
     "tmux-workflow-ok" \
     2500 \
     1200
+  run_case_with_followup \
+    "tmux-split-pane" \
+    "tmux_socket=\"minimal-terminal-app-smoke-\$\$\"; ${tmux_path} -L \"\$tmux_socket\" new-session -s minimal-terminal-smoke 'printf \"tmux-top-ready\\n\"; read -r line' \\; set-hook -g pane-exited 'kill-session' \\; split-window -v 'printf \"tmux-bottom-ready\\n\"; read -r line' \\; select-pane -D; printf \"tmux-split-ok\\n\"; ${tmux_path} -L \"\$tmux_socket\" kill-server >/dev/null 2>&1 || true"$'\n' \
+    $'exit\r' \
+    "tmux-split-ok" \
+    3000 \
+    1200
   ran=1
 else
   echo "app target smoke skipped: tmux not found"

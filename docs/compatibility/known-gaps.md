@@ -106,7 +106,7 @@
 
 - `vim`
 - `emacs -nw`: local verification environment의 PATH에서 `emacs`를 찾지 못했다.
-- `tmux`: `tmux 3.6b` version smoke와 attached session workflow smoke는 통과했다.
+- `tmux`: `tmux 3.6b` version smoke, attached session workflow smoke, split-pane workflow smoke는 통과했다.
 - `tmux` 안의 `vim`
 - `claude` 또는 `claude-code`: `2.1.170 (Claude Code)` version smoke는 통과했다.
 - `codex` / `codex-cli`: `codex-cli 0.139.0` version smoke는 통과했다.
@@ -218,7 +218,7 @@ Phase 033에서 `scripts/run-app-target-smokes.sh`를 추가했다. local verifi
 
 상태: `supported`
 
-Phase 034에서 `scripts/run-app-target-smokes.sh`에 `tmux -V`, `htop --version`, `claude --version`, `codex-cli --version` target을 추가했다. Phase 055에서 현재 local verification environment의 `codex --version` fallback을 추가했다. Phase 056에서 attached `tmux new-session` workflow를 추가했다. `tmux-version`, `tmux-attached-session`, `htop-version`, `claude-version`, `codex-version`이 app 내부 PTY snapshot smoke를 통과한다. 실제 interactive workflow는 대표 CLI/TUI Application Certification gap으로 계속 추적한다.
+Phase 034에서 `scripts/run-app-target-smokes.sh`에 `tmux -V`, `htop --version`, `claude --version`, `codex-cli --version` target을 추가했다. Phase 055에서 현재 local verification environment의 `codex --version` fallback을 추가했다. Phase 056에서 attached `tmux new-session` workflow를 추가했고, Phase 057에서 `tmux split-window` workflow를 추가했다. `tmux-version`, `tmux-attached-session`, `tmux-split-pane`, `htop-version`, `claude-version`, `codex-version`이 app 내부 PTY snapshot smoke를 통과한다. 실제 interactive workflow는 대표 CLI/TUI Application Certification gap으로 계속 추적한다.
 
 ### DEC Special Graphics Charset
 
