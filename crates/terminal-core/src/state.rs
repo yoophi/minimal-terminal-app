@@ -821,6 +821,15 @@ mod tests {
     }
 
     #[test]
+    fn renders_turkish_nrcs_charset() {
+        let mut terminal = TerminalState::new(4, 24);
+
+        terminal.append_bytes(b"\x1b(%2&@[\\]^`{|}~\x1b(B&");
+
+        assert_eq!(terminal.snapshot(4).lines[0], "ğİŞÖÇÜĞşöçü&");
+    }
+
+    #[test]
     fn queues_cursor_position_report_responses() {
         let mut terminal = TerminalState::new(4, 10);
 

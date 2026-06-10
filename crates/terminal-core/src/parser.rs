@@ -108,6 +108,7 @@ enum Charset {
     Spanish,
     Swedish,
     Swiss,
+    Turkish,
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -311,6 +312,10 @@ impl vte::Perform for ActionCollector {
                 self.g0_charset = Charset::Hebrew;
                 return;
             }
+            ([b'(', b'%'], b'2') => {
+                self.g0_charset = Charset::Turkish;
+                return;
+            }
             ([b'('], b'Y') => {
                 self.g0_charset = Charset::Italian;
                 return;
@@ -373,6 +378,10 @@ impl vte::Perform for ActionCollector {
             }
             ([b')', b'%'], b'=') => {
                 self.g1_charset = Charset::Hebrew;
+                return;
+            }
+            ([b')', b'%'], b'2') => {
+                self.g1_charset = Charset::Turkish;
                 return;
             }
             ([b')'], b'Y') => {
@@ -439,6 +448,10 @@ impl vte::Perform for ActionCollector {
                 self.g2_charset = Charset::Hebrew;
                 return;
             }
+            ([b'*', b'%'], b'2') => {
+                self.g2_charset = Charset::Turkish;
+                return;
+            }
             ([b'*'], b'Y') => {
                 self.g2_charset = Charset::Italian;
                 return;
@@ -501,6 +514,10 @@ impl vte::Perform for ActionCollector {
             }
             ([b'+', b'%'], b'=') => {
                 self.g3_charset = Charset::Hebrew;
+                return;
+            }
+            ([b'+', b'%'], b'2') => {
+                self.g3_charset = Charset::Turkish;
                 return;
             }
             ([b'+'], b'Y') => {
@@ -727,6 +744,23 @@ fn map_printable_char(ch: char, charset: Charset) -> char {
             'x' => 'ר',
             'y' => 'ש',
             'z' => 'ת',
+            _ => ch,
+        };
+    }
+
+    if charset == Charset::Turkish {
+        return match ch {
+            '&' => 'ğ',
+            '@' => 'İ',
+            '[' => 'Ş',
+            '\\' => 'Ö',
+            ']' => 'Ç',
+            '^' => 'Ü',
+            '`' => 'Ğ',
+            '{' => 'ş',
+            '|' => 'ö',
+            '}' => 'ç',
+            '~' => 'ü',
             _ => ch,
         };
     }
@@ -1625,6 +1659,37 @@ mod tests {
         assert_eq!(
             parser.advance_bytes(b"\x1b)%=\x1b~\xc3\xa0"),
             vec![Action::Print('א')]
+        );
+    }
+
+    #[test]
+    fn maps_turkish_nrcs_charset() {
+        let mut parser = Parser::default();
+
+        assert_eq!(
+            parser.advance_bytes(b"\x1b(%2&@[\\]^`{|}~\x1b(B&"),
+            vec![
+                Action::Print('ğ'),
+                Action::Print('İ'),
+                Action::Print('Ş'),
+                Action::Print('Ö'),
+                Action::Print('Ç'),
+                Action::Print('Ü'),
+                Action::Print('Ğ'),
+                Action::Print('ş'),
+                Action::Print('ö'),
+                Action::Print('ç'),
+                Action::Print('ü'),
+                Action::Print('&'),
+            ]
+        );
+        assert_eq!(
+            parser.advance_bytes(b"\x1b*%2\x1bN~x"),
+            vec![Action::Print('ü'), Action::Print('x')]
+        );
+        assert_eq!(
+            parser.advance_bytes(b"\x1b)%2\x1b~\xc2\xa6"),
+            vec![Action::Print('ğ')]
         );
     }
 
