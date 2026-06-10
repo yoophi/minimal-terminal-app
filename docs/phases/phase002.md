@@ -12,6 +12,7 @@ Phase 002는 빈 AppKit 창에 login shell 출력을 표시하기 위한 최소 
 - 단순 terminal output buffer
 - AppKit `TerminalView` 구현
 - login shell 출력 렌더링
+- 고정폭 폰트 기반 출력 표시
 - 키보드 입력을 PTY로 전달
 - Console.app 및 `/usr/bin/log` 사용 문서화
 
@@ -164,6 +165,7 @@ crates/terminal-app/src/terminal_view.rs
 - 검은 배경 그리기
 - `TerminalBuffer`에서 visible text 읽기
 - 흰색 텍스트로 draw
+- `NSFont::userFixedPitchFontOfSize`를 사용해 고정폭 폰트 적용
 - keyDown 이벤트 수신
 - keyDown characters를 PTY writer로 전달
 - timer를 사용해 주기적으로 redraw 요청
@@ -173,12 +175,14 @@ crates/terminal-app/src/terminal_view.rs
 ```text
 drawRect:
   -> draw black background
+  -> set white foreground color
+  -> set fixed-pitch font
   -> lock TerminalBuffer
   -> visible_text(200)
   -> draw NSString
 ```
 
-현재 렌더링은 최소 구현이다. 고정폭 폰트 지정도 아직 완성된 렌더러 구조로 분리하지 않았다.
+현재 렌더링은 최소 구현이다. 고정폭 폰트는 적용했지만, 아직 cell 단위 renderer는 아니다. 즉 글자를 터미널 grid에 배치하는 것이 아니라 하나의 문자열 블록으로 그린다.
 
 ## 5. UI 갱신 트리거
 
@@ -455,4 +459,3 @@ Phase 002 종료 시점에는 앱 창 안에 login shell 출력을 표시하는 
 - lifecycle과 PTY 상태를 Console.app에서 확인
 
 이 단계는 아직 완전한 터미널 에뮬레이터는 아니지만, 이후 `terminal-core`와 renderer를 붙일 수 있는 실행 가능한 기반이다.
-

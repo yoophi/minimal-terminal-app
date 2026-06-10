@@ -5,7 +5,7 @@ use objc2::rc::{autoreleasepool, Retained};
 use objc2::runtime::AnyObject;
 use objc2::{define_class, msg_send, sel, ClassType, DefinedClass, MainThreadOnly};
 use objc2_app_kit::{
-    NSColor, NSEvent, NSRectFill, NSResponder, NSView, NSWindow,
+    NSColor, NSEvent, NSFont, NSRectFill, NSResponder, NSView, NSWindow,
 };
 use objc2_foundation::{
     MainThreadMarker, NSObjectProtocol, NSPoint, NSRect, NSString, NSTimer,
@@ -17,6 +17,7 @@ use crate::terminal_buffer::TerminalBuffer;
 
 const PADDING_X: f64 = 12.0;
 const PADDING_Y: f64 = 14.0;
+const FONT_SIZE: f64 = 14.0;
 
 pub(crate) struct TerminalViewIvars {
     buffer: Arc<Mutex<TerminalBuffer>>,
@@ -122,6 +123,10 @@ fn draw_background(rect: NSRect) {
 
 fn draw_terminal_text(text: &str) {
     NSColor::whiteColor().set();
+    if let Some(font) = NSFont::userFixedPitchFontOfSize(FONT_SIZE) {
+        font.set();
+    }
+
     let string = NSString::from_str(text);
     let _: () = unsafe {
         msg_send![
