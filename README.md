@@ -24,6 +24,12 @@ macOS에서 사용할 안정성 우선의 터미널 에뮬레이터를 개발하
 cargo test
 ```
 
+호환성 core regression과 문서 consistency 확인:
+
+```bash
+scripts/run-compatibility-core.sh
+```
+
 macOS `.app` 번들 생성:
 
 ```bash
@@ -72,6 +78,7 @@ docs/
 
 scripts/
 ├── bundle-macos-app.sh
+├── check-compatibility-docs.sh
 └── run-compatibility-core.sh
 
 GOAL.md               # project goal and MVP scope
@@ -85,3 +92,4 @@ ARCHITECTURE.md       # proposed architecture
 - Phase 006: Selection, copy, and scrollback UX are implemented for the current visible snapshot.
 - Phase 007: First TUI compatibility expansion is implemented.
 - Phase 008: Compatibility matrix, smoke test protocol, known gap tracking, CSI/reference documentation, regression runner, and core compatibility evidence tests are implemented. GUI/runtime smoke scenarios remain manual.
+- Phase 009: Compatibility documentation consistency checks are implemented.

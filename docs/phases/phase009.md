@@ -69,10 +69,29 @@ Phase 009에서 다룰 작업:
 
 ## Acceptance Criteria
 
-- `scripts/check-compatibility-docs.sh`가 있다.
-- 현재 `docs/compatibility` 문서에서 script가 통과한다.
-- `supported` row의 evidence 누락을 잡아낼 수 있다.
-- `unknown`/`partially supported`/`not supported` row의 known gap 연결 누락을 잡아낼 수 있다.
-- `scripts/run-compatibility-core.sh` 또는 README에 실행 방법이 반영되어 있다.
-- `cargo test`가 통과한다.
+- `scripts/check-compatibility-docs.sh`가 있다. `done`
+- 현재 `docs/compatibility` 문서에서 script가 통과한다. `done`
+- `supported` row의 evidence 누락을 잡아낼 수 있다. `done`
+- `unknown`/`partially supported`/`not supported` row의 known gap 연결 누락을 잡아낼 수 있다. `done`
+- `scripts/run-compatibility-core.sh` 또는 README에 실행 방법이 반영되어 있다. `done`
+- `cargo test`가 통과한다. `done`
 
+## Implementation Update - 2026-06-10
+
+Status: implementation complete.
+
+구현된 내용:
+
+- `scripts/check-compatibility-docs.sh`를 추가했다.
+- `supported` row의 evidence 누락을 검증한다.
+- `unknown`, `partially supported`, `not supported` row가 `known-gaps.md`와 연결되는지 검증한다.
+- `tests/compatibility.rs::test_name` evidence가 실제 compatibility integration test에 존재하는지 검증한다.
+- `docs/compatibility` 내부 markdown link 대상이 존재하는지 검증한다.
+- `scripts/run-compatibility-core.sh`에 문서 검증을 연결했다.
+- README와 regression runner 문서에 실행 방법을 반영했다.
+
+검증:
+
+- `scripts/check-compatibility-docs.sh`
+- `scripts/run-compatibility-core.sh`
+- `cargo test`

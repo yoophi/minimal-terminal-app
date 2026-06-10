@@ -34,6 +34,7 @@ scripts/run-compatibility-core.sh
 cargo test -p terminal-core
 cargo test -p terminal-core --test fixtures
 cargo test -p terminal-core --test compatibility
+scripts/check-compatibility-docs.sh
 ```
 
 ## 실패 처리
