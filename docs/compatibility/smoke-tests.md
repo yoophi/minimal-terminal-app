@@ -163,6 +163,7 @@ scripts/run-app-target-smokes.sh
 - `fzf-interactive`: `printf 'alpha\nbeta\n' | fzf` 실행 후 query input `b`로 interactive redraw 확인
 - `git-log`: `git log --oneline -1 --no-color`
 - `git-pager-quit`: `git log ... | less` 실행 후 follow-up `q`로 pager 종료 확인
+- `git-pager-page-quit`: `git log ... | less` 실행 후 follow-up Space와 `q`로 page navigation 뒤 pager 종료 확인
 - `tmux-version`: `tmux -V`
 - `htop-version`: `htop --version`
 - `htop-runtime`: `htop` full-screen redraw snapshot
@@ -180,7 +181,7 @@ scripts/run-app-target-smokes.sh
 범위 밖:
 
 - GUI focus 기반 keyboard automation
-- `htop`, `fzf`, `git log` 같은 interactive TUI 내부 key workflow
+- `htop`, `fzf`, `git log` 같은 전체 interactive TUI 내부 key workflow
 - mouse interaction workflow
 
 ## Representative App Certification Smoke
