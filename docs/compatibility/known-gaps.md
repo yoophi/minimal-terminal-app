@@ -43,11 +43,12 @@
 - Phase 038에서 app 내부 `htop` full-screen redraw snapshot smoke를 자동화했다.
 - Phase 039에서 app 내부 `fzf` interactive query redraw snapshot smoke를 자동화했다.
 - Phase 040에서 app 내부 `git log ... | less` pager quit workflow를 자동화했다.
+- Phase 041에서 app 내부 `htop` quit workflow를 자동화했다.
 - interactive key workflow는 아직 남아 있다.
 
 권장 다음 작업:
 
-- `htop` function key 또는 quit key workflow를 앱 내부에서 수행한다.
+- `htop` function key workflow를 앱 내부에서 수행한다.
 - `fzf` Enter selection workflow를 앱 내부에서 수행한다.
 - `git log` pager scroll/page navigation workflow를 앱 내부에서 수행한다.
 
@@ -232,3 +233,9 @@ Phase 039에서 smoke harness에 follow-up input을 추가하고 `scripts/run-ap
 상태: `partially supported`
 
 Phase 040에서 `scripts/run-app-target-smokes.sh`에 `git-pager-quit` target을 추가했다. local verification environment에서 app 내부 PTY로 `git log --oneline --graph --decorate -100 --color=never | less`를 실행하고 follow-up `q` 입력 뒤 shell marker `git-pager-quit-ok`를 확인했다. pager scroll/page navigation은 Environment-dependent App Smoke Target gap으로 계속 추적한다.
+
+### htop Quit App Smoke
+
+상태: `partially supported`
+
+Phase 041에서 `scripts/run-app-target-smokes.sh`에 `htop-quit` target을 추가했다. local verification environment에서 app 내부 PTY로 `htop`을 실행하고 follow-up `q` 입력 뒤 shell marker `htop-quit-ok`를 확인했다. function key workflow는 Environment-dependent App Smoke Target gap으로 계속 추적한다.

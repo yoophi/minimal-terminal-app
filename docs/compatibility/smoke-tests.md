@@ -166,6 +166,7 @@ scripts/run-app-target-smokes.sh
 - `tmux-version`: `tmux -V`
 - `htop-version`: `htop --version`
 - `htop-runtime`: `htop` full-screen redraw snapshot
+- `htop-quit`: `htop` 실행 후 follow-up `q`로 종료 확인
 - `claude-version`: `claude --version`
 - `codex-cli-version`: `codex-cli --version`이 설치된 경우만 실행
 - `vttest-menu`: `vttest` 시작 메뉴 snapshot

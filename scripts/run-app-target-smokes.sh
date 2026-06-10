@@ -157,6 +157,13 @@ if command -v htop >/dev/null 2>&1; then
   htop_path="$(command -v htop)"
   run_case "htop-version" "${htop_path} --version"$'\n' "htop"
   run_case "htop-runtime" "${htop_path}"$'\n' "Load average" 3000
+  run_case_with_followup \
+    "htop-quit" \
+    "${htop_path}; printf \"htop-quit-ok\\n\""$'\n' \
+    "q" \
+    "htop-quit-ok" \
+    2000 \
+    1200
   ran=1
 else
   echo "app target smoke skipped: htop not found"
