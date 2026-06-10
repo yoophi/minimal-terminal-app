@@ -791,6 +791,15 @@ mod tests {
     }
 
     #[test]
+    fn renders_iso_latin5_supplemental_charset() {
+        let mut terminal = TerminalState::new(4, 20);
+
+        terminal.append_bytes(b"\x1b-M\x1b~\xc3\x90\xc3\x9d\xc3\x9e\xc3\xb0\xc3\xbd\xc3\xbe");
+
+        assert_eq!(terminal.snapshot(4).lines[0], "ĞİŞğış");
+    }
+
+    #[test]
     fn renders_british_nrcs_charset() {
         let mut terminal = TerminalState::new(4, 20);
 

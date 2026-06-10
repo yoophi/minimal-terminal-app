@@ -70,6 +70,15 @@ fn iso_latin_cyrillic_supplemental_charset_has_core_evidence() {
 }
 
 #[test]
+fn iso_latin5_supplemental_charset_has_core_evidence() {
+    let mut terminal = TerminalState::new(4, 20);
+
+    terminal.append_bytes(b"\x1b-M\x1b~\xc3\x90\xc3\x9d\xc3\x9e\xc3\xb0\xc3\xbd\xc3\xbe");
+
+    assert_eq!(terminal.snapshot(4).lines[0], "ĞİŞğış");
+}
+
+#[test]
 fn style_sequences_have_snapshot_evidence() {
     let mut terminal = TerminalState::new(3, 32);
 
