@@ -34,3 +34,4 @@ objc2-foundation = { version = "0.3", default-features = false, features = [
     "NSTimer",
 ] }
 oslog = "0.2"
+terminal-core = { path = "../terminal-core" }

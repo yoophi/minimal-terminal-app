@@ -11,6 +11,7 @@ use objc2_app_kit::{
 use objc2_foundation::{
     MainThreadMarker, NSMutableDictionary, NSObjectProtocol, NSPoint, NSRect, NSString, NSTimer,
 };
+use terminal_core::TerminalSnapshot;
 
 use crate::logging;
 use crate::pty::PtyWriter;
@@ -20,6 +21,9 @@ const PADDING_X: f64 = 12.0;
 const PADDING_Y: f64 = 14.0;
 const FONT_SIZE: f64 = 14.0;
 const LINE_HEIGHT: f64 = 18.0;
+const CELL_WIDTH: f64 = 8.4;
+const CURSOR_WIDTH: f64 = 8.0;
+const CURSOR_HEIGHT: f64 = 16.0;
 const TERMINAL_FONT_NAMES: &[&str] = &[
     "JetBrainsMonoNFM-Regular",
     "JetBrainsMonoNF-Regular",
@@ -94,14 +98,18 @@ define_class!(
             let bounds = self.as_super().bounds();
             let max_visible_lines = max_visible_lines(bounds);
 
-            let text = self
+            let snapshot = self
                 .ivars()
                 .buffer
                 .lock()
-                .map(|buffer| buffer.visible_text(max_visible_lines))
-                .unwrap_or_else(|_| "terminal buffer unavailable".to_string());
+                .map(|buffer| buffer.snapshot(max_visible_lines))
+                .unwrap_or_else(|_| TerminalSnapshot {
+                    lines: vec!["terminal buffer unavailable".to_string()],
+                    cursor: terminal_core::Cursor::default(),
+                });
 
-            draw_terminal_text(&text);
+            draw_terminal_text(&snapshot);
+            draw_cursor(&snapshot);
         }
 
         #[unsafe(method(redrawTimerFired:))]
@@ -156,7 +164,10 @@ impl TerminalView {
             return;
         }
 
-        logging::pty_info(&format!("terminal view paste received: bytes={}", input.len()));
+        logging::pty_info(&format!(
+            "terminal view paste received: bytes={}",
+            input.len()
+        ));
 
         if let Err(error) = self.ivars().writer.write_all(input.as_bytes()) {
             logging::pty_error(&format!("pty write failed from paste: {error}"));
@@ -175,10 +186,10 @@ fn draw_background(rect: NSRect) {
     NSRectFill(rect);
 }
 
-fn draw_terminal_text(text: &str) {
+fn draw_terminal_text(snapshot: &TerminalSnapshot) {
     let attributes = terminal_text_attributes();
 
-    for (index, line) in text.lines().enumerate() {
+    for (index, line) in snapshot.lines.iter().enumerate() {
         let string = NSString::from_str(line);
         let y = PADDING_Y + (index as f64 * LINE_HEIGHT);
         let _: () = unsafe {
@@ -189,6 +200,16 @@ fn draw_terminal_text(text: &str) {
             ]
         };
     }
+}
+
+fn draw_cursor(snapshot: &TerminalSnapshot) {
+    let x = PADDING_X + (snapshot.cursor.col as f64 * CELL_WIDTH);
+    let y = PADDING_Y + (snapshot.cursor.row as f64 * LINE_HEIGHT) + 2.0;
+    NSColor::whiteColor().setFill();
+    NSRectFill(NSRect::new(
+        NSPoint::new(x, y),
+        objc2_foundation::NSSize::new(CURSOR_WIDTH, CURSOR_HEIGHT),
+    ));
 }
 
 fn terminal_text_attributes() -> Retained<NSMutableDictionary> {

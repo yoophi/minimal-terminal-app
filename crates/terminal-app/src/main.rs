@@ -58,7 +58,9 @@ define_class!(
                 Err(error) => {
                     logging::app_error(&format!("failed to spawn login shell: {error}"));
                     if let Ok(mut buffer) = buffer.lock() {
-                        buffer.append_bytes(format!("failed to spawn login shell: {error}\n").as_bytes());
+                        buffer.append_bytes(
+                            format!("failed to spawn login shell: {error}\n").as_bytes(),
+                        );
                     }
                     return;
                 }
@@ -75,10 +77,7 @@ define_class!(
                 .window
                 .set(window)
                 .expect("main window should only be initialized once");
-            self.ivars()
-                .terminal_view
-                .set(terminal_view)
-                .ok();
+            self.ivars().terminal_view.set(terminal_view).ok();
 
             app.setActivationPolicy(NSApplicationActivationPolicy::Regular);
 

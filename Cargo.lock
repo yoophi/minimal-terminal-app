@@ -195,7 +195,12 @@ dependencies = [
  "objc2-app-kit",
  "objc2-foundation",
  "oslog",
+ "terminal-core",
 ]
+
+[[package]]
+name = "terminal-core"
+version = "0.1.0"
 
 [[package]]
 name = "windows-link"

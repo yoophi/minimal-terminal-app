@@ -1,6 +1,6 @@
 [workspace]
 members = [
+    "crates/terminal-core",
     "crates/terminal-app",
 ]
 resolver = "2"
-

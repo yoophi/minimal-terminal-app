@@ -21,6 +21,58 @@ Phase 003에서 다룰 작업은 다음과 같다.
 - PTY resize 전달
 - scrollback model 초안
 
+## Progress
+
+2026-06-10에 Phase 003의 첫 수직 조각을 구현했다.
+
+완료한 작업:
+
+- `terminal-core` crate 생성
+- AppKit/PTY와 분리된 순수 Rust terminal state 추가
+- grid/cell/cursor 기본 모델 추가
+- 최소 ANSI/VT CSI parser 추가
+- `terminal-app`의 `TerminalBuffer`를 `terminal-core::TerminalState` wrapper로 전환
+- `TerminalView`가 `TerminalSnapshot`을 렌더링하도록 변경
+- cursor 위치에 흰색 block cursor 렌더링
+- terminal-core 단위 테스트 추가
+- 실제 앱 재실행 후 grid 기반 출력과 block cursor 표시 확인
+
+현재 `terminal-core`가 처리하는 동작:
+
+- printable text
+- carriage return
+- newline
+- backspace/delete
+- tab
+- 기본 scrolling
+- CSI cursor movement: `A`, `B`, `C`, `D`, `G`, `H`, `f`
+- CSI clear line: `K`
+- CSI clear screen: `2J`
+- SGR style sequence `m` 무시
+
+이번 단계의 의도는 완전한 terminal emulator를 만드는 것이 아니라, Phase 002의 문자열 버퍼를 테스트 가능한 grid/cursor 기반으로 교체하는 것이다.
+
+런타임 검증:
+
+```text
+echo phase003-grid; echo cursor-check
+phase003-grid
+cursor-check
+```
+
+확인된 상태:
+
+- shell prompt가 grid 기반 snapshot으로 표시된다.
+- paste한 command echo가 화면에 표시된다.
+- Enter 후 command output과 새 prompt가 표시된다.
+- cursor 위치에 block cursor가 표시된다.
+
+남은 표시 문제:
+
+- zsh prompt redraw 과정에서 command line이 한 번 중복되어 보일 수 있다.
+- prompt 오른쪽 정렬 영역과 cursor movement sequence는 아직 완전히 해석하지 못한다.
+- OSC/charset escape는 skip하도록 보강했지만, ANSI/VT parser 범위는 여전히 제한적이다.
+
 ## Why Cursor Belongs Here
 
 입력 커서는 단순히 문자열 끝에 그리는 UI 장식이 아니다. 터미널에서 cursor는 terminal state의 일부다.
@@ -92,14 +144,14 @@ crates/
 
 Phase 003의 최소 완료 기준:
 
-- shell prompt가 grid 기반으로 표시된다.
-- printable text 입력 후 cursor가 예상 위치로 이동한다.
+- shell prompt가 grid 기반으로 표시된다. `in progress`
+- printable text 입력 후 cursor가 예상 위치로 이동한다. `in progress`
 - Backspace가 화면과 shell 양쪽에서 일관되게 동작한다.
 - Enter 입력 후 새 prompt가 정상적으로 표시된다.
 - Ctrl-C가 foreground shell process로 전달된다.
 - arrow key escape sequence가 shell line editor에 전달된다.
 - window resize 시 PTY size와 grid size가 동기화된다.
-- `cargo test`로 terminal-core parser/grid/cursor 기본 동작을 검증한다.
+- `cargo test`로 terminal-core parser/grid/cursor 기본 동작을 검증한다. `done`
 
 ## Non-goals
 
@@ -122,3 +174,15 @@ Phase 002에서 확인한 중요한 교훈:
 - subsystem/category 기반 logging은 디버깅에 유용하다.
 - 문자열 블록 렌더링은 빠르게 확인하기 좋지만, cursor와 ANSI를 정확히 처리하기에는 부족하다.
 
+## Remaining Work
+
+다음 작업은 Phase 003 안에서 계속 진행한다.
+
+- 실제 login shell prompt에서 grid/cursor 표시 검증
+- Backspace, Enter, Ctrl-C 입력 동작 검증 및 보정
+- arrow key escape sequence encoding
+- resize 시 view bounds에서 rows/cols 계산
+- `TIOCSWINSZ`로 PTY resize 전달
+- scrollback 구조 추가
+- Unicode width 처리 방침 결정
+- ANSI parser 범위 확장

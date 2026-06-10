@@ -44,6 +44,7 @@ macOS Console.app과 `log` CLI를 통한 로그 확인 방법은 [docs/LOGGING.m
 
 ```text
 crates/
+├── terminal-core/     # terminal grid, cursor, and parser state
 └── terminal-app/      # macOS native AppKit application
 
 docs/

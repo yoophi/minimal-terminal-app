@@ -1,0 +1,203 @@
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub(crate) enum Action {
+    Print(char),
+    CarriageReturn,
+    Newline,
+    Backspace,
+    Tab,
+    ClearLineFromCursor,
+    ClearScreen,
+    CursorPosition { row: usize, col: usize },
+    CursorUp(usize),
+    CursorDown(usize),
+    CursorRight(usize),
+    CursorLeft(usize),
+    CursorColumn(usize),
+    Ignore,
+}
+
+#[derive(Clone, Debug, Default)]
+pub(crate) struct Parser {
+    state: ParserState,
+    csi: String,
+}
+
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
+enum ParserState {
+    #[default]
+    Ground,
+    Escape,
+    Csi,
+    Osc,
+    OscEscape,
+    Charset,
+}
+
+impl Parser {
+    pub(crate) fn advance(&mut self, ch: char) -> Option<Action> {
+        match self.state {
+            ParserState::Ground => self.advance_ground(ch),
+            ParserState::Escape => self.advance_escape(ch),
+            ParserState::Csi => self.advance_csi(ch),
+            ParserState::Osc => self.advance_osc(ch),
+            ParserState::OscEscape => self.advance_osc_escape(ch),
+            ParserState::Charset => self.advance_charset(ch),
+        }
+    }
+
+    fn advance_ground(&mut self, ch: char) -> Option<Action> {
+        match ch {
+            '\u{1b}' => {
+                self.state = ParserState::Escape;
+                None
+            }
+            '\r' => Some(Action::CarriageReturn),
+            '\n' => Some(Action::Newline),
+            '\u{08}' | '\u{7f}' => Some(Action::Backspace),
+            '\t' => Some(Action::Tab),
+            ch if ch.is_control() => Some(Action::Ignore),
+            ch => Some(Action::Print(ch)),
+        }
+    }
+
+    fn advance_escape(&mut self, ch: char) -> Option<Action> {
+        match ch {
+            '[' => {
+                self.csi.clear();
+                self.state = ParserState::Csi;
+                None
+            }
+            ']' => {
+                self.state = ParserState::Osc;
+                None
+            }
+            '(' | ')' | '*' | '+' => {
+                self.state = ParserState::Charset;
+                None
+            }
+            _ => {
+                self.state = ParserState::Ground;
+                Some(Action::Ignore)
+            }
+        }
+    }
+
+    fn advance_csi(&mut self, ch: char) -> Option<Action> {
+        if ('@'..='~').contains(&ch) {
+            let action = parse_csi(&self.csi, ch);
+            self.csi.clear();
+            self.state = ParserState::Ground;
+            Some(action)
+        } else {
+            self.csi.push(ch);
+            None
+        }
+    }
+
+    fn advance_osc(&mut self, ch: char) -> Option<Action> {
+        match ch {
+            '\u{07}' => self.state = ParserState::Ground,
+            '\u{1b}' => self.state = ParserState::OscEscape,
+            _ => {}
+        }
+        None
+    }
+
+    fn advance_osc_escape(&mut self, ch: char) -> Option<Action> {
+        self.state = if ch == '\\' {
+            ParserState::Ground
+        } else {
+            ParserState::Osc
+        };
+        None
+    }
+
+    fn advance_charset(&mut self, _ch: char) -> Option<Action> {
+        self.state = ParserState::Ground;
+        None
+    }
+}
+
+fn parse_csi(params: &str, final_byte: char) -> Action {
+    let numbers = parse_numbers(params);
+    match final_byte {
+        'A' => Action::CursorUp(first_or_default(&numbers, 1)),
+        'B' => Action::CursorDown(first_or_default(&numbers, 1)),
+        'C' => Action::CursorRight(first_or_default(&numbers, 1)),
+        'D' => Action::CursorLeft(first_or_default(&numbers, 1)),
+        'G' => Action::CursorColumn(first_or_default(&numbers, 1).saturating_sub(1)),
+        'H' | 'f' => Action::CursorPosition {
+            row: first_or_default(&numbers, 1).saturating_sub(1),
+            col: numbers.get(1).copied().unwrap_or(1).saturating_sub(1),
+        },
+        'J' if first_or_default(&numbers, 0) == 2 => Action::ClearScreen,
+        'K' => Action::ClearLineFromCursor,
+        'm' => Action::Ignore,
+        _ => Action::Ignore,
+    }
+}
+
+fn parse_numbers(params: &str) -> Vec<usize> {
+    params
+        .trim_start_matches('?')
+        .split(';')
+        .filter_map(|part| {
+            if part.is_empty() {
+                Some(0)
+            } else {
+                part.parse().ok()
+            }
+        })
+        .collect()
+}
+
+fn first_or_default(numbers: &[usize], default: usize) -> usize {
+    match numbers.first().copied() {
+        Some(0) | None => default,
+        Some(value) => value,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{Action, Parser};
+
+    #[test]
+    fn parses_cursor_position() {
+        let mut parser = Parser::default();
+        assert_eq!(parser.advance('\u{1b}'), None);
+        assert_eq!(parser.advance('['), None);
+        assert_eq!(parser.advance('1'), None);
+        assert_eq!(parser.advance(';'), None);
+        assert_eq!(parser.advance('5'), None);
+        assert_eq!(
+            parser.advance('H'),
+            Some(Action::CursorPosition { row: 0, col: 4 })
+        );
+    }
+
+    #[test]
+    fn skips_osc_until_bel() {
+        let mut parser = Parser::default();
+        assert_eq!(parser.advance('\u{1b}'), None);
+        assert_eq!(parser.advance(']'), None);
+        assert_eq!(parser.advance('0'), None);
+        assert_eq!(parser.advance(';'), None);
+        assert_eq!(parser.advance('t'), None);
+        assert_eq!(parser.advance('i'), None);
+        assert_eq!(parser.advance('t'), None);
+        assert_eq!(parser.advance('l'), None);
+        assert_eq!(parser.advance('e'), None);
+        assert_eq!(parser.advance('\u{07}'), None);
+        assert_eq!(parser.advance('x'), Some(Action::Print('x')));
+    }
+
+    #[test]
+    fn skips_charset_designation() {
+        let mut parser = Parser::default();
+        assert_eq!(parser.advance('\u{1b}'), None);
+        assert_eq!(parser.advance('('), None);
+        assert_eq!(parser.advance('B'), None);
+        assert_eq!(parser.advance('x'), Some(Action::Print('x')));
+    }
+}

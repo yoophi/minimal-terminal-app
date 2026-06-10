@@ -144,6 +144,8 @@ fn start_reader_thread(pid: libc::pid_t, mut reader: File, buffer: Arc<Mutex<Ter
 
         let mut status = 0;
         let waited = unsafe { libc::waitpid(pid, &mut status, libc::WNOHANG) };
-        logging::pty_info(&format!("pty reader thread exiting: waitpid={waited} status={status}"));
+        logging::pty_info(&format!(
+            "pty reader thread exiting: waitpid={waited} status={status}"
+        ));
     });
 }
