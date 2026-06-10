@@ -105,6 +105,7 @@ enum Charset {
     Italian,
     NorwegianDanish,
     Portuguese,
+    Russian,
     Spanish,
     Swedish,
     Swiss,
@@ -316,6 +317,10 @@ impl vte::Perform for ActionCollector {
                 self.g0_charset = Charset::Turkish;
                 return;
             }
+            ([b'(', b'&'], b'5') => {
+                self.g0_charset = Charset::Russian;
+                return;
+            }
             ([b'('], b'Y') => {
                 self.g0_charset = Charset::Italian;
                 return;
@@ -382,6 +387,10 @@ impl vte::Perform for ActionCollector {
             }
             ([b')', b'%'], b'2') => {
                 self.g1_charset = Charset::Turkish;
+                return;
+            }
+            ([b')', b'&'], b'5') => {
+                self.g1_charset = Charset::Russian;
                 return;
             }
             ([b')'], b'Y') => {
@@ -452,6 +461,10 @@ impl vte::Perform for ActionCollector {
                 self.g2_charset = Charset::Turkish;
                 return;
             }
+            ([b'*', b'&'], b'5') => {
+                self.g2_charset = Charset::Russian;
+                return;
+            }
             ([b'*'], b'Y') => {
                 self.g2_charset = Charset::Italian;
                 return;
@@ -518,6 +531,10 @@ impl vte::Perform for ActionCollector {
             }
             ([b'+', b'%'], b'2') => {
                 self.g3_charset = Charset::Turkish;
+                return;
+            }
+            ([b'+', b'&'], b'5') => {
+                self.g3_charset = Charset::Russian;
                 return;
             }
             ([b'+'], b'Y') => {
@@ -761,6 +778,43 @@ fn map_printable_char(ch: char, charset: Charset) -> char {
             '|' => 'ö',
             '}' => 'ç',
             '~' => 'ü',
+            _ => ch,
+        };
+    }
+
+    if charset == Charset::Russian {
+        return match ch {
+            '`' => 'Ю',
+            'a' => 'А',
+            'b' => 'Б',
+            'c' => 'Ц',
+            'd' => 'Д',
+            'e' => 'Е',
+            'f' => 'Ф',
+            'g' => 'Г',
+            'h' => 'Х',
+            'i' => 'И',
+            'j' => 'Й',
+            'k' => 'К',
+            'l' => 'Л',
+            'm' => 'М',
+            'n' => 'Н',
+            'o' => 'О',
+            'p' => 'П',
+            'q' => 'Я',
+            'r' => 'Р',
+            's' => 'С',
+            't' => 'Т',
+            'u' => 'У',
+            'v' => 'Ж',
+            'w' => 'В',
+            'x' => 'Ь',
+            'y' => 'Ы',
+            'z' => 'З',
+            '{' => 'Ш',
+            '|' => 'Э',
+            '}' => 'Щ',
+            '~' => 'Ч',
             _ => ch,
         };
     }
@@ -1690,6 +1744,57 @@ mod tests {
         assert_eq!(
             parser.advance_bytes(b"\x1b)%2\x1b~\xc2\xa6"),
             vec![Action::Print('ğ')]
+        );
+    }
+
+    #[test]
+    fn maps_russian_nrcs_charset() {
+        let mut parser = Parser::default();
+
+        assert_eq!(
+            parser.advance_bytes(b"\x1b(&5`abcdefghijklmnopqrstuvwxyz{|}~\x1b(B`"),
+            vec![
+                Action::Print('Ю'),
+                Action::Print('А'),
+                Action::Print('Б'),
+                Action::Print('Ц'),
+                Action::Print('Д'),
+                Action::Print('Е'),
+                Action::Print('Ф'),
+                Action::Print('Г'),
+                Action::Print('Х'),
+                Action::Print('И'),
+                Action::Print('Й'),
+                Action::Print('К'),
+                Action::Print('Л'),
+                Action::Print('М'),
+                Action::Print('Н'),
+                Action::Print('О'),
+                Action::Print('П'),
+                Action::Print('Я'),
+                Action::Print('Р'),
+                Action::Print('С'),
+                Action::Print('Т'),
+                Action::Print('У'),
+                Action::Print('Ж'),
+                Action::Print('В'),
+                Action::Print('Ь'),
+                Action::Print('Ы'),
+                Action::Print('З'),
+                Action::Print('Ш'),
+                Action::Print('Э'),
+                Action::Print('Щ'),
+                Action::Print('Ч'),
+                Action::Print('`'),
+            ]
+        );
+        assert_eq!(
+            parser.advance_bytes(b"\x1b*&5\x1bN~x"),
+            vec![Action::Print('Ч'), Action::Print('x')]
+        );
+        assert_eq!(
+            parser.advance_bytes(b"\x1b)&5\x1b~\xc3\xa0"),
+            vec![Action::Print('Ю')]
         );
     }
 

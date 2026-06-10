@@ -830,6 +830,18 @@ mod tests {
     }
 
     #[test]
+    fn renders_russian_nrcs_charset() {
+        let mut terminal = TerminalState::new(4, 40);
+
+        terminal.append_bytes(b"\x1b(&5`abcdefghijklmnopqrstuvwxyz{|}~\x1b(B`");
+
+        assert_eq!(
+            terminal.snapshot(4).lines[0],
+            "ЮАБЦДЕФГХИЙКЛМНОПЯРСТУЖВЬЫЗШЭЩЧ`"
+        );
+    }
+
+    #[test]
     fn queues_cursor_position_report_responses() {
         let mut terminal = TerminalState::new(4, 10);
 
