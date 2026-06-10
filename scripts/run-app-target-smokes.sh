@@ -278,6 +278,20 @@ else
   echo "app target smoke skipped: fzf not found"
 fi
 
+if command -v vim >/dev/null 2>&1; then
+  vim_path="$(command -v vim)"
+  run_case_with_followup \
+    "vim-edit-write-quit" \
+    "tmp=\"/tmp/minimal-terminal-vim-smoke-\$\$.txt\"; rm -f \"\$tmp\"; ${vim_path} --clean -Nu NONE -n \"\$tmp\"; printf \"vim-workflow-ok:%s\\n\" \"\$(cat \"\$tmp\")\"; rm -f \"\$tmp\""$'\n' \
+    $'ihello from vim\e:wq\r' \
+    "vim-workflow-ok:hello from vim" \
+    2500 \
+    1200
+  ran=1
+else
+  echo "app target smoke skipped: vim not found"
+fi
+
 head_sha="$(git rev-parse --short HEAD)"
 run_case "git-log" $'git log --oneline -1 --no-color\n' "${head_sha}"
 run_case_with_followup \
