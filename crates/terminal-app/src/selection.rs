@@ -22,6 +22,15 @@ impl SelectionState {
         }
     }
 
+    pub(crate) fn shift_rows(&mut self, delta: isize, max_row: usize) {
+        self.anchor = self
+            .anchor
+            .map(|point| shift_point_row(point, delta, max_row));
+        self.active = self
+            .active
+            .map(|point| shift_point_row(point, delta, max_row));
+    }
+
     pub(crate) fn clear(&mut self) {
         self.anchor = None;
         self.active = None;
@@ -35,6 +44,18 @@ impl SelectionState {
         }
 
         Some(SelectionRange::new(anchor, active))
+    }
+}
+
+fn shift_point_row(point: GridPoint, delta: isize, max_row: usize) -> GridPoint {
+    let row = if delta.is_positive() {
+        point.row.saturating_add(delta as usize)
+    } else {
+        point.row.saturating_sub(delta.unsigned_abs())
+    };
+    GridPoint {
+        row: row.min(max_row),
+        col: point.col,
     }
 }
 
@@ -244,5 +265,30 @@ mod tests {
 
         state.update(GridPoint { row: 0, col: 2 });
         assert!(state.range().is_some());
+    }
+
+    #[test]
+    fn shifts_selection_rows_when_viewport_scrolls() {
+        let mut state = SelectionState::default();
+        state.begin(GridPoint { row: 2, col: 1 });
+        state.update(GridPoint { row: 4, col: 3 });
+
+        state.shift_rows(1, 9);
+        assert_eq!(
+            state.range(),
+            Some(SelectionRange::new(
+                GridPoint { row: 3, col: 1 },
+                GridPoint { row: 5, col: 3 },
+            ))
+        );
+
+        state.shift_rows(-10, 9);
+        assert_eq!(
+            state.range(),
+            Some(SelectionRange::new(
+                GridPoint { row: 0, col: 1 },
+                GridPoint { row: 0, col: 3 },
+            ))
+        );
     }
 }

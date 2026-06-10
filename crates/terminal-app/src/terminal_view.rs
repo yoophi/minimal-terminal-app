@@ -284,6 +284,18 @@ define_class!(
                 return;
             }
 
+            let event_point = self
+                .as_super()
+                .convertPoint_fromView(event.locationInWindow(), None);
+            let delta = selection_drag_autoscroll_delta(event_point.y, self.ivars().rows.get());
+            if delta != 0 {
+                self.adjust_scrollback(delta);
+                self.ivars()
+                    .selection
+                    .borrow_mut()
+                    .shift_rows(delta, self.ivars().rows.get().saturating_sub(1));
+            }
+
             self.ivars().selection.borrow_mut().update(point);
             self.as_super().setNeedsDisplay(true);
         }
@@ -656,6 +668,17 @@ fn should_use_text_input(event: &NSEvent) -> bool {
     )
 }
 
+fn selection_drag_autoscroll_delta(y: f64, rows: usize) -> isize {
+    let bottom = PADDING_Y + (rows.max(1) as f64 * LINE_HEIGHT);
+    if y < PADDING_Y {
+        1
+    } else if y > bottom {
+        -1
+    } else {
+        0
+    }
+}
+
 fn draw_background(rect: NSRect) {
     NSColor::blackColor().setFill();
     NSRectFill(rect);
@@ -1021,4 +1044,14 @@ fn text_from_input_object(
     }
 
     None
+}
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn selection_drag_autoscrolls_outside_vertical_bounds() {
+        assert_eq!(super::selection_drag_autoscroll_delta(0.0, 10), 1);
+        assert_eq!(super::selection_drag_autoscroll_delta(20.0, 10), 0);
+        assert_eq!(super::selection_drag_autoscroll_delta(220.0, 10), -1);
+    }
 }

@@ -33,12 +33,12 @@
 
 - 현재 selection/copy는 viewport snapshot 기준으로 동작한다.
 - Phase 014에서 scrollback과 live screen을 함께 포함하는 viewport copy는 지원했다.
-- drag 중 자동 스크롤하거나 여러 scrollback page를 가로지르는 selection은 아직 모델링되어 있지 않다.
+- Phase 025에서 drag 중 상하단 autoscroll과 viewport row 보정은 추가했다.
+- 여러 scrollback page를 장거리로 가로지르는 absolute selection address는 아직 모델링되어 있지 않다.
 
 권장 다음 작업:
 
-- drag autoscroll 정책을 정의한다.
-- 여러 page를 가로지르는 selection address를 별도 모델로 확장한다.
+- 여러 page를 가로지르는 selection address를 absolute row 기반 모델로 확장한다.
 
 ## Priority 3
 
