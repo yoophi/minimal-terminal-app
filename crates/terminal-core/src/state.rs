@@ -54,6 +54,14 @@ impl TerminalState {
         self.grid.cols()
     }
 
+    pub fn scrollback_len(&self) -> usize {
+        self.grid.scrollback_len()
+    }
+
+    pub fn resize(&mut self, rows: usize, cols: usize) {
+        self.grid.resize(rows, cols, &mut self.cursor);
+    }
+
     fn apply(&mut self, action: Action) {
         match action {
             Action::Print(ch) => self.grid.put_char(&mut self.cursor, ch),
@@ -149,5 +157,25 @@ mod tests {
         let snapshot = terminal.snapshot(3);
         assert_eq!(snapshot.lines, vec!["prompt", "", ""]);
         assert_eq!(snapshot.cursor, Cursor::new(0, 6));
+    }
+
+    #[test]
+    fn resize_preserves_visible_content_and_clamps_cursor() {
+        let mut terminal = TerminalState::new(3, 10);
+        terminal.append_bytes(b"hello");
+
+        terminal.resize(2, 4);
+
+        let snapshot = terminal.snapshot(2);
+        assert_eq!(snapshot.lines, vec!["hell", ""]);
+        assert_eq!(snapshot.cursor, Cursor::new(0, 3));
+    }
+
+    #[test]
+    fn scrolling_records_scrollback_length() {
+        let mut terminal = TerminalState::new(2, 10);
+        terminal.append_bytes(b"one\ntwo\nthree");
+
+        assert_eq!(terminal.scrollback_len(), 1);
     }
 }

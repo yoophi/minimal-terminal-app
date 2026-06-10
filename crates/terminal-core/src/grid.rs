@@ -6,6 +6,8 @@ pub(crate) struct Grid {
     rows: usize,
     cols: usize,
     lines: Vec<Vec<Cell>>,
+    scrollback: Vec<Vec<Cell>>,
+    max_scrollback_lines: usize,
 }
 
 impl Grid {
@@ -16,6 +18,8 @@ impl Grid {
             rows,
             cols,
             lines: vec![blank_line(cols); rows],
+            scrollback: Vec::new(),
+            max_scrollback_lines: 2_000,
         }
     }
 
@@ -25,6 +29,31 @@ impl Grid {
 
     pub(crate) fn cols(&self) -> usize {
         self.cols
+    }
+
+    pub(crate) fn scrollback_len(&self) -> usize {
+        self.scrollback.len()
+    }
+
+    pub(crate) fn resize(&mut self, rows: usize, cols: usize, cursor: &mut Cursor) {
+        let rows = rows.max(1);
+        let cols = cols.max(1);
+
+        for line in &mut self.lines {
+            resize_line(line, cols);
+        }
+
+        if rows > self.rows {
+            self.lines
+                .extend((0..(rows - self.rows)).map(|_| blank_line(cols)));
+        } else if rows < self.rows {
+            self.lines.truncate(rows);
+        }
+
+        self.rows = rows;
+        self.cols = cols;
+        cursor.row = cursor.row.min(self.rows - 1);
+        cursor.col = cursor.col.min(self.cols - 1);
     }
 
     pub(crate) fn put_char(&mut self, cursor: &mut Cursor, ch: char) {
@@ -109,13 +138,30 @@ impl Grid {
     }
 
     fn scroll_up(&mut self) {
-        self.lines.remove(0);
+        let line = self.lines.remove(0);
+        self.push_scrollback(line);
         self.lines.push(blank_line(self.cols));
+    }
+
+    fn push_scrollback(&mut self, line: Vec<Cell>) {
+        self.scrollback.push(line);
+        if self.scrollback.len() > self.max_scrollback_lines {
+            let overflow = self.scrollback.len() - self.max_scrollback_lines;
+            self.scrollback.drain(0..overflow);
+        }
     }
 }
 
 fn blank_line(cols: usize) -> Vec<Cell> {
     vec![Cell::blank(); cols]
+}
+
+fn resize_line(line: &mut Vec<Cell>, cols: usize) {
+    if line.len() > cols {
+        line.truncate(cols);
+    } else {
+        line.extend((0..(cols - line.len())).map(|_| Cell::blank()));
+    }
 }
 
 fn trim_trailing_blanks(mut text: String) -> String {

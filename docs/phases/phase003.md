@@ -36,6 +36,12 @@ Phase 003에서 다룰 작업은 다음과 같다.
 - cursor 위치에 흰색 block cursor 렌더링
 - terminal-core 단위 테스트 추가
 - 실제 앱 재실행 후 grid 기반 출력과 block cursor 표시 확인
+- `terminal-app/src/input.rs` input encoder 추가
+- Enter, Backspace, Delete, Ctrl-C, Ctrl-D, arrow key, Home/End, PageUp/PageDown byte sequence 분리
+- AppKit view bounds에서 rows/cols 계산
+- terminal-core resize API 추가
+- `TIOCSWINSZ`를 통한 PTY resize 전달
+- scrollback 기본 저장 모델 추가
 
 현재 `terminal-core`가 처리하는 동작:
 
@@ -49,6 +55,8 @@ Phase 003에서 다룰 작업은 다음과 같다.
 - CSI clear line: `K`
 - CSI clear screen: `2J`
 - SGR style sequence `m` 무시
+- resize 시 visible grid 보존 및 cursor clamp
+- scroll 시 overflow line을 scrollback에 저장
 
 이번 단계의 의도는 완전한 terminal emulator를 만드는 것이 아니라, Phase 002의 문자열 버퍼를 테스트 가능한 grid/cursor 기반으로 교체하는 것이다.
 
@@ -66,6 +74,11 @@ cursor-check
 - paste한 command echo가 화면에 표시된다.
 - Enter 후 command output과 새 prompt가 표시된다.
 - cursor 위치에 block cursor가 표시된다.
+- input encoder 단위 테스트로 Enter, Backspace, arrow key byte sequence를 검증했다.
+- Backspace 런타임 검증: `echo backspaceX` 입력 후 Backspace로 `X`를 지우고 `backspace` 출력 확인.
+- Ctrl-C 런타임 검증: `sleep 5` 실행 중 `Ctrl-C` 입력 시 `^C`, `INT`, 새 prompt 표시 확인.
+- terminal-core 단위 테스트로 resize와 scrollback 길이를 검증했다.
+- view resize 시 grid rows/cols와 PTY window size가 함께 갱신된다.
 
 남은 표시 문제:
 
@@ -102,19 +115,19 @@ Phase 003에서는 input encoder를 별도 책임으로 둔다.
 
 예상 처리 대상:
 
-- printable UTF-8 text
-- Enter
-- Backspace/Delete
+- printable UTF-8 text `done`
+- Enter `done`
+- Backspace/Delete `done`
 - Tab
-- Ctrl-C
-- Ctrl-D
-- arrow keys
-- Home/End
-- PageUp/PageDown
+- Ctrl-C `done`
+- Ctrl-D `done`
+- arrow keys `done`
+- Home/End `done`
+- PageUp/PageDown `done`
 - Option/Command 조합
 - IME composition
 
-이 작업은 PTY writer에 직접 붙이기보다 `terminal-app/input.rs` 또는 별도 input adapter로 분리하는 것이 좋다.
+이 작업은 PTY writer에 직접 붙이기보다 `terminal-app/input.rs` 또는 별도 input adapter로 분리하는 것이 좋다. 현재는 `terminal-app/src/input.rs`에 최소 input encoder를 추가했다.
 
 ## Proposed Module Shape
 
@@ -144,13 +157,13 @@ crates/
 
 Phase 003의 최소 완료 기준:
 
-- shell prompt가 grid 기반으로 표시된다. `in progress`
-- printable text 입력 후 cursor가 예상 위치로 이동한다. `in progress`
-- Backspace가 화면과 shell 양쪽에서 일관되게 동작한다.
-- Enter 입력 후 새 prompt가 정상적으로 표시된다.
-- Ctrl-C가 foreground shell process로 전달된다.
-- arrow key escape sequence가 shell line editor에 전달된다.
-- window resize 시 PTY size와 grid size가 동기화된다.
+- shell prompt가 grid 기반으로 표시된다. `done`
+- printable text 입력 후 cursor가 예상 위치로 이동한다. `done`
+- Backspace가 화면과 shell 양쪽에서 일관되게 동작한다. `done`
+- Enter 입력 후 새 prompt가 정상적으로 표시된다. `done`
+- Ctrl-C가 foreground shell process로 전달된다. `done`
+- arrow key escape sequence가 shell line editor에 전달된다. `implemented`
+- window resize 시 PTY size와 grid size가 동기화된다. `done`
 - `cargo test`로 terminal-core parser/grid/cursor 기본 동작을 검증한다. `done`
 
 ## Non-goals
@@ -178,11 +191,17 @@ Phase 002에서 확인한 중요한 교훈:
 
 다음 작업은 Phase 003 안에서 계속 진행한다.
 
-- 실제 login shell prompt에서 grid/cursor 표시 검증
-- Backspace, Enter, Ctrl-C 입력 동작 검증 및 보정
-- arrow key escape sequence encoding
-- resize 시 view bounds에서 rows/cols 계산
-- `TIOCSWINSZ`로 PTY resize 전달
-- scrollback 구조 추가
+- arrow key, Home/End, PageUp/PageDown의 실제 login shell 런타임 검증
+- Tab, Option/Command 조합, IME composition 처리 방침 결정
+- scrollback UI 노출 방식 결정
 - Unicode width 처리 방침 결정
 - ANSI parser 범위 확장
+
+## Prioritization Notes
+
+Phase 003 잔여 작업은 다음 순서로 처리했다.
+
+1. Input encoder: 사용자가 가장 먼저 체감하는 기본 조작이며, Backspace/Ctrl-C/arrow key는 shell 사용의 최소 조건이다.
+2. Resize synchronization: terminal grid와 PTY가 다른 크기를 사용하면 prompt redraw와 line editing이 계속 어긋난다.
+3. Scrollback model: UI 노출 전이라도 core가 scroll된 line을 잃지 않는 구조가 필요하다.
+4. Unicode width and ANSI expansion: 정확한 렌더링 품질에 중요하지만 parser/grid 정책에 더 큰 영향을 주므로 다음 반복에서 별도로 다룬다.

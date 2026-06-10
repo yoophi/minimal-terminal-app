@@ -13,6 +13,7 @@ use objc2_foundation::{
 };
 use terminal_core::TerminalSnapshot;
 
+use crate::input;
 use crate::logging;
 use crate::pty::PtyWriter;
 use crate::terminal_buffer::TerminalBuffer;
@@ -35,6 +36,8 @@ pub(crate) struct TerminalViewIvars {
     writer: PtyWriter,
     timer: OnceCell<Retained<NSTimer>>,
     logged_first_key_input: Cell<bool>,
+    rows: Cell<usize>,
+    cols: Cell<usize>,
 }
 
 define_class!(
@@ -68,18 +71,18 @@ define_class!(
                     return;
                 };
                 let input = unsafe { characters.to_str(pool) };
-                if input.is_empty() {
+                let Some(bytes) = input::encode_key_event(event, input) else {
                     return;
-                }
+                };
 
                 if !self.ivars().logged_first_key_input.replace(true) {
                     logging::pty_info(&format!(
                         "terminal view first key input received: bytes={}",
-                        input.len()
+                        bytes.len()
                     ));
                 }
 
-                if let Err(error) = self.ivars().writer.write_all(input.as_bytes()) {
+                if let Err(error) = self.ivars().writer.write_all(&bytes) {
                     logging::pty_error(&format!("pty write failed from keyDown: {error}"));
                 }
             });
@@ -96,13 +99,14 @@ define_class!(
         fn draw_rect(&self, dirty_rect: NSRect) {
             draw_background(dirty_rect);
             let bounds = self.as_super().bounds();
-            let max_visible_lines = max_visible_lines(bounds);
+            let (rows, cols) = terminal_dimensions(bounds);
+            self.apply_resize_if_needed(rows, cols);
 
             let snapshot = self
                 .ivars()
                 .buffer
                 .lock()
-                .map(|buffer| buffer.snapshot(max_visible_lines))
+                .map(|buffer| buffer.snapshot(rows))
                 .unwrap_or_else(|_| TerminalSnapshot {
                     lines: vec!["terminal buffer unavailable".to_string()],
                     cursor: terminal_core::Cursor::default(),
@@ -131,6 +135,8 @@ impl TerminalView {
             writer,
             timer: OnceCell::new(),
             logged_first_key_input: Cell::new(false),
+            rows: Cell::new(0),
+            cols: Cell::new(0),
         });
         let view: Retained<Self> = unsafe { msg_send![super(view), initWithFrame: frame] };
 
@@ -172,6 +178,24 @@ impl TerminalView {
         if let Err(error) = self.ivars().writer.write_all(input.as_bytes()) {
             logging::pty_error(&format!("pty write failed from paste: {error}"));
         }
+    }
+
+    fn apply_resize_if_needed(&self, rows: usize, cols: usize) {
+        if self.ivars().rows.get() == rows && self.ivars().cols.get() == cols {
+            return;
+        }
+
+        if let Ok(mut buffer) = self.ivars().buffer.lock() {
+            buffer.resize(rows, cols);
+        }
+
+        if let Err(error) = self.ivars().writer.resize(rows, cols) {
+            logging::pty_error(&format!("pty resize failed: {error}"));
+        }
+
+        self.ivars().rows.set(rows);
+        self.ivars().cols.set(cols);
+        logging::pty_info(&format!("terminal resized: rows={rows} cols={cols}"));
     }
 }
 
@@ -249,7 +273,10 @@ fn terminal_font() -> Option<Retained<NSFont>> {
     NSFont::userFixedPitchFontOfSize(FONT_SIZE)
 }
 
-fn max_visible_lines(bounds: NSRect) -> usize {
+fn terminal_dimensions(bounds: NSRect) -> (usize, usize) {
     let available_height = (bounds.size.height - (PADDING_Y * 2.0)).max(LINE_HEIGHT);
-    (available_height / LINE_HEIGHT).floor() as usize
+    let available_width = (bounds.size.width - (PADDING_X * 2.0)).max(CELL_WIDTH);
+    let rows = (available_height / LINE_HEIGHT).floor().max(1.0) as usize;
+    let cols = (available_width / CELL_WIDTH).floor().max(1.0) as usize;
+    (rows, cols)
 }

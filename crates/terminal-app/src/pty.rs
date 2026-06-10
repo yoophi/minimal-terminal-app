@@ -3,7 +3,7 @@ use std::ffi::CString;
 use std::fs::File;
 use std::io::{self, Read, Write};
 use std::mem::MaybeUninit;
-use std::os::fd::{FromRawFd, RawFd};
+use std::os::fd::{AsRawFd, FromRawFd, RawFd};
 use std::ptr;
 use std::sync::{Arc, Mutex};
 use std::thread;
@@ -27,6 +27,25 @@ impl PtyWriter {
             .lock()
             .map_err(|_| io::Error::new(io::ErrorKind::Other, "PTY writer lock poisoned"))?;
         writer.write_all(bytes)
+    }
+
+    pub fn resize(&self, rows: usize, cols: usize) -> io::Result<()> {
+        let writer = self
+            .writer
+            .lock()
+            .map_err(|_| io::Error::new(io::ErrorKind::Other, "PTY writer lock poisoned"))?;
+        let winsize = libc::winsize {
+            ws_row: rows.min(libc::c_ushort::MAX as usize) as libc::c_ushort,
+            ws_col: cols.min(libc::c_ushort::MAX as usize) as libc::c_ushort,
+            ws_xpixel: 0,
+            ws_ypixel: 0,
+        };
+        let result = unsafe { libc::ioctl(writer.as_raw_fd(), libc::TIOCSWINSZ, &winsize) };
+        if result < 0 {
+            Err(io::Error::last_os_error())
+        } else {
+            Ok(())
+        }
     }
 }
 

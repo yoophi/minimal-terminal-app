@@ -15,6 +15,7 @@ use objc2_foundation::{
     NSSize,
 };
 
+mod input;
 mod logging;
 mod pty;
 mod terminal_buffer;

@@ -22,4 +22,8 @@ impl TerminalBuffer {
     pub fn snapshot(&self, max_visible_lines: usize) -> TerminalSnapshot {
         self.terminal.snapshot(max_visible_lines)
     }
+
+    pub fn resize(&mut self, rows: usize, cols: usize) {
+        self.terminal.resize(rows, cols);
+    }
 }
