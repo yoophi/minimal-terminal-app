@@ -151,6 +151,17 @@ scripts/run-app-command-smoke.sh
 
 이 script는 app bundle을 만든 뒤 smoke 전용 환경 변수로 marker command를 PTY에 쓰고, retained terminal snapshot에서 marker 출력을 찾는다.
 
+대표 command target의 app-internal smoke는 다음 script로 실행한다.
+
+```sh
+scripts/run-app-target-smokes.sh
+```
+
+현재 자동 target:
+
+- `fzf-filter`: `printf 'alpha\nbeta\n' | fzf --filter alpha`
+- `git-log`: `git log --oneline -1 --no-color`
+
 범위:
 
 - native app binary가 실행된다.

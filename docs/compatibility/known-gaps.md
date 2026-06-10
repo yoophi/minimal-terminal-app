@@ -37,7 +37,9 @@
 
 - app 내부 interactive smoke는 로컬 설치, focus, 입력 조작에 따라 확인 가능성이 달라진다.
 - `htop`, `fzf`, `git log`는 command-level smoke를 통과했지만 app 내부 TUI interaction evidence는 아직 없다.
-- Phase 032에서 app 내부 PTY command output snapshot smoke는 자동화했지만, interactive key workflow는 아직 남아 있다.
+- Phase 032에서 app 내부 PTY command output snapshot smoke를 자동화했다.
+- Phase 033에서 app 내부 `fzf --filter`와 non-pager `git log --oneline` snapshot smoke를 자동화했다.
+- interactive key workflow는 아직 남아 있다.
 
 권장 다음 작업:
 
@@ -180,3 +182,9 @@ Phase 030에서 `TerminalSnapshot`에 `viewport_start_absolute_row`를 추가하
 상태: `supported`
 
 Phase 032에서 smoke 전용 환경 변수 기반 harness를 추가했다. `scripts/run-app-command-smoke.sh`는 native app 내부 PTY에 marker command를 주입하고 terminal buffer snapshot에서 marker output을 확인한다. interactive TUI key workflow는 Environment-dependent App Smoke Target gap으로 계속 추적한다.
+
+### App Target Command Smoke
+
+상태: `supported`
+
+Phase 033에서 `scripts/run-app-target-smokes.sh`를 추가했다. local verification environment에서 app 내부 PTY를 통해 `fzf --filter`와 non-pager `git log --oneline` snapshot smoke가 통과했다. `fzf` interactive navigation과 `git` pager workflow는 Environment-dependent App Smoke Target gap으로 계속 추적한다.
