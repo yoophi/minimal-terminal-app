@@ -49,12 +49,13 @@
 - Phase 043에서 app 내부 `fzf` Enter selection workflow를 자동화했다.
 - Phase 044에서 app 내부 `htop` F10 function key quit workflow를 자동화했다.
 - Phase 046에서 app 내부 `fzf -m` multi-select workflow를 자동화했다.
+- Phase 047에서 app 내부 `fzf --preview` preview pane redraw workflow를 자동화했다.
 - interactive key workflow는 아직 남아 있다.
 
 권장 다음 작업:
 
 - `htop` mouse 또는 추가 function key workflow를 앱 내부에서 수행한다.
-- `fzf` preview, shell integration workflow를 앱 내부에서 수행한다.
+- `fzf` shell integration workflow를 앱 내부에서 수행한다.
 - `git log` pager search/mark/horizontal scroll workflow를 앱 내부에서 수행한다.
 
 ## Priority 3
@@ -249,7 +250,13 @@ Phase 043에서 `scripts/run-app-target-smokes.sh`에 `fzf-select` target을 추
 
 상태: `partially supported`
 
-Phase 046에서 `scripts/run-app-target-smokes.sh`에 `fzf-multi-select` target을 추가했다. local verification environment에서 app 내부 PTY로 `selected="$(printf "alpha\nbeta\n" | fzf -m)"; printf "fzf-multi:%s\n" "$selected"`를 실행하고 query input `b`, Tab, Enter 입력 뒤 shell marker `fzf-multi:beta`를 확인했다. preview와 shell integration workflow는 Environment-dependent App Smoke Target gap으로 계속 추적한다.
+Phase 046에서 `scripts/run-app-target-smokes.sh`에 `fzf-multi-select` target을 추가했다. local verification environment에서 app 내부 PTY로 `selected="$(printf "alpha\nbeta\n" | fzf -m)"; printf "fzf-multi:%s\n" "$selected"`를 실행하고 query input `b`, Tab, Enter 입력 뒤 shell marker `fzf-multi:beta`를 확인했다.
+
+### fzf Preview App Smoke
+
+상태: `partially supported`
+
+Phase 047에서 `scripts/run-app-target-smokes.sh`에 `fzf-preview` target을 추가했다. local verification environment에서 app 내부 PTY로 `printf "alpha\nbeta\n" | fzf --preview "printf preview:{}"`를 실행하고 query input `b` 뒤 preview pane marker `preview:beta`를 확인했다. shell integration workflow는 Environment-dependent App Smoke Target gap으로 계속 추적한다.
 
 ### git Pager Quit App Smoke
 

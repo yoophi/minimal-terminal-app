@@ -162,6 +162,7 @@ scripts/run-app-target-smokes.sh
 - `mouse-sgr-report`: mouse reporting / SGR mouse mode enable 뒤 app smoke hook이 보낸 SGR left press bytes 확인
 - `fzf-filter`: `printf 'alpha\nbeta\n' | fzf --filter alpha`
 - `fzf-interactive`: `printf 'alpha\nbeta\n' | fzf` 실행 후 query input `b`로 interactive redraw 확인
+- `fzf-preview`: `printf 'alpha\nbeta\n' | fzf --preview ...` 실행 후 query input `b`로 preview pane 갱신 확인
 - `fzf-select`: `printf 'alpha\nbeta\n' | fzf` 실행 후 query input `b`와 Enter로 선택 결과 확인
 - `fzf-multi-select`: `printf 'alpha\nbeta\n' | fzf -m` 실행 후 query input `b`, Tab, Enter로 multi-select 결과 확인
 - `git-log`: `git log --oneline -1 --no-color`
