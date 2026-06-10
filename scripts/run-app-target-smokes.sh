@@ -345,6 +345,17 @@ if command -v fzf >/dev/null 2>&1; then
     900 \
     1200 \
     700
+  run_case_with_three_followups \
+    "fzf-shell-alt-c" \
+    "tmpdir=\"\$(mktemp -d /tmp/minimal-terminal-fzf-alt-c.XXXXXX)\"; mkdir -p \"\$tmpdir/alpha-dir\" \"\$tmpdir/phase-fzf-alt-c-target\"; cd \"\$tmpdir\"; source /opt/homebrew/opt/fzf/shell/key-bindings.zsh; printf \"fzf-alt-c-ready\\n\""$'\n' \
+    $'\ec' \
+    "phase-fzf-alt-c-target"$'\r' \
+    $'printf "fzf-alt-c:%s\\n" "$(basename "$PWD")"\r' \
+    "fzf-alt-c:phase-fzf-alt-c-target" \
+    2200 \
+    900 \
+    1200 \
+    700
   ran=1
 else
   echo "app target smoke skipped: fzf not found"
