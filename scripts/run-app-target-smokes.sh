@@ -303,6 +303,13 @@ run_case_with_followup \
   "git-pager-search-ok" \
   1500 \
   1000
+run_case_with_followup \
+  "git-pager-horizontal-quit" \
+  $'git log --pretty=format:"%H %s" -100 --color=never | less -S; printf "git-pager-horizontal-ok\\n"\n' \
+  $'\e[Cq' \
+  "git-pager-horizontal-ok" \
+  1500 \
+  1000
 ran=1
 
 if command -v tmux >/dev/null 2>&1; then
