@@ -56,10 +56,14 @@ docs/
 │   ├── phase005.md
 │   ├── phase006.md
 │   ├── phase007.md
-│   └── phase008.md
+│   ├── phase008.md
+│   ├── phase009.md
+│   └── ...
 ├── compatibility/
 │   ├── csi.md
 │   ├── standards-and-tests.md
+│   ├── test-strategy.md
+│   ├── app-readiness.md
 │   ├── matrix.md
 │   ├── smoke-tests.md
 │   ├── known-gaps.md

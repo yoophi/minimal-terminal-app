@@ -2,7 +2,7 @@
 
 이 문서는 터미널 동작을 구현 상태와 근거 기준으로 추적한다. 범위를 의도적으로 작게 유지하고, 지원하지 않거나 확인되지 않은 동작은 숨기지 않고 명시한다.
 
-CSI 용어와 준수 이유는 [csi.md](csi.md)를 참고한다. 호환성 판단에 사용하는 표준과 테스트 근거는 [standards-and-tests.md](standards-and-tests.md)를 참고한다.
+CSI 용어와 준수 이유는 [csi.md](csi.md)를 참고한다. 호환성 판단에 사용하는 표준과 테스트 근거는 [standards-and-tests.md](standards-and-tests.md)를 참고한다. 테스트 목표, 방법, 범위는 [test-strategy.md](test-strategy.md)를 참고한다. 대표 CLI/TUI 애플리케이션 실행 보증 기준은 [app-readiness.md](app-readiness.md)를 참고한다.
 
 ## 상태 값
 

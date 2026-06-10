@@ -2,6 +2,8 @@
 
 이 문서는 Phase 008에서 검토한 regression command runner의 범위와 사용법을 기록한다. 자동화 가능한 terminal-core 호환성 검증은 script로 실행하고, AppKit GUI나 pasteboard, IME, TUI runtime 동작은 `smoke-tests.md`의 수동 절차로 검증한다.
 
+전체 테스트 목표, 방법, 범위는 [test-strategy.md](test-strategy.md)를 기준으로 한다.
+
 ## Runner 범위
 
 자동 runner가 검증하는 범위:
@@ -51,4 +53,3 @@ cargo test -p terminal-core --test compatibility
 - Korean IME 조합 문자열이 cursor 위치에 보이는지
 - selection/copy가 macOS pasteboard와 맞물리는지
 - `less`, `vim`, `top` 같은 TUI가 실제로 읽을 수 있게 동작하는지
-

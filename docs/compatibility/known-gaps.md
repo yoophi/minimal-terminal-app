@@ -123,3 +123,31 @@
 - `docs/compatibility/matrix.md`를 sequence family별로 계속 확장한다.
 - smoke test 실패에서 나온 unknown row를 우선순위에 따라 승격한다.
 - 새로 지원하는 sequence마다 작은 parser/grid fixture를 우선 추가한다.
+
+## Priority 7
+
+### 대표 CLI/TUI Application Certification
+
+상태: `not supported`
+
+대상:
+
+- `vim`
+- `emacs -nw`
+- `tmux`
+- `tmux` 안의 `vim`
+- `claude` 또는 `claude-code`
+- `codex-cli`
+
+중요한 이유:
+
+- Phase 009-018을 완료해도 특정 앱이 문제 없이 실행된다고 보증할 수는 없다.
+- `TERM=xterm-256color`를 선언하는 이상 앱별 terminal capability 기대치와 실제 구현이 어긋날 수 있다.
+- `tmux`와 editor, agent-style CLI는 DSR/DA, key encoding, resize, alternate screen, paste, mouse reporting 같은 여러 기능을 조합해서 사용한다.
+
+권장 다음 작업:
+
+- Phase 019에서 앱별 smoke workflow를 정의한다.
+- 통과한 workflow만 `matrix.md`에 `supported`로 표시한다.
+- 실패는 앱 이름이 아니라 구체적인 sequence/input/rendering gap으로 분해한다.
+- 자세한 판단 기준은 `docs/compatibility/app-readiness.md`를 따른다.

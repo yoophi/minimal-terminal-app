@@ -82,6 +82,7 @@ docs/
 └── compatibility/
     ├── csi.md
     ├── standards-and-tests.md
+    ├── test-strategy.md
     ├── matrix.md
     ├── smoke-tests.md
     ├── known-gaps.md
@@ -200,6 +201,7 @@ Phase 008 완료 기준:
 - `docs/compatibility/csi.md`가 생성되어 있다. `done`
 - `docs/compatibility/standards-and-tests.md`가 생성되어 있다. `done`
 - `docs/compatibility/regression-runner.md`가 생성되어 있다. `done`
+- `docs/compatibility/test-strategy.md`가 생성되어 있다. `done`
 - `scripts/run-compatibility-core.sh`가 생성되어 있다. `done`
 - Phase 004-007 결과가 matrix에 반영되어 있다. `done`
 - supported 항목마다 test 또는 runtime evidence가 있다. `done`
@@ -219,6 +221,7 @@ Status: matrix documentation and automated core evidence are implemented. GUI/ru
 - `docs/compatibility/known-gaps.md`를 추가해 Phase 007에서 넘긴 mouse reporting, device status report, cursor style, full xterm coverage gap을 우선순위와 함께 기록했다.
 - `docs/compatibility/csi.md`와 `docs/compatibility/standards-and-tests.md`를 추가해 CSI 용어, 준수 이유, 표준/테스트 판단 근거를 문서화했다.
 - `docs/compatibility/regression-runner.md`와 `scripts/run-compatibility-core.sh`를 추가해 자동화 가능한 core regression 검증 범위를 정의했다.
+- `docs/compatibility/test-strategy.md`를 추가해 Phase 008까지의 테스트 목표, 방법, 범위를 정리했다.
 - `crates/terminal-core/tests/compatibility.rs`를 추가해 matrix의 핵심 supported row가 `TerminalState` 공개 API로 검증되도록 했다.
 - `README.md`의 현재 단계와 project layout을 Phase 008 기준으로 갱신했다.
 
@@ -226,3 +229,19 @@ Status: matrix documentation and automated core evidence are implemented. GUI/ru
 
 - `cargo test`
 - `scripts/run-compatibility-core.sh`
+
+## Follow-up Phases
+
+Phase 008 이후 `docs/compatibility`에 남은 gap과 테스트 전략은 다음 phase로 진행한다.
+
+1. Phase 009: Compatibility Documentation Consistency Checks
+2. Phase 010: App Logic Unit Test Expansion
+3. Phase 011: Device Status Report Responses
+4. Phase 012: Cursor Style Sequences
+5. Phase 013: Mouse Reporting
+6. Phase 014: Cross-Scrollback Selection
+7. Phase 015: App Runtime Smoke Automation
+8. Phase 016: TUI Replay Fixtures
+9. Phase 017: Unknown App Smoke Resolution
+10. Phase 018: vttest and xterm Compatibility Expansion
+11. Phase 019: Representative CLI/TUI Application Certification
