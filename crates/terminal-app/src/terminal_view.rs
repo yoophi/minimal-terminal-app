@@ -57,7 +57,139 @@ define_class!(
     pub(crate) struct TerminalView;
 
     unsafe impl NSObjectProtocol for TerminalView {}
-    unsafe impl NSTextInputClient for TerminalView {}
+    unsafe impl NSTextInputClient for TerminalView {
+        #[allow(non_snake_case)]
+        #[unsafe(method(insertText:replacementRange:))]
+        unsafe fn insertText_replacementRange(
+            &self,
+            string: &AnyObject,
+            _replacement_range: NSRange,
+        ) {
+            autoreleasepool(|pool| {
+                let Some(text) = text_from_input_object(string, pool) else {
+                    return;
+                };
+
+                if text.is_empty() {
+                    return;
+                }
+
+                self.ivars().composition.borrow_mut().clear();
+                self.write_text_to_pty(&text, "insertText");
+                self.ivars().scrollback_offset.set(0);
+                self.as_super().setNeedsDisplay(true);
+            });
+        }
+
+        #[allow(non_snake_case)]
+        #[unsafe(method(doCommandBySelector:))]
+        unsafe fn doCommandBySelector(&self, selector: Sel) {
+            if selector == sel!(deleteBackward:) {
+                self.ivars().composition.borrow_mut().clear();
+                if let Err(error) = self.ivars().writer.write_all(&[0x7f]) {
+                    logging::pty_error(&format!("pty write failed from deleteBackward: {error}"));
+                }
+                self.as_super().setNeedsDisplay(true);
+            }
+        }
+
+        #[allow(non_snake_case)]
+        #[unsafe(method(setMarkedText:selectedRange:replacementRange:))]
+        unsafe fn setMarkedText_selectedRange_replacementRange(
+            &self,
+            string: &AnyObject,
+            selected_range: NSRange,
+            _replacement_range: NSRange,
+        ) {
+            autoreleasepool(|pool| {
+                let Some(text) = text_from_input_object(string, pool) else {
+                    return;
+                };
+
+                self.ivars().composition.borrow_mut().set_marked_text(
+                    text,
+                    TextRange {
+                        location: selected_range.location,
+                        length: selected_range.length,
+                    },
+                );
+                self.as_super().setNeedsDisplay(true);
+            });
+        }
+
+        #[allow(non_snake_case)]
+        #[unsafe(method(unmarkText))]
+        fn unmarkText(&self) {
+            self.ivars().composition.borrow_mut().clear();
+            self.as_super().setNeedsDisplay(true);
+        }
+
+        #[allow(non_snake_case)]
+        #[unsafe(method(selectedRange))]
+        fn selectedRange(&self) -> NSRange {
+            let range = self.ivars().composition.borrow().selected_range();
+            NSRange::new(range.location, range.length)
+        }
+
+        #[allow(non_snake_case)]
+        #[unsafe(method(markedRange))]
+        fn markedRange(&self) -> NSRange {
+            let range = self.ivars().composition.borrow().marked_range();
+            if range.location == usize::MAX {
+                NSRange::new(NSNotFound as usize, 0)
+            } else {
+                NSRange::new(range.location, range.length)
+            }
+        }
+
+        #[allow(non_snake_case)]
+        #[unsafe(method(hasMarkedText))]
+        fn hasMarkedText(&self) -> bool {
+            self.ivars().composition.borrow().has_marked_text()
+        }
+
+        #[allow(non_snake_case)]
+        #[unsafe(method_id(attributedSubstringForProposedRange:actualRange:))]
+        unsafe fn attributedSubstringForProposedRange_actualRange(
+            &self,
+            _range: NSRange,
+            actual_range: NSRangePointer,
+        ) -> Option<Retained<NSAttributedString>> {
+            unsafe {
+                if !actual_range.is_null() {
+                    *actual_range = NSRange::new(NSNotFound as usize, 0);
+                }
+            }
+            None
+        }
+
+        #[allow(non_snake_case)]
+        #[unsafe(method_id(validAttributesForMarkedText))]
+        fn validAttributesForMarkedText(&self) -> Retained<NSArray<NSAttributedStringKey>> {
+            NSArray::from_slice(&[])
+        }
+
+        #[allow(non_snake_case)]
+        #[unsafe(method(firstRectForCharacterRange:actualRange:))]
+        unsafe fn firstRectForCharacterRange_actualRange(
+            &self,
+            range: NSRange,
+            actual_range: NSRangePointer,
+        ) -> NSRect {
+            unsafe {
+                if !actual_range.is_null() {
+                    *actual_range = range;
+                }
+            }
+            self.cursor_screen_rect()
+        }
+
+        #[allow(non_snake_case)]
+        #[unsafe(method(characterIndexForPoint:))]
+        fn characterIndexForPoint(&self, _point: NSPoint) -> usize {
+            0
+        }
+    }
 
     impl TerminalView {
         #[unsafe(method(isFlipped))]
@@ -141,124 +273,6 @@ define_class!(
             let point = self.grid_point_for_event(event);
             self.ivars().selection.borrow_mut().update(point);
             self.as_super().setNeedsDisplay(true);
-        }
-
-        #[unsafe(method(insertText:replacementRange:))]
-        fn insert_text_replacement_range(&self, string: &AnyObject, _replacement_range: NSRange) {
-            autoreleasepool(|pool| {
-                let Some(text) = text_from_input_object(string, pool) else {
-                    return;
-                };
-
-                if text.is_empty() {
-                    return;
-                }
-
-                self.ivars().composition.borrow_mut().clear();
-                self.write_text_to_pty(&text, "insertText");
-                self.ivars().scrollback_offset.set(0);
-                self.as_super().setNeedsDisplay(true);
-            });
-        }
-
-        #[unsafe(method(doCommandBySelector:))]
-        fn do_command_by_selector(&self, selector: Sel) {
-            if selector == sel!(deleteBackward:) {
-                self.ivars().composition.borrow_mut().clear();
-                if let Err(error) = self.ivars().writer.write_all(&[0x7f]) {
-                    logging::pty_error(&format!("pty write failed from deleteBackward: {error}"));
-                }
-                self.as_super().setNeedsDisplay(true);
-            }
-        }
-
-        #[unsafe(method(setMarkedText:selectedRange:replacementRange:))]
-        fn set_marked_text_selected_range_replacement_range(
-            &self,
-            string: &AnyObject,
-            selected_range: NSRange,
-            _replacement_range: NSRange,
-        ) {
-            autoreleasepool(|pool| {
-                let Some(text) = text_from_input_object(string, pool) else {
-                    return;
-                };
-
-                self.ivars().composition.borrow_mut().set_marked_text(
-                    text,
-                    TextRange {
-                        location: selected_range.location,
-                        length: selected_range.length,
-                    },
-                );
-                self.as_super().setNeedsDisplay(true);
-            });
-        }
-
-        #[unsafe(method(unmarkText))]
-        fn unmark_text(&self) {
-            self.ivars().composition.borrow_mut().clear();
-            self.as_super().setNeedsDisplay(true);
-        }
-
-        #[unsafe(method(selectedRange))]
-        fn selected_range(&self) -> NSRange {
-            let range = self.ivars().composition.borrow().selected_range();
-            NSRange::new(range.location, range.length)
-        }
-
-        #[unsafe(method(markedRange))]
-        fn marked_range(&self) -> NSRange {
-            let range = self.ivars().composition.borrow().marked_range();
-            if range.location == usize::MAX {
-                NSRange::new(NSNotFound as usize, 0)
-            } else {
-                NSRange::new(range.location, range.length)
-            }
-        }
-
-        #[unsafe(method(hasMarkedText))]
-        fn has_marked_text(&self) -> bool {
-            self.ivars().composition.borrow().has_marked_text()
-        }
-
-        #[unsafe(method(attributedSubstringForProposedRange:actualRange:))]
-        fn attributed_substring_for_proposed_range_actual_range(
-            &self,
-            _range: NSRange,
-            actual_range: NSRangePointer,
-        ) -> *mut NSAttributedString {
-            unsafe {
-                if !actual_range.is_null() {
-                    *actual_range = NSRange::new(NSNotFound as usize, 0);
-                }
-            }
-            std::ptr::null_mut()
-        }
-
-        #[unsafe(method(validAttributesForMarkedText))]
-        fn valid_attributes_for_marked_text(&self) -> *mut NSArray<NSAttributedStringKey> {
-            let attributes: Retained<NSArray<NSAttributedStringKey>> = NSArray::from_slice(&[]);
-            Retained::autorelease_return(attributes)
-        }
-
-        #[unsafe(method(firstRectForCharacterRange:actualRange:))]
-        fn first_rect_for_character_range_actual_range(
-            &self,
-            range: NSRange,
-            actual_range: NSRangePointer,
-        ) -> NSRect {
-            unsafe {
-                if !actual_range.is_null() {
-                    *actual_range = range;
-                }
-            }
-            self.cursor_screen_rect()
-        }
-
-        #[unsafe(method(characterIndexForPoint:))]
-        fn character_index_for_point(&self, _point: NSPoint) -> usize {
-            0
         }
 
         #[unsafe(method(scrollWheel:))]
