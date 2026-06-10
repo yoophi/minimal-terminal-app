@@ -1,0 +1,6 @@
+[workspace]
+members = [
+    "crates/terminal-app",
+]
+resolver = "2"
+

@@ -1,0 +1,23 @@
+[package]
+name = "terminal-app"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+objc2 = "0.6"
+objc2-app-kit = { version = "0.3", default-features = false, features = [
+    "std",
+    "NSApplication",
+    "NSGraphics",
+    "NSResponder",
+    "NSRunningApplication",
+    "NSWindow",
+] }
+objc2-foundation = { version = "0.3", default-features = false, features = [
+    "std",
+    "alloc",
+    "NSNotification",
+    "NSObject",
+    "NSGeometry",
+    "NSString",
+] }
