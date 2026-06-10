@@ -94,6 +94,7 @@ impl Default for Parser {
 enum Charset {
     Ascii,
     British,
+    DecSupplementalGraphics,
     DecSpecialGraphics,
     Dutch,
     Finnish,
@@ -284,6 +285,10 @@ impl vte::Perform for ActionCollector {
                 self.g0_charset = Charset::Ascii;
                 return;
             }
+            ([b'(', b'%'], b'5') => {
+                self.g0_charset = Charset::DecSupplementalGraphics;
+                return;
+            }
             ([b'('], b'4') => {
                 self.g0_charset = Charset::Dutch;
                 return;
@@ -366,6 +371,10 @@ impl vte::Perform for ActionCollector {
             }
             ([b')'], b'B') => {
                 self.g1_charset = Charset::Ascii;
+                return;
+            }
+            ([b')', b'%'], b'5') => {
+                self.g1_charset = Charset::DecSupplementalGraphics;
                 return;
             }
             ([b')'], b'4') => {
@@ -452,6 +461,10 @@ impl vte::Perform for ActionCollector {
                 self.g2_charset = Charset::Ascii;
                 return;
             }
+            ([b'*', b'%'], b'5') => {
+                self.g2_charset = Charset::DecSupplementalGraphics;
+                return;
+            }
             ([b'*'], b'4') => {
                 self.g2_charset = Charset::Dutch;
                 return;
@@ -534,6 +547,10 @@ impl vte::Perform for ActionCollector {
             }
             ([b'+'], b'B') => {
                 self.g3_charset = Charset::Ascii;
+                return;
+            }
+            ([b'+', b'%'], b'5') => {
+                self.g3_charset = Charset::DecSupplementalGraphics;
                 return;
             }
             ([b'+'], b'4') => {
@@ -620,6 +637,20 @@ impl vte::Perform for ActionCollector {
 }
 
 fn map_printable_char(ch: char, charset: Charset) -> char {
+    if charset == Charset::DecSupplementalGraphics {
+        return match ch {
+            '$' | '&' | ',' | '-' | '.' | '/' | '4' | '8' | '>' | 'P' | '^' | 'p' | '~' => '␦',
+            '(' => '¤',
+            'W' => 'Œ',
+            ']' => 'Ÿ',
+            '_' => '_',
+            'w' => 'œ',
+            '}' => 'ÿ',
+            '!'..='~' => char::from_u32(ch as u32 + 0x80).unwrap_or(ch),
+            _ => ch,
+        };
+    }
+
     if charset == Charset::British {
         return match ch {
             '#' => '£',
@@ -1300,6 +1331,37 @@ mod tests {
         );
         assert_eq!(parser.advance_bytes(b"x"), vec![Action::Print('│')]);
         assert_eq!(parser.advance_bytes(b"\x1b(Bx"), vec![Action::Print('x')]);
+    }
+
+    #[test]
+    fn maps_dec_supplemental_graphics_charset() {
+        let mut parser = Parser::default();
+
+        assert_eq!(
+            parser.advance_bytes(b"\x1b(%5!\"#(W]_$w}~\x1b(B!"),
+            vec![
+                Action::Print('¡'),
+                Action::Print('¢'),
+                Action::Print('£'),
+                Action::Print('¤'),
+                Action::Print('Œ'),
+                Action::Print('Ÿ'),
+                Action::Print('_'),
+                Action::Print('␦'),
+                Action::Print('œ'),
+                Action::Print('ÿ'),
+                Action::Print('␦'),
+                Action::Print('!'),
+            ]
+        );
+        assert_eq!(
+            parser.advance_bytes(b"\x1b*%5\x1bNWx"),
+            vec![Action::Print('Œ'), Action::Print('x')]
+        );
+        assert_eq!(
+            parser.advance_bytes(b"\x1b)%5\x1b~\xc2\xa1"),
+            vec![Action::Print('¡')]
+        );
     }
 
     #[test]
