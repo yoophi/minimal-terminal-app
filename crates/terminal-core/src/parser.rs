@@ -66,22 +66,32 @@ pub(crate) enum ScreenClearMode {
 
 pub(crate) struct Parser {
     parser: vte::Parser,
-    g0_charset: G0Charset,
+    g0_charset: Charset,
+    g1_charset: Charset,
+    active_charset: ActiveCharset,
 }
 
 impl Default for Parser {
     fn default() -> Self {
         Self {
             parser: vte::Parser::default(),
-            g0_charset: G0Charset::Ascii,
+            g0_charset: Charset::Ascii,
+            g1_charset: Charset::Ascii,
+            active_charset: ActiveCharset::G0,
         }
     }
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
-enum G0Charset {
+enum Charset {
     Ascii,
     DecSpecialGraphics,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+enum ActiveCharset {
+    G0,
+    G1,
 }
 
 impl Parser {
@@ -96,9 +106,13 @@ impl Parser {
         let mut performer = ActionCollector {
             actions: Vec::new(),
             g0_charset: self.g0_charset,
+            g1_charset: self.g1_charset,
+            active_charset: self.active_charset,
         };
         self.parser.advance(&mut performer, bytes);
         self.g0_charset = performer.g0_charset;
+        self.g1_charset = performer.g1_charset;
+        self.active_charset = performer.active_charset;
         performer.actions
     }
 }
@@ -106,15 +120,21 @@ impl Parser {
 #[derive(Debug)]
 struct ActionCollector {
     actions: Vec<Action>,
-    g0_charset: G0Charset,
+    g0_charset: Charset,
+    g1_charset: Charset,
+    active_charset: ActiveCharset,
 }
 
 impl vte::Perform for ActionCollector {
     fn print(&mut self, ch: char) {
+        let charset = match self.active_charset {
+            ActiveCharset::G0 => self.g0_charset,
+            ActiveCharset::G1 => self.g1_charset,
+        };
         let action = match ch {
             '\u{08}' | '\u{7f}' => Action::Backspace,
             ch if ch.is_control() => Action::Ignore,
-            ch => Action::Print(map_printable_char(ch, self.g0_charset)),
+            ch => Action::Print(map_printable_char(ch, charset)),
         };
         self.actions.push(action);
     }
@@ -125,6 +145,14 @@ impl vte::Perform for ActionCollector {
             b'\n' => Action::Newline,
             0x08 | 0x7f => Action::Backspace,
             b'\t' => Action::Tab,
+            0x0e => {
+                self.active_charset = ActiveCharset::G1;
+                return;
+            }
+            0x0f => {
+                self.active_charset = ActiveCharset::G0;
+                return;
+            }
             _ => Action::Ignore,
         };
         self.actions.push(action);
@@ -158,11 +186,19 @@ impl vte::Perform for ActionCollector {
             ([], b'=') => Action::SetApplicationKeypad(true),
             ([], b'>') => Action::SetApplicationKeypad(false),
             ([b'('], b'0') => {
-                self.g0_charset = G0Charset::DecSpecialGraphics;
+                self.g0_charset = Charset::DecSpecialGraphics;
                 return;
             }
             ([b'('], b'B') => {
-                self.g0_charset = G0Charset::Ascii;
+                self.g0_charset = Charset::Ascii;
+                return;
+            }
+            ([b')'], b'0') => {
+                self.g1_charset = Charset::DecSpecialGraphics;
+                return;
+            }
+            ([b')'], b'B') => {
+                self.g1_charset = Charset::Ascii;
                 return;
             }
             ([b'(' | b')' | b'*' | b'+'], _) => return,
@@ -176,8 +212,8 @@ impl vte::Perform for ActionCollector {
     }
 }
 
-fn map_printable_char(ch: char, g0_charset: G0Charset) -> char {
-    if g0_charset != G0Charset::DecSpecialGraphics {
+fn map_printable_char(ch: char, charset: Charset) -> char {
+    if charset != Charset::DecSpecialGraphics {
         return ch;
     }
 
@@ -525,6 +561,18 @@ mod tests {
         );
         assert_eq!(parser.advance_bytes(b"x"), vec![Action::Print('│')]);
         assert_eq!(parser.advance_bytes(b"\x1b(Bx"), vec![Action::Print('x')]);
+    }
+
+    #[test]
+    fn maps_g1_dec_special_graphics_with_locking_shift() {
+        let mut parser = Parser::default();
+
+        assert_eq!(
+            parser.advance_bytes(b"\x1b)0\x0elqk"),
+            vec![Action::Print('┌'), Action::Print('─'), Action::Print('┐')]
+        );
+        assert_eq!(parser.advance_bytes(b"x"), vec![Action::Print('│')]);
+        assert_eq!(parser.advance_bytes(b"\x0fx"), vec![Action::Print('x')]);
     }
 
     #[test]
