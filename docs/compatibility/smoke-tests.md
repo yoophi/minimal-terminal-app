@@ -141,6 +141,28 @@ git log --oneline --graph --decorate
 - 종료 후 shell 화면이 복원된다.
 - 실패하면 `known-gaps.md`의 미확인 app smoke target을 구체적인 gap으로 승격한다.
 
+## 자동 App Command Smoke
+
+앱 내부 PTY가 shell command를 받고 terminal buffer에 출력을 반영하는지는 다음 script로 자동 확인한다.
+
+```sh
+scripts/run-app-command-smoke.sh
+```
+
+이 script는 app bundle을 만든 뒤 smoke 전용 환경 변수로 marker command를 PTY에 쓰고, retained terminal snapshot에서 marker 출력을 찾는다.
+
+범위:
+
+- native app binary가 실행된다.
+- app 내부 login shell이 command를 받는다.
+- command output이 terminal buffer snapshot에 반영된다.
+
+범위 밖:
+
+- GUI focus 기반 keyboard automation
+- `htop`, `fzf`, `git log` 같은 interactive TUI 내부 key workflow
+- mouse interaction workflow
+
 ## Representative App Certification Smoke
 
 대표 CLI/TUI 앱은 단순 실행 여부가 아니라 workflow 단위로 확인한다.

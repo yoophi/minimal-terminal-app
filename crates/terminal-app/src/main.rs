@@ -22,6 +22,7 @@ mod mouse;
 mod paste;
 mod pty;
 mod selection;
+mod smoke;
 mod terminal_buffer;
 mod terminal_view;
 
@@ -71,7 +72,7 @@ define_class!(
                 }
             };
 
-            let terminal_view = TerminalView::new(mtm, frame, buffer, writer);
+            let terminal_view = TerminalView::new(mtm, frame, Arc::clone(&buffer), writer.clone());
             window.setContentView(Some(terminal_view.as_super()));
             window.center();
             window.setDelegate(Some(ProtocolObject::from_ref(self)));
@@ -83,6 +84,7 @@ define_class!(
                 .set(window)
                 .expect("main window should only be initialized once");
             self.ivars().terminal_view.set(terminal_view).ok();
+            smoke::start_if_requested(Arc::clone(&buffer), writer.clone());
 
             app.setActivationPolicy(NSApplicationActivationPolicy::Regular);
 
