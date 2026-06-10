@@ -67,8 +67,26 @@ GUI app 실행은 display session, 권한, focus 상태에 영향을 받을 수 
 
 ## Acceptance Criteria
 
-- `scripts/run-app-smoke.sh`가 있다.
-- app bundle build와 binary 생존 smoke를 수행한다.
-- 실패 시 non-zero exit를 반환한다.
-- `docs/compatibility/smoke-tests.md`가 script 사용법을 반영한다.
+- `scripts/run-app-smoke.sh`가 있다. `done`
+- app bundle build와 binary 생존 smoke를 수행한다. `done`
+- 실패 시 non-zero exit를 반환한다. `done`
+- `docs/compatibility/smoke-tests.md`가 script 사용법을 반영한다. `done`
 
+## Implementation Update - 2026-06-10
+
+Status: implementation complete.
+
+구현된 내용:
+
+- `scripts/run-app-smoke.sh`를 추가했다.
+- script가 `scripts/bundle-macos-app.sh`를 실행해 app bundle을 새로 생성한다.
+- app binary 존재와 실행 권한을 확인한다.
+- app binary를 직접 실행하고 기본 3초 생존 여부를 확인한다.
+- 실패하면 stdout/stderr log 경로를 출력하고 non-zero로 종료한다.
+- `docs/compatibility/smoke-tests.md`, `docs/compatibility/test-strategy.md`, README에 실행 방법을 반영했다.
+
+검증:
+
+- `scripts/run-app-smoke.sh`
+- `scripts/run-compatibility-core.sh`
+- `cargo test`

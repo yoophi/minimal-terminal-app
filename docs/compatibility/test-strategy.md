@@ -170,7 +170,7 @@ crates/terminal-core/tests/fixtures/tui/vim_minimal.ansi
 4. `scripts/run-app-smoke.sh`
 5. `docs/compatibility/smoke-tests.md`의 수동 TUI smoke
 
-현재 `scripts/run-compatibility-core.sh`는 1번과 2번을 함께 실행한다. 4번은 다음 자동화 후보로 둔다.
+현재 `scripts/run-compatibility-core.sh`는 1번과 2번을 함께 실행한다. `scripts/run-app-smoke.sh`는 4번의 최소 runtime smoke를 실행한다.
 
 ## 완료 기준
 

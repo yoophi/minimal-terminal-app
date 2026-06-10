@@ -8,9 +8,12 @@
 
 ```sh
 scripts/run-compatibility-core.sh
+scripts/run-app-smoke.sh
 scripts/bundle-macos-app.sh
 open 'target/debug/Minimal Terminal.app'
 ```
+
+`scripts/run-app-smoke.sh`는 로컬 macOS 세션에서 app bundle을 새로 만들고 binary를 직접 실행한 뒤 짧은 시간 생존 여부를 확인한다. GUI rendering, IME, pasteboard, 실제 TUI 조작은 아래 수동 절차로 계속 확인한다.
 
 필요하면 로그를 함께 확인한다.
 

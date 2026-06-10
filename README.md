@@ -30,6 +30,12 @@ cargo test
 scripts/run-compatibility-core.sh
 ```
 
+로컬 macOS 앱 smoke 확인:
+
+```bash
+scripts/run-app-smoke.sh
+```
+
 macOS `.app` 번들 생성:
 
 ```bash
@@ -79,6 +85,7 @@ docs/
 scripts/
 ├── bundle-macos-app.sh
 ├── check-compatibility-docs.sh
+├── run-app-smoke.sh
 └── run-compatibility-core.sh
 
 GOAL.md               # project goal and MVP scope
@@ -93,3 +100,4 @@ ARCHITECTURE.md       # proposed architecture
 - Phase 007: First TUI compatibility expansion is implemented.
 - Phase 008: Compatibility matrix, smoke test protocol, known gap tracking, CSI/reference documentation, regression runner, and core compatibility evidence tests are implemented. GUI/runtime smoke scenarios remain manual.
 - Phase 009: Compatibility documentation consistency checks are implemented.
+- Phase 010-015: App logic tests, DSR, cursor style, SGR mouse reporting, combined scrollback selection, and local app smoke automation are implemented.
