@@ -101,6 +101,7 @@ enum Charset {
     FrenchCanadian,
     German,
     Greek,
+    Hebrew,
     Italian,
     NorwegianDanish,
     Portuguese,
@@ -306,6 +307,10 @@ impl vte::Perform for ActionCollector {
                 self.g0_charset = Charset::Greek;
                 return;
             }
+            ([b'(', b'%'], b'=') => {
+                self.g0_charset = Charset::Hebrew;
+                return;
+            }
             ([b'('], b'Y') => {
                 self.g0_charset = Charset::Italian;
                 return;
@@ -364,6 +369,10 @@ impl vte::Perform for ActionCollector {
             }
             ([b')', b'"'], b'>') => {
                 self.g1_charset = Charset::Greek;
+                return;
+            }
+            ([b')', b'%'], b'=') => {
+                self.g1_charset = Charset::Hebrew;
                 return;
             }
             ([b')'], b'Y') => {
@@ -426,6 +435,10 @@ impl vte::Perform for ActionCollector {
                 self.g2_charset = Charset::Greek;
                 return;
             }
+            ([b'*', b'%'], b'=') => {
+                self.g2_charset = Charset::Hebrew;
+                return;
+            }
             ([b'*'], b'Y') => {
                 self.g2_charset = Charset::Italian;
                 return;
@@ -484,6 +497,10 @@ impl vte::Perform for ActionCollector {
             }
             ([b'+', b'"'], b'>') => {
                 self.g3_charset = Charset::Greek;
+                return;
+            }
+            ([b'+', b'%'], b'=') => {
+                self.g3_charset = Charset::Hebrew;
                 return;
             }
             ([b'+'], b'Y') => {
@@ -677,6 +694,39 @@ fn map_printable_char(ch: char, charset: Charset) -> char {
             'w' => 'Ψ',
             'x' => 'Ω',
             'y' | 'z' => '␦',
+            _ => ch,
+        };
+    }
+
+    if charset == Charset::Hebrew {
+        return match ch {
+            '`' => 'א',
+            'a' => 'ב',
+            'b' => 'ג',
+            'c' => 'ד',
+            'd' => 'ה',
+            'e' => 'ו',
+            'f' => 'ז',
+            'g' => 'ח',
+            'h' => 'ט',
+            'i' => 'י',
+            'j' => 'ך',
+            'k' => 'כ',
+            'l' => 'ל',
+            'm' => 'ם',
+            'n' => 'מ',
+            'o' => 'ן',
+            'p' => 'נ',
+            'q' => 'ס',
+            'r' => 'ע',
+            's' => 'ף',
+            't' => 'פ',
+            'u' => 'ץ',
+            'v' => 'צ',
+            'w' => 'ק',
+            'x' => 'ר',
+            'y' => 'ש',
+            'z' => 'ת',
             _ => ch,
         };
     }
@@ -1528,6 +1578,53 @@ mod tests {
         assert_eq!(
             parser.advance_bytes(b"\x1b)\">\x1b~\xc3\xa1"),
             vec![Action::Print('Α')]
+        );
+    }
+
+    #[test]
+    fn maps_hebrew_nrcs_charset() {
+        let mut parser = Parser::default();
+
+        assert_eq!(
+            parser.advance_bytes(b"\x1b(%=`abcdefghijklmnopqrstuvwxyz\x1b(B`"),
+            vec![
+                Action::Print('א'),
+                Action::Print('ב'),
+                Action::Print('ג'),
+                Action::Print('ד'),
+                Action::Print('ה'),
+                Action::Print('ו'),
+                Action::Print('ז'),
+                Action::Print('ח'),
+                Action::Print('ט'),
+                Action::Print('י'),
+                Action::Print('ך'),
+                Action::Print('כ'),
+                Action::Print('ל'),
+                Action::Print('ם'),
+                Action::Print('מ'),
+                Action::Print('ן'),
+                Action::Print('נ'),
+                Action::Print('ס'),
+                Action::Print('ע'),
+                Action::Print('ף'),
+                Action::Print('פ'),
+                Action::Print('ץ'),
+                Action::Print('צ'),
+                Action::Print('ק'),
+                Action::Print('ר'),
+                Action::Print('ש'),
+                Action::Print('ת'),
+                Action::Print('`'),
+            ]
+        );
+        assert_eq!(
+            parser.advance_bytes(b"\x1b*%=\x1bNzx"),
+            vec![Action::Print('ת'), Action::Print('x')]
+        );
+        assert_eq!(
+            parser.advance_bytes(b"\x1b)%=\x1b~\xc3\xa0"),
+            vec![Action::Print('א')]
         );
     }
 
