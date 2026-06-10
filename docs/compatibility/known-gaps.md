@@ -55,6 +55,7 @@
 - Phase 049에서 app 내부 `git log ... | less -S` pager horizontal scroll 뒤 quit workflow를 자동화했다.
 - Phase 050에서 app 내부 `git log ... | less` pager mark 뒤 quit workflow를 자동화했다.
 - Phase 058에서 app 내부 `vim --clean -Nu NONE -n` edit/write/quit workflow를 자동화했다.
+- Phase 059에서 app 내부 `tmux` 안의 clean `vim` edit/write/quit workflow를 자동화했다.
 - interactive key workflow는 아직 남아 있다.
 
 권장 다음 작업:
@@ -108,7 +109,7 @@
 - `vim`: clean vim edit/write/quit workflow smoke는 통과했다.
 - `emacs -nw`: local verification environment의 PATH에서 `emacs`를 찾지 못했다.
 - `tmux`: `tmux 3.6b` version smoke, attached session workflow smoke, split-pane workflow smoke는 통과했다.
-- `tmux` 안의 `vim`
+- `tmux` 안의 `vim`: clean nested edit/write/quit workflow smoke는 통과했다.
 - `claude` 또는 `claude-code`: `2.1.170 (Claude Code)` version smoke는 통과했다.
 - `codex` / `codex-cli`: `codex-cli 0.139.0` version smoke는 통과했다.
 

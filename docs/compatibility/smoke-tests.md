@@ -175,6 +175,7 @@ scripts/run-app-target-smokes.sh
 - `tmux-version`: `tmux -V`
 - `tmux-attached-session`: attached `tmux new-session` 실행 후 pane 입력과 shell 복원 확인
 - `tmux-split-pane`: attached tmux session에서 vertical split pane 생성, active pane 입력, shell 복원 확인
+- `tmux-vim-edit-write-quit`: attached tmux session 안에서 clean vim 실행, write, quit, shell 복원 확인
 - `htop-version`: `htop --version`
 - `htop-runtime`: `htop` full-screen redraw snapshot
 - `htop-quit`: `htop` 실행 후 follow-up `q`로 종료 확인
@@ -247,6 +248,8 @@ tmux new -s minimal-terminal-smoke
 ```sh
 tmux new -s minimal-terminal-nested 'vim /tmp/minimal-terminal-smoke.txt'
 ```
+
+자동 smoke `tmux-vim-edit-write-quit`은 app 내부 PTY에서 tmux 안의 clean vim tempfile edit/write/quit와 shell 복원을 확인한다.
 
 확인 항목:
 

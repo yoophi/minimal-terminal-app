@@ -350,6 +350,18 @@ if command -v tmux >/dev/null 2>&1; then
     "tmux-split-ok" \
     3000 \
     1200
+  if command -v vim >/dev/null 2>&1; then
+    vim_path="$(command -v vim)"
+    run_case_with_followup \
+      "tmux-vim-edit-write-quit" \
+      "tmp=\"/tmp/minimal-terminal-tmux-vim-smoke-\$\$.txt\"; tmux_socket=\"minimal-terminal-app-smoke-\$\$\"; rm -f \"\$tmp\"; ${tmux_path} -L \"\$tmux_socket\" new-session -s minimal-terminal-nested \"${vim_path} --clean -Nu NONE -n \\\"\$tmp\\\"\"; printf \"tmux-vim-workflow-ok:%s\\n\" \"\$(cat \"\$tmp\")\"; rm -f \"\$tmp\"; ${tmux_path} -L \"\$tmux_socket\" kill-server >/dev/null 2>&1 || true"$'\n' \
+      $'ihello from tmux vim\e:wq\r' \
+      "tmux-vim-workflow-ok:hello from tmux vim" \
+      3000 \
+      1400
+  else
+    echo "app target smoke skipped: tmux-vim-edit-write-quit requires vim"
+  fi
   ran=1
 else
   echo "app target smoke skipped: tmux not found"
