@@ -296,6 +296,13 @@ run_case_with_two_followups \
   1500 \
   1000 \
   700
+run_case_with_followup \
+  "git-pager-search-quit" \
+  $'git log --oneline --graph --decorate -100 --color=never | less; printf "git-pager-search-ok\\n"\n' \
+  $'/Implement\rq' \
+  "git-pager-search-ok" \
+  1500 \
+  1000
 ran=1
 
 if command -v tmux >/dev/null 2>&1; then
