@@ -66,6 +66,7 @@
 - Phase 059에서 app 내부 `tmux` 안의 clean `vim` edit/write/quit workflow를 자동화했다.
 - Phase 060에서 app 내부 direct `less` basic quit workflow를 자동화했다.
 - Phase 105에서 app 내부 direct `less` search workflow를 자동화했다.
+- Phase 106에서 app 내부 direct `less +F` follow mode append workflow를 자동화했다.
 - interactive key workflow는 아직 남아 있다.
 
 권장 다음 작업:
@@ -73,7 +74,7 @@
 - `htop` mouse 또는 setup/editing workflow를 앱 내부에서 수행한다.
 - 사용자별 shell/plugin 설정이 포함된 `fzf` integration workflow를 앱 내부에서 수행한다.
 - `git log` pager workflow는 현재 자동 smoke target에서 quit/page/search/horizontal/mark 경로를 확인한다.
-- `less` direct quit/search와 mouse wheel workflow는 현재 자동 smoke target에서 확인한다.
+- `less` direct quit/search/follow와 mouse wheel workflow는 현재 자동 smoke target에서 확인한다.
 
 ## Priority 3
 
