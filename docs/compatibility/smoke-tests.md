@@ -185,7 +185,7 @@ scripts/run-app-target-smokes.sh
 - `tmux-split-pane`: attached tmux session에서 vertical split pane 생성, active pane 입력, shell 복원 확인
 - `tmux-vim-edit-write-quit`: attached tmux session 안에서 clean vim 실행, write, quit, shell 복원 확인
 - `htop-version`: `htop --version`
-- `htop-runtime`: `htop` full-screen redraw snapshot
+- `htop-runtime`: `htop` full-screen meter layout snapshot에서 `Tasks:` marker 확인
 - `htop-quit`: `htop` 실행 후 follow-up `q`로 종료 확인
 - `htop-f10-quit`: `htop` 실행 후 follow-up F10 sequence로 종료 확인
 - `htop-f1-help-quit`: `htop` 실행 후 follow-up F1 sequence와 `q q`로 help와 htop 종료 확인

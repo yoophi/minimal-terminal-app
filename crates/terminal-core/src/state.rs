@@ -45,6 +45,7 @@ pub struct TerminalState {
     current_style: Style,
     modes: TerminalModes,
     scroll_region: Option<(usize, usize)>,
+    pending_wrap: bool,
     pending_responses: Vec<u8>,
     pending_clipboard_writes: Vec<String>,
     pending_title_writes: Vec<String>,
@@ -60,6 +61,7 @@ struct ScreenState {
     current_style: Style,
     modes: TerminalModes,
     scroll_region: Option<(usize, usize)>,
+    pending_wrap: bool,
 }
 
 impl TerminalState {
@@ -71,6 +73,7 @@ impl TerminalState {
             current_style: Style::default(),
             modes: TerminalModes::default(),
             scroll_region: None,
+            pending_wrap: false,
             pending_responses: Vec::new(),
             pending_clipboard_writes: Vec::new(),
             pending_title_writes: Vec::new(),
@@ -187,42 +190,83 @@ impl TerminalState {
 
     fn apply(&mut self, action: Action) {
         match action {
-            Action::Print(ch) => self.grid.put_char(&mut self.cursor, ch, self.current_style),
-            Action::CarriageReturn => self.grid.carriage_return(&mut self.cursor),
-            Action::Newline => self
-                .grid
-                .newline_in_region(&mut self.cursor, self.scroll_region),
-            Action::Backspace => self.grid.backspace(&mut self.cursor),
+            Action::Print(ch) => self.print_char(ch),
+            Action::CarriageReturn => {
+                self.pending_wrap = false;
+                self.grid.carriage_return(&mut self.cursor);
+            }
+            Action::Newline => {
+                self.pending_wrap = false;
+                self.grid
+                    .newline_in_region(&mut self.cursor, self.scroll_region);
+            }
+            Action::Backspace => {
+                self.pending_wrap = false;
+                self.grid.backspace(&mut self.cursor);
+            }
             Action::Tab => {
                 let next_tab = ((self.cursor.col / 8) + 1) * 8;
                 while self.cursor.col < next_tab.min(self.grid.cols()) {
-                    self.grid
-                        .put_char(&mut self.cursor, ' ', self.current_style);
+                    self.print_char(' ');
                 }
             }
             Action::ClearLine(mode) => match mode {
-                LineClearMode::FromCursor => self.grid.clear_line_from_cursor(self.cursor),
-                LineClearMode::ToCursor => self.grid.clear_line_to_cursor(self.cursor),
-                LineClearMode::Entire => self.grid.clear_entire_line(self.cursor.row),
+                LineClearMode::FromCursor if self.pending_wrap => self.pending_wrap = false,
+                LineClearMode::FromCursor => {
+                    self.pending_wrap = false;
+                    self.grid.clear_line_from_cursor(self.cursor);
+                }
+                LineClearMode::ToCursor => {
+                    self.pending_wrap = false;
+                    self.grid.clear_line_to_cursor(self.cursor);
+                }
+                LineClearMode::Entire => {
+                    self.pending_wrap = false;
+                    self.grid.clear_entire_line(self.cursor.row);
+                }
             },
             Action::ClearScreen(mode) => match mode {
-                ScreenClearMode::FromCursor => self.grid.clear_screen_from_cursor(self.cursor),
-                ScreenClearMode::ToCursor => self.grid.clear_screen_to_cursor(self.cursor),
-                ScreenClearMode::Entire => self.grid.clear_screen(&mut self.cursor),
+                ScreenClearMode::FromCursor => {
+                    self.pending_wrap = false;
+                    self.grid.clear_screen_from_cursor(self.cursor);
+                }
+                ScreenClearMode::ToCursor => {
+                    self.pending_wrap = false;
+                    self.grid.clear_screen_to_cursor(self.cursor);
+                }
+                ScreenClearMode::Entire => {
+                    self.pending_wrap = false;
+                    self.grid.clear_screen(&mut self.cursor);
+                }
             },
-            Action::InsertBlankChars(count) => self.grid.insert_blank_chars(self.cursor, count),
-            Action::DeleteChars(count) => self.grid.delete_chars(self.cursor, count),
-            Action::EraseChars(count) => self.grid.erase_chars(self.cursor, count),
+            Action::InsertBlankChars(count) => {
+                self.pending_wrap = false;
+                self.grid.insert_blank_chars(self.cursor, count);
+            }
+            Action::DeleteChars(count) => {
+                self.pending_wrap = false;
+                self.grid.delete_chars(self.cursor, count);
+            }
+            Action::EraseChars(count) => {
+                self.pending_wrap = false;
+                self.grid.erase_chars(self.cursor, count);
+            }
             Action::InsertLines(count) => {
+                self.pending_wrap = false;
                 self.grid
                     .insert_blank_lines(self.cursor, count, self.scroll_region)
             }
             Action::DeleteLines(count) => {
+                self.pending_wrap = false;
                 self.grid
                     .delete_lines(self.cursor, count, self.scroll_region)
             }
-            Action::SaveCursor => self.saved_cursor = self.cursor,
+            Action::SaveCursor => {
+                self.pending_wrap = false;
+                self.saved_cursor = self.cursor;
+            }
             Action::RestoreCursor => {
+                self.pending_wrap = false;
                 self.grid.move_cursor(
                     &mut self.cursor,
                     self.saved_cursor.row,
@@ -258,17 +302,37 @@ impl TerminalState {
                 );
             }
             Action::CursorPosition { row, col } => {
+                self.pending_wrap = false;
                 self.grid.move_cursor(&mut self.cursor, row, col)
             }
-            Action::CursorUp(count) => self.grid.move_up(&mut self.cursor, count),
-            Action::CursorDown(count) => self.grid.move_down(&mut self.cursor, count),
-            Action::CursorRight(count) => self.grid.move_right(&mut self.cursor, count),
-            Action::CursorLeft(count) => self.grid.move_left(&mut self.cursor, count),
+            Action::CursorUp(count) => {
+                self.pending_wrap = false;
+                self.grid.move_up(&mut self.cursor, count);
+            }
+            Action::CursorDown(count) => {
+                self.pending_wrap = false;
+                self.grid.move_down(&mut self.cursor, count);
+            }
+            Action::CursorRight(count) => {
+                self.pending_wrap = false;
+                self.grid.move_right(&mut self.cursor, count);
+            }
+            Action::CursorLeft(count) => {
+                self.pending_wrap = false;
+                self.grid.move_left(&mut self.cursor, count);
+            }
             Action::CursorColumn(col) => {
+                self.pending_wrap = false;
                 let row = self.cursor.row;
                 self.grid.move_cursor(&mut self.cursor, row, col);
             }
+            Action::CursorRow(row) => {
+                self.pending_wrap = false;
+                let col = self.cursor.col;
+                self.grid.move_cursor(&mut self.cursor, row, col);
+            }
             Action::SetScrollRegion(region) => {
+                self.pending_wrap = false;
                 self.scroll_region = region;
                 self.grid.move_cursor(&mut self.cursor, 0, 0);
             }
@@ -290,6 +354,7 @@ impl TerminalState {
             current_style: self.current_style,
             modes: self.modes,
             scroll_region: self.scroll_region,
+            pending_wrap: self.pending_wrap,
         };
         let rows = self.grid.rows();
         let cols = self.grid.cols();
@@ -305,6 +370,7 @@ impl TerminalState {
         self.modes.mouse_reporting = false;
         self.modes.sgr_mouse = false;
         self.scroll_region = None;
+        self.pending_wrap = false;
         self.main_screen = Some(main_screen);
     }
 
@@ -319,6 +385,16 @@ impl TerminalState {
         self.current_style = main_screen.current_style;
         self.modes = main_screen.modes;
         self.scroll_region = main_screen.scroll_region;
+        self.pending_wrap = main_screen.pending_wrap;
+    }
+
+    fn print_char(&mut self, ch: char) {
+        if self.pending_wrap {
+            self.grid
+                .newline_in_region(&mut self.cursor, self.scroll_region);
+            self.pending_wrap = false;
+        }
+        self.pending_wrap = self.grid.put_char(&mut self.cursor, ch, self.current_style);
     }
 }
 
@@ -378,6 +454,38 @@ mod tests {
         let snapshot = terminal.snapshot(3);
         assert_eq!(snapshot.lines[0], "   ok");
         assert_eq!(snapshot.cursor, Cursor::new(0, 5));
+    }
+
+    #[test]
+    fn vertical_position_absolute_preserves_column() {
+        let mut terminal = TerminalState::new(4, 12);
+        terminal.append_bytes(b"\x1b[5Gtop");
+        terminal.append_bytes(b"\x1b[3drow");
+
+        let snapshot = terminal.snapshot(4);
+        assert_eq!(snapshot.lines[0], "    top");
+        assert_eq!(snapshot.lines[2], "       row");
+        assert_eq!(snapshot.cursor, Cursor::new(2, 10));
+    }
+
+    #[test]
+    fn printable_after_right_margin_triggers_deferred_wrap() {
+        let mut terminal = TerminalState::new(2, 5);
+        terminal.append_bytes(b"abcdeZ");
+
+        let snapshot = terminal.snapshot(2);
+        assert_eq!(snapshot.lines, vec!["abcde", "Z"]);
+        assert_eq!(snapshot.cursor, Cursor::new(1, 1));
+    }
+
+    #[test]
+    fn clear_line_after_right_margin_does_not_wrap() {
+        let mut terminal = TerminalState::new(2, 5);
+        terminal.append_bytes(b"abcde\x1b[K\rZ");
+
+        let snapshot = terminal.snapshot(2);
+        assert_eq!(snapshot.lines, vec!["Zbcde", ""]);
+        assert_eq!(snapshot.cursor, Cursor::new(0, 1));
     }
 
     #[test]

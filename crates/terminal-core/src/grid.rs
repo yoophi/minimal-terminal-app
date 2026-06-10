@@ -57,10 +57,10 @@ impl Grid {
         cursor.col = cursor.col.min(self.cols - 1);
     }
 
-    pub(crate) fn put_char(&mut self, cursor: &mut Cursor, ch: char, style: Style) {
+    pub(crate) fn put_char(&mut self, cursor: &mut Cursor, ch: char, style: Style) -> bool {
         let width = char_width(ch);
         if width == 0 {
-            return;
+            return false;
         }
 
         if cursor.row >= self.rows {
@@ -75,9 +75,12 @@ impl Grid {
             self.lines[cursor.row][cursor.col + 1].set_wide_continuation(style);
         }
 
-        cursor.col += width;
-        if cursor.col >= self.cols {
-            self.newline(cursor);
+        if cursor.col + width >= self.cols {
+            cursor.col = self.cols - 1;
+            true
+        } else {
+            cursor.col += width;
+            false
         }
     }
 

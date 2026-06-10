@@ -113,6 +113,7 @@ pub(crate) enum Action {
     CursorRight(usize),
     CursorLeft(usize),
     CursorColumn(usize),
+    CursorRow(usize),
     SetScrollRegion(Option<(usize, usize)>),
     SetGraphicRendition(Vec<usize>),
     Ignore,
@@ -1760,6 +1761,7 @@ fn parse_csi(numbers: &[usize], intermediates: &[u8], final_byte: char) -> Actio
         'C' => Action::CursorRight(first_or_default(&numbers, 1)),
         'D' => Action::CursorLeft(first_or_default(&numbers, 1)),
         'c' => Action::PrimaryDeviceAttributes,
+        'd' => Action::CursorRow(first_or_default(&numbers, 1).saturating_sub(1)),
         'G' => Action::CursorColumn(first_or_default(&numbers, 1).saturating_sub(1)),
         'H' | 'f' => Action::CursorPosition {
             row: first_or_default(&numbers, 1).saturating_sub(1),
@@ -1932,6 +1934,16 @@ mod tests {
             parser.advance('H'),
             Some(Action::CursorPosition { row: 0, col: 4 })
         );
+    }
+
+    #[test]
+    fn parses_vertical_position_absolute() {
+        let mut parser = Parser::default();
+        assert_eq!(parser.advance('\u{1b}'), None);
+        assert_eq!(parser.advance('['), None);
+        assert_eq!(parser.advance('2'), None);
+        assert_eq!(parser.advance('4'), None);
+        assert_eq!(parser.advance('d'), Some(Action::CursorRow(23)));
     }
 
     #[test]
