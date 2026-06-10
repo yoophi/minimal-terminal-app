@@ -409,6 +409,13 @@ if command -v less >/dev/null 2>&1; then
     "less-mouse-line-045" \
     2200 \
     1200
+  run_case_with_followup \
+    "less-search" \
+    "seq -f \"less-search-line-%03g\" 1 120 | ${less_path}"$'\n' \
+    $'/less-search-line-080\r' \
+    "less-search-line-080" \
+    3200 \
+    1800
   ran=1
 else
   echo "app target smoke skipped: less not found"

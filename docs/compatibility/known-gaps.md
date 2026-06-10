@@ -65,6 +65,7 @@
 - Phase 058에서 app 내부 `vim --clean -Nu NONE -n` edit/write/quit workflow를 자동화했다.
 - Phase 059에서 app 내부 `tmux` 안의 clean `vim` edit/write/quit workflow를 자동화했다.
 - Phase 060에서 app 내부 direct `less` basic quit workflow를 자동화했다.
+- Phase 105에서 app 내부 direct `less` search workflow를 자동화했다.
 - interactive key workflow는 아직 남아 있다.
 
 권장 다음 작업:
@@ -72,7 +73,7 @@
 - `htop` mouse 또는 setup/editing workflow를 앱 내부에서 수행한다.
 - 사용자별 shell/plugin 설정이 포함된 `fzf` integration workflow를 앱 내부에서 수행한다.
 - `git log` pager workflow는 현재 자동 smoke target에서 quit/page/search/horizontal/mark 경로를 확인한다.
-- `less` mouse wheel workflow는 현재 자동 smoke target에서 확인한다.
+- `less` direct quit/search와 mouse wheel workflow는 현재 자동 smoke target에서 확인한다.
 
 ## Priority 3
 
@@ -212,7 +213,7 @@ Phase 024에서 SGR mouse mode가 꺼진 상태의 legacy X10-style mouse report
 
 상태: `supported`
 
-Phase 026에서 Shift, Option, Control modifier bit를 legacy 및 SGR mouse report code에 반영했다. Option은 xterm Meta modifier bit로 인코딩한다. runtime `vim`/`less` mouse smoke evidence는 Mouse Reporting gap으로 남긴다.
+Phase 026에서 Shift, Option, Control modifier bit를 legacy 및 SGR mouse report code에 반영했다. Option은 xterm Meta modifier bit로 인코딩한다. Runtime `vim`/`less` mouse smoke evidence는 Phase 100-101에서 추가했다. native GUI event에서 시작되는 end-to-end workflow는 Mouse Reporting gap으로 남긴다.
 
 ### Mode-gated SGR Mouse Report App Smoke
 
