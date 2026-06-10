@@ -355,12 +355,15 @@ Phase 004의 완료 기준:
 
 ## Follow-up Candidates
 
-Phase 004 이후 후보:
+Phase 004 이후 확정된 진행 순서:
 
-- broader xterm compatibility
-- alternate screen 기반 TUI 앱 smoke test
-- selection/copy와 scrollback UX 통합
-- `NSTextInputClient` 기반 IME preedit/composition UI
+1. Phase 005: Korean IME and Text Editing Stability
+2. Phase 006: Selection, Copy, and Scrollback UX
+3. Phase 007: TUI Compatibility Expansion
+4. Phase 008: Terminal Compatibility Test Matrix
+
+후속 후보:
+
 - configurable theme/palette
 - configurable Option/Command key policy
 - `alacritty_terminal` 통합 가능성 별도 spike
