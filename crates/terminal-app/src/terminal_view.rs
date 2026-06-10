@@ -458,11 +458,7 @@ impl TerminalView {
             .lock()
             .map(|buffer| {
                 let offset = self.ivars().scrollback_offset.get();
-                if offset == 0 {
-                    buffer.snapshot(rows)
-                } else {
-                    buffer.scrollback_snapshot(offset.saturating_sub(rows), rows)
-                }
+                buffer.combined_snapshot(offset, rows)
             })
             .unwrap_or_else(|_| TerminalSnapshot {
                 lines: vec!["terminal buffer unavailable".to_string()],

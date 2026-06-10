@@ -222,6 +222,21 @@ mod tests {
     }
 
     #[test]
+    fn extracts_text_across_scrollback_live_boundary_snapshot() {
+        let lines = vec![
+            "scrollback".to_string(),
+            "live-one".to_string(),
+            "live-two".to_string(),
+        ];
+        let text = selected_text(
+            &lines,
+            SelectionRange::new(GridPoint { row: 0, col: 6 }, GridPoint { row: 2, col: 4 }),
+        );
+
+        assert_eq!(text, "back\nlive-one\nlive");
+    }
+
+    #[test]
     fn inactive_until_drag_has_extent() {
         let mut state = SelectionState::default();
         state.begin(GridPoint { row: 0, col: 0 });

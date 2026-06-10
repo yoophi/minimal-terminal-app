@@ -128,6 +128,37 @@ impl TerminalState {
         }
     }
 
+    pub fn combined_snapshot(
+        &self,
+        offset_from_bottom: usize,
+        max_visible_lines: usize,
+    ) -> TerminalSnapshot {
+        let max_visible_lines = max_visible_lines.max(1);
+        let scrollback_len = self.grid.scrollback_len();
+        let mut lines = self.grid.scrollback_lines(0, scrollback_len);
+        let mut styled_lines = self.grid.scrollback_styled_lines(0, scrollback_len);
+        lines.extend(self.grid.visible_lines_from(0, self.grid.rows()));
+        styled_lines.extend(self.grid.visible_styled_lines_from(0, self.grid.rows()));
+
+        let total = lines.len();
+        let end = total.saturating_sub(offset_from_bottom).max(1).min(total);
+        let start = end.saturating_sub(max_visible_lines);
+        let cursor_absolute_row = scrollback_len + self.cursor.row;
+        let cursor = if cursor_absolute_row >= start && cursor_absolute_row < end {
+            Cursor::new(cursor_absolute_row - start, self.cursor.col)
+        } else {
+            Cursor::default()
+        };
+
+        TerminalSnapshot {
+            lines: lines[start..end].to_vec(),
+            styled_lines: styled_lines[start..end].to_vec(),
+            cursor,
+            modes: self.modes,
+            scrollback_len,
+        }
+    }
+
     pub fn resize(&mut self, rows: usize, cols: usize) {
         self.grid.resize(rows, cols, &mut self.cursor);
     }
@@ -523,6 +554,18 @@ mod tests {
         terminal.append_bytes(b"\x1b[2;4H\x1b[6n");
 
         assert_eq!(terminal.take_pending_responses(), b"\x1b[2;4R".to_vec());
+    }
+
+    #[test]
+    fn combined_snapshot_spans_scrollback_and_live_screen() {
+        let mut terminal = TerminalState::new(3, 10);
+        terminal.append_bytes(b"one\ntwo\nthree\nfour");
+
+        let snapshot = terminal.combined_snapshot(0, 3);
+        assert_eq!(snapshot.lines, vec!["two", "three", "four"]);
+
+        let snapshot = terminal.combined_snapshot(1, 3);
+        assert_eq!(snapshot.lines, vec!["one", "two", "three"]);
     }
 
     #[test]

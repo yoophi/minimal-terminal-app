@@ -23,13 +23,13 @@ impl TerminalBuffer {
         self.terminal.snapshot(max_visible_lines)
     }
 
-    pub fn scrollback_snapshot(
+    pub fn combined_snapshot(
         &self,
         offset_from_bottom: usize,
         max_visible_lines: usize,
     ) -> TerminalSnapshot {
         self.terminal
-            .scrollback_snapshot(offset_from_bottom, max_visible_lines)
+            .combined_snapshot(offset_from_bottom, max_visible_lines)
     }
 
     pub fn scrollback_len(&self) -> usize {
