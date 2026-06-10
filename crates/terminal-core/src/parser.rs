@@ -428,6 +428,10 @@ impl vte::Perform for ActionCollector {
                 self.g0_charset = Charset::DecSupplementalGraphics;
                 return;
             }
+            ([b'('], b'<') => {
+                self.g0_charset = Charset::DecSupplementalGraphics;
+                return;
+            }
             ([b'('], b'>') => {
                 self.g0_charset = Charset::DecTechnical;
                 return;
@@ -533,6 +537,10 @@ impl vte::Perform for ActionCollector {
                 return;
             }
             ([b')', b'%'], b'5') => {
+                self.g1_charset = Charset::DecSupplementalGraphics;
+                return;
+            }
+            ([b')'], b'<') => {
                 self.g1_charset = Charset::DecSupplementalGraphics;
                 return;
             }
@@ -668,6 +676,10 @@ impl vte::Perform for ActionCollector {
                 self.g2_charset = Charset::DecSupplementalGraphics;
                 return;
             }
+            ([b'*'], b'<') => {
+                self.g2_charset = Charset::DecSupplementalGraphics;
+                return;
+            }
             ([b'*'], b'>') => {
                 self.g2_charset = Charset::DecTechnical;
                 return;
@@ -797,6 +809,10 @@ impl vte::Perform for ActionCollector {
                 return;
             }
             ([b'+', b'%'], b'5') => {
+                self.g3_charset = Charset::DecSupplementalGraphics;
+                return;
+            }
+            ([b'+'], b'<') => {
                 self.g3_charset = Charset::DecSupplementalGraphics;
                 return;
             }
@@ -2032,6 +2048,28 @@ mod tests {
         assert_eq!(
             parser.advance_bytes(b"\x1b)%5\x1b~\xc2\xa1"),
             vec![Action::Print('¡')]
+        );
+    }
+
+    #[test]
+    fn maps_dec_supplemental_upss_alias_charset() {
+        let mut parser = Parser::default();
+
+        assert_eq!(
+            parser.advance_bytes(b"\x1b(<!W\x1b(B!"),
+            vec![Action::Print('¡'), Action::Print('Œ'), Action::Print('!'),]
+        );
+        assert_eq!(
+            parser.advance_bytes(b"\x1b)<\x1b~\xc2\xa1"),
+            vec![Action::Print('¡')]
+        );
+        assert_eq!(
+            parser.advance_bytes(b"\x1b*<\x1bNWx"),
+            vec![Action::Print('Œ'), Action::Print('x')]
+        );
+        assert_eq!(
+            parser.advance_bytes(b"\x1b+<\x1b|\xc3\xb7"),
+            vec![Action::Print('œ')]
         );
     }
 

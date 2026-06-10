@@ -737,6 +737,15 @@ mod tests {
     }
 
     #[test]
+    fn renders_dec_supplemental_upss_alias_charset() {
+        let mut terminal = TerminalState::new(4, 24);
+
+        terminal.append_bytes(b"\x1b(<!W \x1b)<\x1b~\xc2\xa1 \x1b*<\x1bNW \x1b+<\x1b|\xc3\xb7");
+
+        assert_eq!(terminal.snapshot(4).lines[0], "¡Œ ¡ Œ œ");
+    }
+
+    #[test]
     fn renders_dec_technical_charset() {
         let mut terminal = TerminalState::new(4, 24);
 

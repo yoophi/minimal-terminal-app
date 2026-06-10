@@ -36,6 +36,15 @@ fn dec_special_graphics_have_core_evidence() {
 }
 
 #[test]
+fn dec_supplemental_upss_alias_has_core_evidence() {
+    let mut terminal = TerminalState::new(4, 24);
+
+    terminal.append_bytes(b"\x1b(<!W \x1b)<\x1b~\xc2\xa1 \x1b*<\x1bNW \x1b+<\x1b|\xc3\xb7");
+
+    assert_eq!(terminal.snapshot(4).lines[0], "¡Œ ¡ Œ œ");
+}
+
+#[test]
 fn c1_single_shift_charset_sequences_have_core_evidence() {
     let mut terminal = TerminalState::new(4, 20);
 
