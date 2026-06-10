@@ -17,12 +17,14 @@ pub(crate) fn start_if_requested(buffer: Arc<Mutex<TerminalBuffer>>, writer: Pty
     let input = env::var("MINIMAL_TERMINAL_SMOKE_INPUT").ok();
     let followup_input = env::var("MINIMAL_TERMINAL_SMOKE_FOLLOWUP_INPUT").ok();
     let second_followup_input = env::var("MINIMAL_TERMINAL_SMOKE_SECOND_FOLLOWUP_INPUT").ok();
+    let third_followup_input = env::var("MINIMAL_TERMINAL_SMOKE_THIRD_FOLLOWUP_INPUT").ok();
     let mouse_report = env::var("MINIMAL_TERMINAL_SMOKE_MOUSE_REPORT").ok();
     let snapshot_path = env::var("MINIMAL_TERMINAL_SMOKE_SNAPSHOT_PATH").ok();
 
     if input.is_none()
         && followup_input.is_none()
         && second_followup_input.is_none()
+        && third_followup_input.is_none()
         && mouse_report.is_none()
         && snapshot_path.is_none()
     {
@@ -59,6 +61,18 @@ pub(crate) fn start_if_requested(buffer: Arc<Mutex<TerminalBuffer>>, writer: Pty
             if let Err(error) = writer.write_all(input.as_bytes()) {
                 logging::pty_error(&format!(
                     "smoke second follow-up input write failed: {error}"
+                ));
+            }
+        }
+
+        if let Some(input) = third_followup_input {
+            thread::sleep(Duration::from_millis(env_u64(
+                "MINIMAL_TERMINAL_SMOKE_THIRD_FOLLOWUP_INPUT_DELAY_MS",
+                FOLLOWUP_INPUT_DELAY_MS,
+            )));
+            if let Err(error) = writer.write_all(input.as_bytes()) {
+                logging::pty_error(&format!(
+                    "smoke third follow-up input write failed: {error}"
                 ));
             }
         }

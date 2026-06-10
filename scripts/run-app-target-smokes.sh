@@ -174,6 +174,67 @@ run_case_with_two_followups() {
   echo "app target smoke passed: ${name}"
 }
 
+run_case_with_three_followups() {
+  local name="$1"
+  local input="$2"
+  local followup_input="$3"
+  local second_followup_input="$4"
+  local third_followup_input="$5"
+  local marker="$6"
+  local snapshot_delay_ms="${7:-2500}"
+  local followup_delay_ms="${8:-1000}"
+  local second_followup_delay_ms="${9:-1000}"
+  local third_followup_delay_ms="${10:-1000}"
+  local case_dir="${LOG_DIR}/${name}"
+  local snapshot_path="${case_dir}/snapshot.txt"
+  local stdout_path="${case_dir}/stdout.log"
+  local stderr_path="${case_dir}/stderr.log"
+
+  mkdir -p "${case_dir}"
+  rm -f "${snapshot_path}" "${stdout_path}" "${stderr_path}"
+
+  MINIMAL_TERMINAL_SMOKE_INPUT="${input}" \
+  MINIMAL_TERMINAL_SMOKE_FOLLOWUP_INPUT="${followup_input}" \
+  MINIMAL_TERMINAL_SMOKE_SECOND_FOLLOWUP_INPUT="${second_followup_input}" \
+  MINIMAL_TERMINAL_SMOKE_THIRD_FOLLOWUP_INPUT="${third_followup_input}" \
+  MINIMAL_TERMINAL_SMOKE_SNAPSHOT_PATH="${snapshot_path}" \
+  MINIMAL_TERMINAL_SMOKE_INPUT_DELAY_MS=500 \
+  MINIMAL_TERMINAL_SMOKE_FOLLOWUP_INPUT_DELAY_MS="${followup_delay_ms}" \
+  MINIMAL_TERMINAL_SMOKE_SECOND_FOLLOWUP_INPUT_DELAY_MS="${second_followup_delay_ms}" \
+  MINIMAL_TERMINAL_SMOKE_THIRD_FOLLOWUP_INPUT_DELAY_MS="${third_followup_delay_ms}" \
+  MINIMAL_TERMINAL_SMOKE_SNAPSHOT_DELAY_MS="${snapshot_delay_ms}" \
+  MINIMAL_TERMINAL_SMOKE_EXIT=1 \
+  "${APP_BINARY}" >"${stdout_path}" 2>"${stderr_path}" &
+  local pid=$!
+
+  local deadline=$((SECONDS + WAIT_SECONDS))
+  while kill -0 "${pid}" >/dev/null 2>&1 && [[ "${SECONDS}" -lt "${deadline}" ]]; do
+    sleep 0.2
+  done
+
+  if kill -0 "${pid}" >/dev/null 2>&1; then
+    kill "${pid}" >/dev/null 2>&1 || true
+    wait "${pid}" >/dev/null 2>&1 || true
+    echo "app target smoke failed: ${name} did not exit within ${WAIT_SECONDS}s" >&2
+    exit 1
+  fi
+
+  wait "${pid}"
+
+  if [[ ! -f "${snapshot_path}" ]]; then
+    echo "app target smoke failed: ${name} missing snapshot ${snapshot_path}" >&2
+    exit 1
+  fi
+
+  if ! grep -Fq "${marker}" "${snapshot_path}"; then
+    echo "app target smoke failed: ${name} marker not found: ${marker}" >&2
+    echo "snapshot: ${snapshot_path}" >&2
+    exit 1
+  fi
+
+  echo "app target smoke passed: ${name}"
+}
+
 run_case_with_mouse_report() {
   local name="$1"
   local input="$2"
@@ -272,6 +333,17 @@ if command -v fzf >/dev/null 2>&1; then
     "fzf-multi:beta" \
     1500 \
     1000 \
+    700
+  run_case_with_three_followups \
+    "fzf-shell-ctrl-t" \
+    "tmpdir=\"\$(mktemp -d /tmp/minimal-terminal-fzf-shell.XXXXXX)\"; touch \"\$tmpdir/alpha-file\" \"\$tmpdir/phase-fzf-shell-target\"; cd \"\$tmpdir\"; source /opt/homebrew/opt/fzf/shell/key-bindings.zsh; printf \"fzf-shell-ready\\n\""$'\n' \
+    $'printf "fzf-shell:%s\\n" \024' \
+    "phase-fzf-shell-target"$'\r' \
+    $'\r' \
+    "fzf-shell:phase-fzf-shell-target" \
+    2200 \
+    900 \
+    1200 \
     700
   ran=1
 else
