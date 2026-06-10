@@ -6,6 +6,20 @@ use crate::style::{Color, Style};
 const MAX_OSC52_DECODED_BYTES: usize = 1024 * 1024;
 const MAX_OSC52_SELECTOR_BYTES: usize = 64;
 const MAX_OSC_TITLE_BYTES: usize = 4096;
+const ISO_LATIN2_SUPPLEMENTAL: [char; 96] = [
+    '\u{00a0}', '\u{0104}', '\u{02d8}', '\u{0141}', '\u{00a4}', '\u{013d}', '\u{015a}', '\u{00a7}',
+    '\u{00a8}', '\u{0160}', '\u{015e}', '\u{0164}', '\u{0179}', '\u{00ad}', '\u{017d}', '\u{017b}',
+    '\u{00b0}', '\u{0105}', '\u{02db}', '\u{0142}', '\u{00b4}', '\u{013e}', '\u{015b}', '\u{02c7}',
+    '\u{00b8}', '\u{0161}', '\u{015f}', '\u{0165}', '\u{017a}', '\u{02dd}', '\u{017e}', '\u{017c}',
+    '\u{0154}', '\u{00c1}', '\u{00c2}', '\u{0102}', '\u{00c4}', '\u{0139}', '\u{0106}', '\u{00c7}',
+    '\u{010c}', '\u{00c9}', '\u{0118}', '\u{00cb}', '\u{011a}', '\u{00cd}', '\u{00ce}', '\u{010e}',
+    '\u{0110}', '\u{0143}', '\u{0147}', '\u{00d3}', '\u{00d4}', '\u{0150}', '\u{00d6}', '\u{00d7}',
+    '\u{0158}', '\u{016e}', '\u{00da}', '\u{0170}', '\u{00dc}', '\u{00dd}', '\u{0162}', '\u{00df}',
+    '\u{0155}', '\u{00e1}', '\u{00e2}', '\u{0103}', '\u{00e4}', '\u{013a}', '\u{0107}', '\u{00e7}',
+    '\u{010d}', '\u{00e9}', '\u{0119}', '\u{00eb}', '\u{011b}', '\u{00ed}', '\u{00ee}', '\u{010f}',
+    '\u{0111}', '\u{0144}', '\u{0148}', '\u{00f3}', '\u{00f4}', '\u{0151}', '\u{00f6}', '\u{00f7}',
+    '\u{0159}', '\u{016f}', '\u{00fa}', '\u{0171}', '\u{00fc}', '\u{00fd}', '\u{0163}', '\u{02d9}',
+];
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub(crate) enum Action {
@@ -109,6 +123,7 @@ enum Charset {
     Greek,
     Hebrew,
     IsoLatin1Supplemental,
+    IsoLatin2Supplemental,
     Italian,
     JisKatakana,
     JisRoman,
@@ -499,6 +514,10 @@ impl vte::Perform for ActionCollector {
                 self.g1_charset = Charset::IsoLatin1Supplemental;
                 return;
             }
+            ([b'-'], b'B') => {
+                self.g1_charset = Charset::IsoLatin2Supplemental;
+                return;
+            }
             ([b'*'], b'0') => {
                 self.g2_charset = Charset::DecSpecialGraphics;
                 return;
@@ -609,6 +628,10 @@ impl vte::Perform for ActionCollector {
             }
             ([b'.'], b'A') => {
                 self.g2_charset = Charset::IsoLatin1Supplemental;
+                return;
+            }
+            ([b'.'], b'B') => {
+                self.g2_charset = Charset::IsoLatin2Supplemental;
                 return;
             }
             ([b'+'], b'0') => {
@@ -723,6 +746,10 @@ impl vte::Perform for ActionCollector {
                 self.g3_charset = Charset::IsoLatin1Supplemental;
                 return;
             }
+            ([b'/'], b'B') => {
+                self.g3_charset = Charset::IsoLatin2Supplemental;
+                return;
+            }
             ([b'(' | b')' | b'*' | b'+' | b'-' | b'.' | b'/'], _) => return,
             _ => Action::Ignore,
         };
@@ -738,6 +765,13 @@ fn map_printable_char(ch: char, charset: Charset) -> char {
     if charset == Charset::IsoLatin1Supplemental {
         return match ch {
             ' '..='\u{7f}' => char::from_u32(ch as u32 + 0x80).unwrap_or(ch),
+            _ => ch,
+        };
+    }
+
+    if charset == Charset::IsoLatin2Supplemental {
+        return match ch {
+            ' '..='\u{7f}' => ISO_LATIN2_SUPPLEMENTAL[ch as usize - 0x20],
             _ => ch,
         };
     }
@@ -1808,6 +1842,24 @@ mod tests {
         assert_eq!(
             parser.advance_bytes(b"\x1b/A\x1b|\xc2\xa4"),
             vec![Action::Print('¤')]
+        );
+    }
+
+    #[test]
+    fn maps_iso_latin2_supplemental_charset() {
+        let mut parser = Parser::default();
+
+        assert_eq!(
+            parser.advance_bytes(b"\x1b-B\x1b~\xc2\xa1\xc3\x80\xc3\xbf"),
+            vec![Action::Print('Ą'), Action::Print('Ŕ'), Action::Print('˙')]
+        );
+        assert_eq!(
+            parser.advance_bytes(b"\x1b.B\x1b}\xc2\xa2"),
+            vec![Action::Print('˘')]
+        );
+        assert_eq!(
+            parser.advance_bytes(b"\x1b/B\x1b|\xc3\xa0"),
+            vec![Action::Print('ŕ')]
         );
     }
 

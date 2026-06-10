@@ -34,6 +34,15 @@ fn iso_latin1_supplemental_charset_has_core_evidence() {
 }
 
 #[test]
+fn iso_latin2_supplemental_charset_has_core_evidence() {
+    let mut terminal = TerminalState::new(4, 20);
+
+    terminal.append_bytes(b"\x1b-B\x1b~\xc2\xa1\xc3\x80\xc3\xbf");
+
+    assert_eq!(terminal.snapshot(4).lines[0], "ĄŔ˙");
+}
+
+#[test]
 fn style_sequences_have_snapshot_evidence() {
     let mut terminal = TerminalState::new(3, 32);
 
