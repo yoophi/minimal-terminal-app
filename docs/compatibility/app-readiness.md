@@ -40,7 +40,7 @@ Phase 009-018은 1-5번의 많은 부분을 구현하거나 검증 대상으로 
 - mouse reporting과 native selection 충돌
 - alternate screen 안에서 다시 다른 TUI를 실행하는 nested workflow
 - resize 후 cursor, pane, prompt redraw
-- OSC 52 query/readback, OSC title, 기타 xterm extension
+- OSC 52 query/readback과 기타 xterm extension
 
 따라서 Phase 018 이후에는 sequence family 중심의 compatibility 확장만으로 충분하다고 보지 않고, 실제 앱별 workflow를 통과 기준으로 삼아야 한다.
 

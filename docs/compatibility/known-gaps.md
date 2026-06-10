@@ -176,3 +176,9 @@ Phase 024에서 SGR mouse mode가 꺼진 상태의 legacy X10-style mouse report
 상태: `supported`
 
 Phase 026에서 Shift, Option, Control modifier bit를 legacy 및 SGR mouse report code에 반영했다. Option은 xterm Meta modifier bit로 인코딩한다. runtime `vim`/`less` mouse smoke evidence는 Mouse Reporting gap으로 남긴다.
+
+### OSC Title Update
+
+상태: `supported`
+
+Phase 027에서 `OSC 0 ; title BEL`과 `OSC 2 ; title BEL` window title update를 구현했다. core parser가 pending title write를 큐잉하고 AppKit layer가 main thread에서 window title에 반영한다.

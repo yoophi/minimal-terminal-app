@@ -360,6 +360,7 @@ define_class!(
         #[unsafe(method(redrawTimerFired:))]
         fn redraw_timer_fired(&self, _timer: &NSTimer) {
             self.apply_pending_clipboard_writes();
+            self.apply_pending_title_writes();
             self.as_super().setNeedsDisplay(true);
         }
     }
@@ -455,6 +456,26 @@ impl TerminalView {
             });
         }
         logging::pty_info("terminal view applied OSC 52 clipboard write");
+    }
+
+    fn apply_pending_title_writes(&self) {
+        let title_writes = match self.ivars().buffer.lock() {
+            Ok(mut buffer) => buffer.take_pending_title_writes(),
+            Err(_) => {
+                logging::pty_error("terminal buffer lock poisoned while draining OSC title");
+                return;
+            }
+        };
+
+        let Some(title) = title_writes.last() else {
+            return;
+        };
+        let Some(window) = self.as_super().window() else {
+            return;
+        };
+
+        window.setTitle(&NSString::from_str(title));
+        logging::pty_info("terminal view applied OSC title update");
     }
 
     fn write_text_to_pty(&self, text: &str, source: &str) {

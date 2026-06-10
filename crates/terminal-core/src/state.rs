@@ -46,6 +46,7 @@ pub struct TerminalState {
     scroll_region: Option<(usize, usize)>,
     pending_responses: Vec<u8>,
     pending_clipboard_writes: Vec<String>,
+    pending_title_writes: Vec<String>,
     main_screen: Option<ScreenState>,
     parser: Parser,
 }
@@ -71,6 +72,7 @@ impl TerminalState {
             scroll_region: None,
             pending_responses: Vec::new(),
             pending_clipboard_writes: Vec::new(),
+            pending_title_writes: Vec::new(),
             main_screen: None,
             parser: Parser::default(),
         }
@@ -88,6 +90,10 @@ impl TerminalState {
 
     pub fn take_pending_clipboard_writes(&mut self) -> Vec<String> {
         std::mem::take(&mut self.pending_clipboard_writes)
+    }
+
+    pub fn take_pending_title_writes(&mut self) -> Vec<String> {
+        std::mem::take(&mut self.pending_title_writes)
     }
 
     pub fn snapshot(&self, max_visible_lines: usize) -> TerminalSnapshot {
@@ -233,6 +239,7 @@ impl TerminalState {
                 self.pending_responses.extend_from_slice(b"\x1b[>0;0;0c")
             }
             Action::SetClipboard(text) => self.pending_clipboard_writes.push(text),
+            Action::SetWindowTitle(title) => self.pending_title_writes.push(title),
             Action::DeviceStatusReport => self.pending_responses.extend_from_slice(b"\x1b[0n"),
             Action::CursorPositionReport => {
                 self.pending_responses.extend_from_slice(
@@ -595,6 +602,19 @@ mod tests {
             vec!["hello".to_string()]
         );
         assert!(terminal.take_pending_clipboard_writes().is_empty());
+    }
+
+    #[test]
+    fn queues_osc_title_write() {
+        let mut terminal = TerminalState::new(4, 10);
+
+        terminal.append_bytes(b"\x1b]2;minimal terminal\x07");
+
+        assert_eq!(
+            terminal.take_pending_title_writes(),
+            vec!["minimal terminal".to_string()]
+        );
+        assert!(terminal.take_pending_title_writes().is_empty());
     }
 
     #[test]

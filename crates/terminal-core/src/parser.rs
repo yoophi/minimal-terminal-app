@@ -4,6 +4,7 @@ use crate::cursor::CursorStyle;
 use crate::style::{Color, Style};
 
 const MAX_OSC52_DECODED_BYTES: usize = 1024 * 1024;
+const MAX_OSC_TITLE_BYTES: usize = 4096;
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub(crate) enum Action {
@@ -33,6 +34,7 @@ pub(crate) enum Action {
     PrimaryDeviceAttributes,
     SecondaryDeviceAttributes,
     SetClipboard(String),
+    SetWindowTitle(String),
     DeviceStatusReport,
     CursorPositionReport,
     CursorPosition { row: usize, col: usize },
@@ -146,6 +148,10 @@ impl vte::Perform for ActionCollector {
 }
 
 fn parse_osc(params: &[&[u8]]) -> Action {
+    if params.len() >= 2 && matches!(params[0], b"0" | b"2") {
+        return parse_osc_title(params[1]);
+    }
+
     if params.len() < 3 || params[0] != b"52" {
         return Action::Ignore;
     }
@@ -164,6 +170,17 @@ fn parse_osc(params: &[&[u8]]) -> Action {
 
     match String::from_utf8(decoded) {
         Ok(text) => Action::SetClipboard(text),
+        Err(_) => Action::Ignore,
+    }
+}
+
+fn parse_osc_title(title: &[u8]) -> Action {
+    if title.is_empty() || title.len() > MAX_OSC_TITLE_BYTES {
+        return Action::Ignore;
+    }
+
+    match std::str::from_utf8(title) {
+        Ok(title) => Action::SetWindowTitle(title.to_string()),
         Err(_) => Action::Ignore,
     }
 }
@@ -374,8 +391,21 @@ mod tests {
         assert_eq!(parser.advance('t'), None);
         assert_eq!(parser.advance('l'), None);
         assert_eq!(parser.advance('e'), None);
-        assert_eq!(parser.advance('\u{07}'), Some(Action::Ignore));
+        assert_eq!(
+            parser.advance('\u{07}'),
+            Some(Action::SetWindowTitle("title".to_string()))
+        );
         assert_eq!(parser.advance('x'), Some(Action::Print('x')));
+    }
+
+    #[test]
+    fn parses_osc_title_update() {
+        let mut parser = Parser::default();
+        assert_eq!(
+            parser.advance_bytes(b"\x1b]2;minimal terminal\x07"),
+            vec![Action::SetWindowTitle("minimal terminal".to_string())]
+        );
+        assert_eq!(parser.advance_bytes(b"\x1b]2;\x07"), vec![Action::Ignore]);
     }
 
     #[test]

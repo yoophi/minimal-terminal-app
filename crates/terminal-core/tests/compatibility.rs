@@ -101,6 +101,18 @@ fn osc52_clipboard_write_has_core_evidence() {
 }
 
 #[test]
+fn osc_title_write_has_core_evidence() {
+    let mut terminal = TerminalState::new(4, 10);
+
+    terminal.append_bytes(b"\x1b]2;minimal terminal\x07");
+
+    assert_eq!(
+        terminal.take_pending_title_writes(),
+        vec!["minimal terminal".to_string()]
+    );
+}
+
+#[test]
 fn cursor_style_sequences_have_core_evidence() {
     let mut terminal = TerminalState::new(4, 10);
 
