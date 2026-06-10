@@ -1,10 +1,12 @@
 use crate::cursor::Cursor;
 use crate::grid::Grid;
-use crate::parser::{Action, LineClearMode, Parser, ScreenClearMode};
+use crate::parser::{apply_sgr, Action, LineClearMode, Parser, ScreenClearMode};
+use crate::style::{Style, StyledLine};
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct TerminalSnapshot {
     pub lines: Vec<String>,
+    pub styled_lines: Vec<StyledLine>,
     pub cursor: Cursor,
     pub scrollback_len: usize,
 }
@@ -13,6 +15,7 @@ pub struct TerminalState {
     grid: Grid,
     cursor: Cursor,
     saved_cursor: Cursor,
+    current_style: Style,
     main_screen: Option<ScreenState>,
     parser: Parser,
 }
@@ -22,6 +25,7 @@ struct ScreenState {
     grid: Grid,
     cursor: Cursor,
     saved_cursor: Cursor,
+    current_style: Style,
 }
 
 impl TerminalState {
@@ -30,6 +34,7 @@ impl TerminalState {
             grid: Grid::new(rows, cols),
             cursor: Cursor::default(),
             saved_cursor: Cursor::default(),
+            current_style: Style::default(),
             main_screen: None,
             parser: Parser::default(),
         }
@@ -50,6 +55,7 @@ impl TerminalState {
         };
         TerminalSnapshot {
             lines: self.grid.visible_lines_from(start, visible_rows),
+            styled_lines: self.grid.visible_styled_lines_from(start, visible_rows),
             cursor: Cursor::new(self.cursor.row.saturating_sub(start), self.cursor.col),
             scrollback_len: self.grid.scrollback_len(),
         }
@@ -76,6 +82,9 @@ impl TerminalState {
             lines: self
                 .grid
                 .scrollback_lines(offset_from_bottom, max_visible_lines),
+            styled_lines: self
+                .grid
+                .scrollback_styled_lines(offset_from_bottom, max_visible_lines),
             cursor: Cursor::default(),
             scrollback_len: self.grid.scrollback_len(),
         }
@@ -87,14 +96,17 @@ impl TerminalState {
 
     fn apply(&mut self, action: Action) {
         match action {
-            Action::Print(ch) => self.grid.put_char(&mut self.cursor, ch),
+            Action::Print(ch) => self
+                .grid
+                .put_char(&mut self.cursor, ch, self.current_style),
             Action::CarriageReturn => self.grid.carriage_return(&mut self.cursor),
             Action::Newline => self.grid.newline(&mut self.cursor),
             Action::Backspace => self.grid.backspace(&mut self.cursor),
             Action::Tab => {
                 let next_tab = ((self.cursor.col / 8) + 1) * 8;
                 while self.cursor.col < next_tab.min(self.grid.cols()) {
-                    self.grid.put_char(&mut self.cursor, ' ');
+                    self.grid
+                        .put_char(&mut self.cursor, ' ', self.current_style);
                 }
             }
             Action::ClearLine(mode) => match mode {
@@ -128,6 +140,7 @@ impl TerminalState {
                 let row = self.cursor.row;
                 self.grid.move_cursor(&mut self.cursor, row, col);
             }
+            Action::SetGraphicRendition(numbers) => apply_sgr(&mut self.current_style, &numbers),
             Action::Ignore => {}
         }
     }
@@ -142,12 +155,14 @@ impl TerminalState {
             grid: self.grid.clone(),
             cursor: self.cursor,
             saved_cursor: self.saved_cursor,
+            current_style: self.current_style,
         };
         let rows = self.grid.rows();
         let cols = self.grid.cols();
         self.grid = Grid::new(rows, cols);
         self.cursor = Cursor::default();
         self.saved_cursor = Cursor::default();
+        self.current_style = Style::default();
         self.main_screen = Some(main_screen);
     }
 
@@ -159,13 +174,14 @@ impl TerminalState {
         self.grid = main_screen.grid;
         self.cursor = main_screen.cursor;
         self.saved_cursor = main_screen.saved_cursor;
+        self.current_style = main_screen.current_style;
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::TerminalState;
-    use crate::Cursor;
+    use crate::{Color, Cursor, Style};
 
     #[test]
     fn writes_printable_text_and_tracks_cursor() {
@@ -314,5 +330,45 @@ mod tests {
         let snapshot = terminal.snapshot(3);
         assert_eq!(snapshot.lines[0], "A");
         assert_eq!(snapshot.cursor, Cursor::new(0, 1));
+    }
+
+    #[test]
+    fn stores_sgr_style_per_cell() {
+        let mut terminal = TerminalState::new(3, 20);
+        terminal.append_bytes(b"\x1b[1;31mred\x1b[0m plain");
+
+        let snapshot = terminal.snapshot(3);
+        assert_eq!(snapshot.lines[0], "red plain");
+        assert_eq!(snapshot.styled_lines[0].spans.len(), 2);
+        assert_eq!(snapshot.styled_lines[0].spans[0].text, "red");
+        assert_eq!(
+            snapshot.styled_lines[0].spans[0].style,
+            Style {
+                foreground: Some(Color::Indexed(1)),
+                bold: true,
+                ..Style::default()
+            }
+        );
+        assert_eq!(snapshot.styled_lines[0].spans[1].text, " plain");
+        assert_eq!(
+            snapshot.styled_lines[0].spans[1].style,
+            Style::default()
+        );
+    }
+
+    #[test]
+    fn stores_extended_sgr_colors() {
+        let mut terminal = TerminalState::new(3, 20);
+        terminal.append_bytes(b"\x1b[38;5;196midx\x1b[48;2;1;2;3m rgb");
+
+        let snapshot = terminal.snapshot(3);
+        assert_eq!(
+            snapshot.styled_lines[0].spans[0].style.foreground,
+            Some(Color::Indexed(196))
+        );
+        assert_eq!(
+            snapshot.styled_lines[0].spans[1].style.background,
+            Some(Color::Rgb(1, 2, 3))
+        );
     }
 }

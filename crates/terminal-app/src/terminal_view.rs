@@ -135,6 +135,7 @@ define_class!(
                 })
                 .unwrap_or_else(|_| TerminalSnapshot {
                     lines: vec!["terminal buffer unavailable".to_string()],
+                    styled_lines: Vec::new(),
                     cursor: terminal_core::Cursor::default(),
                     scrollback_len: 0,
                 });

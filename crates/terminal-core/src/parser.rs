@@ -1,3 +1,5 @@
+use crate::style::{Color, Style};
+
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub(crate) enum Action {
     Print(char),
@@ -17,6 +19,7 @@ pub(crate) enum Action {
     CursorRight(usize),
     CursorLeft(usize),
     CursorColumn(usize),
+    SetGraphicRendition(Vec<usize>),
     Ignore,
 }
 
@@ -142,7 +145,7 @@ fn parse_csi(numbers: &[usize], intermediates: &[u8], final_byte: char) -> Actio
         },
         's' => Action::SaveCursor,
         'u' => Action::RestoreCursor,
-        'm' => Action::Ignore,
+        'm' => Action::SetGraphicRendition(numbers.to_vec()),
         _ => Action::Ignore,
     }
 }
@@ -172,6 +175,64 @@ fn first_or_default(numbers: &[usize], default: usize) -> usize {
 
 fn contains_any(numbers: &[usize], targets: &[usize]) -> bool {
     numbers.iter().any(|number| targets.contains(number))
+}
+
+pub(crate) fn apply_sgr(style: &mut Style, numbers: &[usize]) {
+    let numbers = if numbers.is_empty() { &[0][..] } else { numbers };
+    let mut index = 0;
+
+    while index < numbers.len() {
+        match numbers[index] {
+            0 => style.reset(),
+            1 => style.bold = true,
+            3 => style.italic = true,
+            4 => style.underline = true,
+            7 => style.inverse = true,
+            22 => style.bold = false,
+            23 => style.italic = false,
+            24 => style.underline = false,
+            27 => style.inverse = false,
+            30..=37 => style.set_foreground(Some(Color::Indexed((numbers[index] - 30) as u8))),
+            39 => style.set_foreground(None),
+            40..=47 => style.set_background(Some(Color::Indexed((numbers[index] - 40) as u8))),
+            49 => style.set_background(None),
+            90..=97 => {
+                style.set_foreground(Some(Color::Indexed((numbers[index] - 90 + 8) as u8)))
+            }
+            100..=107 => {
+                style.set_background(Some(Color::Indexed((numbers[index] - 100 + 8) as u8)))
+            }
+            38 | 48 => {
+                let is_foreground = numbers[index] == 38;
+                if let Some((color, consumed)) = parse_extended_color(&numbers[index + 1..]) {
+                    if is_foreground {
+                        style.set_foreground(Some(color));
+                    } else {
+                        style.set_background(Some(color));
+                    }
+                    index += consumed;
+                }
+            }
+            _ => {}
+        }
+
+        index += 1;
+    }
+}
+
+fn parse_extended_color(numbers: &[usize]) -> Option<(Color, usize)> {
+    match numbers {
+        [5, color, ..] => Some((Color::Indexed((*color).min(255) as u8), 2)),
+        [2, red, green, blue, ..] => Some((
+            Color::Rgb(
+                (*red).min(255) as u8,
+                (*green).min(255) as u8,
+                (*blue).min(255) as u8,
+            ),
+            4,
+        )),
+        _ => None,
+    }
 }
 
 #[cfg(test)]
@@ -279,5 +340,20 @@ mod tests {
         assert_eq!(parser.advance('0'), None);
         assert_eq!(parser.advance('4'), None);
         assert_eq!(parser.advance('h'), Some(Action::Ignore));
+    }
+
+    #[test]
+    fn parses_sgr_parameters() {
+        let mut parser = Parser::default();
+        assert_eq!(parser.advance('\u{1b}'), None);
+        assert_eq!(parser.advance('['), None);
+        assert_eq!(parser.advance('1'), None);
+        assert_eq!(parser.advance(';'), None);
+        assert_eq!(parser.advance('3'), None);
+        assert_eq!(parser.advance('1'), None);
+        assert_eq!(
+            parser.advance('m'),
+            Some(Action::SetGraphicRendition(vec![1, 31]))
+        );
     }
 }

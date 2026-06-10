@@ -1,5 +1,6 @@
 use crate::cell::Cell;
 use crate::cursor::Cursor;
+use crate::style::{Style, StyledLine, StyledSpan};
 
 #[derive(Clone, Debug)]
 pub(crate) struct Grid {
@@ -56,7 +57,7 @@ impl Grid {
         cursor.col = cursor.col.min(self.cols - 1);
     }
 
-    pub(crate) fn put_char(&mut self, cursor: &mut Cursor, ch: char) {
+    pub(crate) fn put_char(&mut self, cursor: &mut Cursor, ch: char, style: Style) {
         let width = char_width(ch);
         if width == 0 {
             return;
@@ -69,9 +70,9 @@ impl Grid {
             self.newline(cursor);
         }
 
-        self.lines[cursor.row][cursor.col].set_ch(ch);
+        self.lines[cursor.row][cursor.col].set_ch(ch, style);
         if width == 2 && cursor.col + 1 < self.cols {
-            self.lines[cursor.row][cursor.col + 1].set_wide_continuation();
+            self.lines[cursor.row][cursor.col + 1].set_wide_continuation(style);
         }
 
         cursor.col += width;
@@ -177,6 +178,20 @@ impl Grid {
             .collect()
     }
 
+    pub(crate) fn visible_styled_lines_from(
+        &self,
+        start: usize,
+        max_visible_lines: usize,
+    ) -> Vec<StyledLine> {
+        let max_visible_lines = max_visible_lines.max(1);
+        let start = start.min(self.rows.saturating_sub(1));
+        let end = (start + max_visible_lines).min(self.rows);
+        self.lines[start..end]
+            .iter()
+            .map(|line| render_styled_line(line))
+            .collect()
+    }
+
     pub(crate) fn scrollback_lines(
         &self,
         offset_from_bottom: usize,
@@ -191,6 +206,23 @@ impl Grid {
         self.scrollback[start..end]
             .iter()
             .map(|line| render_line(line))
+            .collect()
+    }
+
+    pub(crate) fn scrollback_styled_lines(
+        &self,
+        offset_from_bottom: usize,
+        max_lines: usize,
+    ) -> Vec<StyledLine> {
+        if self.scrollback.is_empty() || max_lines == 0 {
+            return Vec::new();
+        }
+
+        let end = self.scrollback.len().saturating_sub(offset_from_bottom);
+        let start = end.saturating_sub(max_lines);
+        self.scrollback[start..end]
+            .iter()
+            .map(|line| render_styled_line(line))
             .collect()
     }
 
@@ -229,6 +261,38 @@ fn render_line(line: &[Cell]) -> String {
         }
     }
     trim_trailing_blanks(text)
+}
+
+fn render_styled_line(line: &[Cell]) -> StyledLine {
+    let end = last_nonblank_cell_index(line);
+    let mut spans: Vec<StyledSpan> = Vec::new();
+
+    for cell in &line[..end] {
+        if cell.is_wide_continuation() {
+            continue;
+        }
+
+        if let Some(last) = spans.last_mut() {
+            if last.style == cell.style() {
+                last.text.push(cell.ch());
+                continue;
+            }
+        }
+
+        spans.push(StyledSpan {
+            text: cell.ch().to_string(),
+            style: cell.style(),
+        });
+    }
+
+    StyledLine { spans }
+}
+
+fn last_nonblank_cell_index(line: &[Cell]) -> usize {
+    line.iter()
+        .rposition(|cell| cell.ch() != ' ' || cell.is_wide_continuation())
+        .map(|index| index + 1)
+        .unwrap_or(0)
 }
 
 fn trim_trailing_blanks(mut text: String) -> String {

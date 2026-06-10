@@ -1,7 +1,10 @@
+use crate::style::Style;
+
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub(crate) struct Cell {
     ch: char,
     wide_continuation: bool,
+    style: Style,
 }
 
 impl Cell {
@@ -9,6 +12,7 @@ impl Cell {
         Self {
             ch: ' ',
             wide_continuation: false,
+            style: Style::default(),
         }
     }
 
@@ -20,18 +24,25 @@ impl Cell {
         self.wide_continuation
     }
 
-    pub(crate) fn set_ch(&mut self, ch: char) {
-        self.ch = ch;
-        self.wide_continuation = false;
+    pub(crate) fn style(&self) -> Style {
+        self.style
     }
 
-    pub(crate) fn set_wide_continuation(&mut self) {
+    pub(crate) fn set_ch(&mut self, ch: char, style: Style) {
+        self.ch = ch;
+        self.wide_continuation = false;
+        self.style = style;
+    }
+
+    pub(crate) fn set_wide_continuation(&mut self, style: Style) {
         self.ch = ' ';
         self.wide_continuation = true;
+        self.style = style;
     }
 
     pub(crate) fn clear(&mut self) {
         self.ch = ' ';
         self.wide_continuation = false;
+        self.style = Style::default();
     }
 }
