@@ -33,6 +33,8 @@ const CELL_WIDTH: f64 = 8.4;
 const CURSOR_WIDTH: f64 = 8.0;
 const CURSOR_HEIGHT: f64 = 16.0;
 const KEY_RETURN: u16 = 36;
+const KEY_TAB: u16 = 48;
+const KEY_ESCAPE: u16 = 53;
 const KEY_KEYPAD_ENTER: u16 = 76;
 const KEY_PAGE_UP: u16 = 116;
 const KEY_PAGE_DOWN: u16 = 121;
@@ -682,6 +684,8 @@ fn should_use_text_input(event: &NSEvent) -> bool {
     !matches!(
         event.keyCode(),
         KEY_RETURN
+            | KEY_TAB
+            | KEY_ESCAPE
             | KEY_KEYPAD_ENTER
             | KEY_PAGE_UP
             | KEY_PAGE_DOWN

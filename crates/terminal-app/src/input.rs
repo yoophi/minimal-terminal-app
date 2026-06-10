@@ -1,6 +1,8 @@
 use objc2_app_kit::{NSEvent, NSEventModifierFlags};
 
 const KEY_RETURN: u16 = 36;
+const KEY_TAB: u16 = 48;
+const KEY_ESCAPE: u16 = 53;
 const KEY_KEYPAD_ENTER: u16 = 76;
 const KEY_KEYPAD_DECIMAL: u16 = 65;
 const KEY_KEYPAD_MULTIPLY: u16 = 67;
@@ -121,6 +123,8 @@ fn encode_key(key_code: u16, flags: NSEventModifierFlags, input: &str) -> Option
 
     match key_code {
         KEY_RETURN | KEY_KEYPAD_ENTER => Some(b"\r".to_vec()),
+        KEY_TAB => Some(b"\t".to_vec()),
+        KEY_ESCAPE => Some(vec![0x1b]),
         KEY_BACKSPACE => Some(vec![0x7f]),
         KEY_FORWARD_DELETE => Some(b"\x1b[3~".to_vec()),
         KEY_HOME => Some(vec![0x01]),
@@ -238,6 +242,8 @@ mod tests {
     use objc2_app_kit::NSEventModifierFlags;
 
     const KEY_RETURN: u16 = 36;
+    const KEY_TAB: u16 = 48;
+    const KEY_ESCAPE: u16 = 53;
     const KEY_KEYPAD_ENTER: u16 = 76;
     const KEY_KEYPAD_DECIMAL: u16 = 65;
     const KEY_KEYPAD_PLUS: u16 = 69;
@@ -275,6 +281,12 @@ mod tests {
     fn encodes_return_as_carriage_return() {
         assert_eq!(encode_key_code(KEY_RETURN, ""), Some(b"\r".to_vec()));
         assert_eq!(encode_key_code(KEY_KEYPAD_ENTER, ""), Some(b"\r".to_vec()));
+    }
+
+    #[test]
+    fn encodes_tab_and_escape_as_control_bytes() {
+        assert_eq!(encode_key_code(KEY_TAB, ""), Some(b"\t".to_vec()));
+        assert_eq!(encode_key_code(KEY_ESCAPE, ""), Some(vec![0x1b]));
     }
 
     #[test]
