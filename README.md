@@ -47,6 +47,9 @@ crates/
 └── terminal-app/      # macOS native AppKit application
 
 docs/
+├── phases/
+│   ├── phase001.md
+│   └── phase002.md
 └── LOGGING.md
 
 scripts/
