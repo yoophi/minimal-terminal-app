@@ -233,6 +233,8 @@ vttest
 
 현재 local verification environment에서는 `/opt/homebrew/bin/vttest`와 `vttest -V` 결과 `VT100 test program, version 2.7 (20251205)`를 확인했다. menu 기반 runtime 결과는 아직 수동 smoke 대상으로 남긴다.
 
+Phase 028에서 시작 메뉴 output을 `tests/tui_replay.rs::vttest_menu_replay_renders_menu_and_queues_da_response` fixture로 고정했다. 이 fixture는 full interactive result가 아니라 vttest 초기 화면과 primary DA response path에 대한 자동 evidence다.
+
 ## 실패 처리
 
 Smoke 테스트가 실패하면 다음 순서로 반영한다.

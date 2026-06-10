@@ -75,3 +75,26 @@ fn top_replay_keeps_styled_redraw() {
         }
     );
 }
+
+#[test]
+fn vttest_menu_replay_renders_menu_and_queues_da_response() {
+    let input = decode_fixture(include_str!("fixtures/tui/vttest_menu.ansi"));
+    let mut terminal = TerminalState::new(16, 80);
+
+    terminal.append_bytes(&input);
+
+    let snapshot = terminal.snapshot(16);
+    assert!(snapshot
+        .lines
+        .iter()
+        .any(|line| line.contains("VT100 test program, version 2.7")));
+    assert!(snapshot
+        .lines
+        .iter()
+        .any(|line| line.contains("Choose test type:")));
+    assert!(snapshot
+        .lines
+        .iter()
+        .any(|line| line.contains("6. Test of terminal reports")));
+    assert_eq!(terminal.take_pending_responses(), b"\x1b[?1;2c".to_vec());
+}

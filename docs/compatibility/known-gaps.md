@@ -85,6 +85,7 @@
 
 - `vttest`는 terminal emulator 호환성을 검증하는 de facto 테스트 도구다.
 - 현재 local verification environment에서 `/opt/homebrew/bin/vttest`와 `vttest -V`는 확인했다.
+- Phase 028에서 vttest 시작 메뉴 출력 replay fixture를 추가했다.
 - 실제 menu 기반 runtime 결과는 아직 수집하지 못했다.
 
 권장 다음 작업:
