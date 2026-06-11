@@ -434,7 +434,7 @@ else
 fi
 
 head_sha="$(git rev-parse --short HEAD)"
-run_case "git-log" $'git --no-pager log --oneline -1 --no-color\r' "${head_sha}" 5000
+run_case "git-log" $'git --no-pager log --oneline -1 --no-color\r\r' "${head_sha}" 5000
 run_case_with_followup \
   "git-pager-quit" \
   $'git log --oneline --graph --decorate -100 --color=never | less; printf "git-pager-quit-ok\\n"\n' \
