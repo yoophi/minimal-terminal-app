@@ -1639,6 +1639,10 @@ mod tests {
             Some((NSEventModifierFlags::Shift, 121))
         );
         assert_eq!(
+            super::native_key_smoke_event("control-page-down"),
+            Some((NSEventModifierFlags::Control, 121))
+        );
+        assert_eq!(
             super::native_key_smoke_event("shift-delete"),
             Some((NSEventModifierFlags::Shift, 117))
         );
