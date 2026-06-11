@@ -1372,6 +1372,20 @@ if command -v vttest >/dev/null 2>&1; then
     "Report is: <27> [ 5 ; 1 R  -- OK" \
     2500 \
     1000
+  run_case_with_followup \
+    "vttest-primary-da" \
+    "${vttest_path}"$'\n' \
+    $'6\r4\r' \
+    "means VT100 with AVO" \
+    2500 \
+    1000
+  run_case_with_followup \
+    "vttest-secondary-da" \
+    "${vttest_path}"$'\n' \
+    $'6\r5\r' \
+    "Pv=0, firmware version 0.0" \
+    2500 \
+    1000
   ran=1
 else
   echo "app target smoke skipped: vttest not found"
