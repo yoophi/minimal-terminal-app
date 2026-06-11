@@ -244,6 +244,7 @@ scripts/run-app-target-smokes.sh
 - `codex-help`: `codex-cli`가 없고 `codex`가 설치된 경우 `codex --help` 출력 확인
 - `vttest-version`: `vttest -V` version output snapshot
 - `vttest-menu`: `vttest` 시작 메뉴 snapshot
+- `vttest-cursor-movement`: `vttest` 시작 메뉴에서 1번 cursor movement 하위 테스트에 진입하고 안내 marker 확인
 
 범위:
 
@@ -355,7 +356,7 @@ vttest
 - 실패 증상
 - 관련 sequence family: cursor, erase, scrolling, reporting, character set, keyboard input, OSC
 
-현재 local verification environment에서는 `/opt/homebrew/bin/vttest`와 `vttest -V` 결과 `VT100 test program, version 2.7 (20251205)`를 확인했다. Phase 151 이후 app 내부 PTY에서도 `vttest-version` target으로 version output을 확인한다. menu 기반 runtime 결과는 아직 수동 smoke 대상으로 남긴다.
+현재 local verification environment에서는 `/opt/homebrew/bin/vttest`와 `vttest -V` 결과 `VT100 test program, version 2.7 (20251205)`를 확인했다. Phase 151 이후 app 내부 PTY에서도 `vttest-version` target으로 version output을 확인한다. Phase 154 이후 app 내부 PTY에서 `vttest-cursor-movement` target으로 1번 cursor movement 하위 테스트 화면 진입도 확인한다. full menu suite 결과는 아직 수동 smoke 대상으로 남긴다.
 
 Phase 028에서 시작 메뉴 output을 `tests/tui_replay.rs::vttest_menu_replay_renders_menu_and_queues_da_response` fixture로 고정했다. 이 fixture는 full interactive result가 아니라 vttest 초기 화면과 primary DA response path에 대한 자동 evidence다.
 

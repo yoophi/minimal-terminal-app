@@ -1337,6 +1337,13 @@ if command -v vttest >/dev/null 2>&1; then
   vttest_path="$(command -v vttest)"
   run_case "vttest-version" "${vttest_path} -V"$'\n' "VT100 test program"
   run_case "vttest-menu" "${vttest_path}"$'\n' "VT100 test program"
+  run_case_with_followup \
+    "vttest-cursor-movement" \
+    "${vttest_path}"$'\n' \
+    $'1\r' \
+    "The screen should be cleared" \
+    1500 \
+    1000
   ran=1
 else
   echo "app target smoke skipped: vttest not found"

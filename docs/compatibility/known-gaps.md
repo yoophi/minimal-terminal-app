@@ -123,11 +123,12 @@
 - Phase 028에서 vttest 시작 메뉴 출력 replay fixture를 추가했다.
 - Phase 036에서 app 내부 PTY 시작 메뉴 snapshot smoke를 추가했다.
 - Phase 151에서 app 내부 PTY version output smoke를 추가했다.
+- Phase 154에서 app 내부 `vttest` 시작 메뉴의 1번 cursor movement 하위 테스트 화면 진입을 자동화했다.
 - full interactive menu result는 아직 수집하지 못했다.
 
 권장 다음 작업:
 
-- `docs/compatibility/smoke-tests.md`의 `vttest` 절차를 앱 내부에서 실행한다.
+- `vttest` full interactive suite 또는 추가 대표 menu 항목을 앱 내부에서 분해해 실행한다.
 - 실패 항목을 cursor, erase, scrolling, reporting, character set, keyboard input, OSC 등 sequence family로 분해한다.
 - 통과/실패 결과를 matrix evidence와 known gap으로 연결한다.
 
@@ -298,7 +299,7 @@ Phase 035에서 `ESC ( 0`과 `ESC ( B` G0 charset switching을 구현했다. Pha
 
 상태: `partially supported`
 
-Phase 036에서 `scripts/run-app-target-smokes.sh`에 `vttest-menu` target을 추가했다. local verification environment에서 app 내부 PTY로 `vttest`를 실행하고 시작 메뉴 snapshot marker `VT100 test program`을 확인했다. Phase 151에서 `vttest-version` target을 추가해 app 내부 PTY로 `vttest -V` version output marker `VT100 test program`을 확인했다. 전체 interactive menu suite 결과는 vttest Runtime Coverage gap으로 계속 추적한다.
+Phase 036에서 `scripts/run-app-target-smokes.sh`에 `vttest-menu` target을 추가했다. local verification environment에서 app 내부 PTY로 `vttest`를 실행하고 시작 메뉴 snapshot marker `VT100 test program`을 확인했다. Phase 151에서 `vttest-version` target을 추가해 app 내부 PTY로 `vttest -V` version output marker `VT100 test program`을 확인했다. Phase 154에서 `vttest-cursor-movement` target을 추가해 시작 메뉴에서 1번 cursor movement 하위 테스트 화면으로 진입하고 `The screen should be cleared` marker를 확인했다. 전체 interactive menu suite 결과는 vttest Runtime Coverage gap으로 계속 추적한다.
 
 ### htop App Runtime Snapshot Smoke
 
