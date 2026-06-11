@@ -5,7 +5,7 @@ use objc2::rc::{autoreleasepool, Retained};
 use objc2::runtime::{AnyObject, Sel};
 use objc2::{define_class, msg_send, sel, ClassType, DefinedClass, MainThreadOnly};
 use objc2_app_kit::{
-    NSBackgroundColorAttributeName, NSColor, NSEvent, NSEventModifierFlags, NSFont,
+    NSApplication, NSBackgroundColorAttributeName, NSColor, NSEvent, NSEventModifierFlags, NSFont,
     NSFontAttributeName, NSForegroundColorAttributeName, NSPasteboard, NSPasteboardTypeString,
     NSRectFill, NSResponder, NSTextInputClient, NSUnderlineStyleAttributeName, NSView, NSWindow,
 };
@@ -35,6 +35,9 @@ const KEY_RETURN: u16 = 36;
 const KEY_TAB: u16 = 48;
 const KEY_ESCAPE: u16 = 53;
 const KEY_KEYPAD_ENTER: u16 = 76;
+const KEY_Q: u16 = 12;
+const KEY_W: u16 = 13;
+const KEY_N: u16 = 45;
 const KEY_PAGE_UP: u16 = 116;
 const KEY_PAGE_DOWN: u16 = 121;
 const TERMINAL_FONT_NAMES: &[&str] = &[
@@ -210,6 +213,10 @@ define_class!(
         #[unsafe(method(keyDown:))]
         fn key_down(&self, event: &NSEvent) {
             autoreleasepool(|pool| {
+                if self.handle_app_command_key(event) {
+                    return;
+                }
+
                 if is_command_c(event) {
                     self.copy_selection_to_clipboard();
                     return;
@@ -662,6 +669,32 @@ impl TerminalView {
         }
     }
 
+    fn handle_app_command_key(&self, event: &NSEvent) -> bool {
+        if is_command_key(event, KEY_W) {
+            if let Some(window) = self.as_super().window() {
+                window.performClose(None);
+            }
+            return true;
+        }
+
+        if is_command_key(event, KEY_Q) {
+            NSApplication::sharedApplication(self.mtm()).terminate(None);
+            return true;
+        }
+
+        if is_command_key(event, KEY_N) {
+            let app = NSApplication::sharedApplication(self.mtm());
+            if let Some(delegate) = app.delegate() {
+                unsafe {
+                    let _: () = msg_send![&*delegate, newTerminalWindow: self];
+                }
+            }
+            return true;
+        }
+
+        false
+    }
+
     fn scroll_page_up(&self) {
         let rows = self.ivars().rows.get().max(1);
         self.adjust_scrollback(rows as isize);
@@ -691,15 +724,28 @@ impl TerminalView {
 }
 
 fn is_command_v(event: &NSEvent) -> bool {
-    let flags = event.modifierFlags();
-    let key_code = event.keyCode();
-    key_code == 9 && flags.contains(objc2_app_kit::NSEventModifierFlags::Command)
+    is_command_key(event, 9)
 }
 
 fn is_command_c(event: &NSEvent) -> bool {
-    let flags = event.modifierFlags();
-    let key_code = event.keyCode();
-    key_code == 8 && flags.contains(objc2_app_kit::NSEventModifierFlags::Command)
+    is_command_key(event, 8)
+}
+
+fn is_command_key(event: &NSEvent, key_code: u16) -> bool {
+    is_command_key_parts(event.keyCode(), event.modifierFlags(), key_code)
+}
+
+fn is_command_key_parts(
+    event_key_code: u16,
+    flags: NSEventModifierFlags,
+    expected_key_code: u16,
+) -> bool {
+    event_key_code == expected_key_code
+        && flags.contains(objc2_app_kit::NSEventModifierFlags::Command)
+        && !flags.intersects(
+            objc2_app_kit::NSEventModifierFlags::Control
+                | objc2_app_kit::NSEventModifierFlags::Option,
+        )
 }
 
 fn should_use_text_input(event: &NSEvent) -> bool {
@@ -1186,6 +1232,40 @@ mod tests {
             20
         );
         assert_eq!(super::mouse_modifier_mask(NSEventModifierFlags::Option), 8);
+    }
+
+    #[test]
+    fn app_command_shortcuts_require_command_without_control_or_option() {
+        assert!(super::is_command_key_parts(
+            super::KEY_N,
+            NSEventModifierFlags::Command,
+            super::KEY_N
+        ));
+        assert!(super::is_command_key_parts(
+            super::KEY_W,
+            NSEventModifierFlags::Command,
+            super::KEY_W
+        ));
+        assert!(super::is_command_key_parts(
+            super::KEY_Q,
+            NSEventModifierFlags::Command,
+            super::KEY_Q
+        ));
+        assert!(!super::is_command_key_parts(
+            super::KEY_N,
+            NSEventModifierFlags::empty(),
+            super::KEY_N
+        ));
+        assert!(!super::is_command_key_parts(
+            super::KEY_N,
+            NSEventModifierFlags::Command | NSEventModifierFlags::Option,
+            super::KEY_N
+        ));
+        assert!(!super::is_command_key_parts(
+            super::KEY_N,
+            NSEventModifierFlags::Command | NSEventModifierFlags::Control,
+            super::KEY_N
+        ));
     }
 
     #[test]
