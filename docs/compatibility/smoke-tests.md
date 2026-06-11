@@ -200,8 +200,11 @@ scripts/run-app-target-smokes.sh
 - `htop-f5-tree`: `htop` 실행 후 follow-up F5 sequence로 tree view를 켜고 process tree marker `├─` 확인
 - `htop-f2-setup`: `htop` 실행 후 follow-up F2 sequence로 Setup 화면 `[Setup]` marker 확인
 - `claude-version`: `claude --version`
+- `claude-help`: `claude --help` 출력 확인
 - `codex-cli-version`: `codex-cli --version`이 설치된 경우 실행
+- `codex-cli-help`: `codex-cli --help` 출력 확인
 - `codex-version`: `codex-cli`가 없고 `codex`가 설치된 경우 `codex --version` 실행
+- `codex-help`: `codex-cli`가 없고 `codex`가 설치된 경우 `codex --help` 출력 확인
 - `vttest-menu`: `vttest` 시작 메뉴 snapshot
 
 범위:

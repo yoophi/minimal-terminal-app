@@ -572,6 +572,7 @@ fi
 if command -v claude >/dev/null 2>&1; then
   claude_path="$(command -v claude)"
   run_case "claude-version" "${claude_path} --version"$'\n' "Claude Code"
+  run_case "claude-help" "${claude_path} --help"$'\n' "Usage: claude"
   ran=1
 else
   echo "app target smoke skipped: claude not found"
@@ -580,10 +581,12 @@ fi
 if command -v codex-cli >/dev/null 2>&1; then
   codex_cli_path="$(command -v codex-cli)"
   run_case "codex-cli-version" "${codex_cli_path} --version"$'\n' "codex-cli"
+  run_case "codex-cli-help" "${codex_cli_path} --help"$'\n' "Commands:"
   ran=1
 elif command -v codex >/dev/null 2>&1; then
   codex_path="$(command -v codex)"
   run_case "codex-version" "${codex_path} --version"$'\n' "codex-cli"
+  run_case "codex-help" "${codex_path} --help"$'\n' "Commands:"
   ran=1
 else
   echo "app target smoke skipped: codex/codex-cli not found"
