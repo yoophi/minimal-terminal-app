@@ -423,8 +423,8 @@ if command -v fzf >/dev/null 2>&1; then
     "printf \"alpha\\nbeta\\n\" | ${fzf_path} --preview \"printf preview:{}\""$'\n' \
     "b" \
     "preview:beta" \
-    1500 \
-    1000
+    2500 \
+    2000
   run_case_with_two_followups \
     "fzf-select" \
     "selected=\"\$(printf \"alpha\\nbeta\\n\" | ${fzf_path})\"; printf \"fzf-select:%s\\n\" \"\$selected\""$'\n' \

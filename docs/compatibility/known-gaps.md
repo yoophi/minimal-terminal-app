@@ -59,6 +59,7 @@
 - Phase 111에서 app 내부 `htop` F2 Setup 화면 진입 workflow를 자동화했다.
 - Phase 046에서 app 내부 `fzf -m` multi-select workflow를 자동화했다.
 - Phase 047에서 app 내부 `fzf --preview` preview pane redraw workflow를 자동화했다.
+- Phase 116에서 `fzf-preview` target의 follow-up/snapshot delay를 늘려 preview pane 준비 전에 query가 shell prompt로 전달되는 smoke timing 문제를 완화했다.
 - Phase 062에서 app 내부 zsh `fzf` Ctrl-T shell integration workflow를 자동화했다.
 - Phase 063에서 app 내부 zsh `fzf` Alt-C directory widget workflow를 자동화했다.
 - Phase 064에서 app 내부 zsh `fzf` Ctrl-R history widget workflow를 자동화했다.
