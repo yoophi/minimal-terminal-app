@@ -557,6 +557,13 @@ if command -v htop >/dev/null 2>&1; then
     "├─" \
     2500 \
     1200
+  run_case_with_followup \
+    "htop-f2-setup" \
+    "${htop_path}"$'\n' \
+    $'\eOQ' \
+    "[Setup]" \
+    2500 \
+    1200
   ran=1
 else
   echo "app target smoke skipped: htop not found"
