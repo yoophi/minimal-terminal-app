@@ -1358,6 +1358,13 @@ if command -v vttest >/dev/null 2>&1; then
     "These are the installed character sets" \
     1500 \
     1000
+  run_case_with_followup \
+    "vttest-double-sized" \
+    "${vttest_path}"$'\n' \
+    $'4\r' \
+    "Double-width-and-height line" \
+    1500 \
+    1000
   ran=1
 else
   echo "app target smoke skipped: vttest not found"
