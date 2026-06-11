@@ -496,6 +496,11 @@ if command -v tmux >/dev/null 2>&1; then
     "tmux_socket=\"minimal-terminal-app-smoke-\$\$\"; ${tmux_path} -L \"\$tmux_socket\" new-session -d -s minimal-terminal-resize 'sleep 30'; ${tmux_path} -L \"\$tmux_socket\" split-window -v 'sleep 30'; ${tmux_path} -L \"\$tmux_socket\" select-pane -D; before=\"\$(${tmux_path} -L \"\$tmux_socket\" display-message -p '#{pane_height}')\"; ${tmux_path} -L \"\$tmux_socket\" resize-pane -D 2; after=\"\$(${tmux_path} -L \"\$tmux_socket\" display-message -p '#{pane_height}')\"; ${tmux_path} -L \"\$tmux_socket\" kill-server >/dev/null 2>&1 || true; if [ \"\$after\" -gt \"\$before\" ]; then printf \"tmux-pane-resize-ok:%s>%s\\n\" \"\$after\" \"\$before\"; else printf \"tmux-pane-resize-failed:%s<=%s\\n\" \"\$after\" \"\$before\"; exit 1; fi"$'\n' \
     "tmux-pane-resize-ok" \
     2500
+  run_case \
+    "tmux-copy-mode" \
+    "tmux_socket=\"minimal-terminal-app-smoke-\$\$\"; out=\"/tmp/minimal-terminal-tmux-copy-mode-\$\$.txt\"; rm -f \"\$out\"; ${tmux_path} -L \"\$tmux_socket\" new-session -d -s minimal-terminal-copy 'printf \"alpha\\ntmux-copy-source\\nsecond-line\\n\"; sleep 30'; ${tmux_path} -L \"\$tmux_socket\" copy-mode -t minimal-terminal-copy:0.0; ${tmux_path} -L \"\$tmux_socket\" send-keys -t minimal-terminal-copy:0.0 -X search-backward \"tmux-copy-source\"; ${tmux_path} -L \"\$tmux_socket\" send-keys -t minimal-terminal-copy:0.0 -X start-of-line; ${tmux_path} -L \"\$tmux_socket\" send-keys -t minimal-terminal-copy:0.0 -X begin-selection; ${tmux_path} -L \"\$tmux_socket\" send-keys -t minimal-terminal-copy:0.0 -X end-of-line; ${tmux_path} -L \"\$tmux_socket\" send-keys -t minimal-terminal-copy:0.0 -X copy-selection-and-cancel; ${tmux_path} -L \"\$tmux_socket\" save-buffer \"\$out\" 2>/dev/null || true; printf \"tmux-copy-mode:%s\\n\" \"\$(cat \"\$out\" 2>/dev/null)\"; rm -f \"\$out\"; ${tmux_path} -L \"\$tmux_socket\" kill-server >/dev/null 2>&1 || true"$'\n' \
+    "tmux-copy-mode:tmux-copy-source" \
+    3500
   if command -v vim >/dev/null 2>&1; then
     vim_path="$(command -v vim)"
     run_case_with_followup \

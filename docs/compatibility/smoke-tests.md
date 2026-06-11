@@ -189,6 +189,7 @@ scripts/run-app-target-smokes.sh
 - `tmux-attached-session`: attached `tmux new-session` 실행 후 pane 입력과 shell 복원 확인
 - `tmux-split-pane`: attached tmux session에서 vertical split pane 생성, active pane 입력, shell 복원 확인
 - `tmux-pane-resize`: detached tmux split pane에서 `resize-pane -D 2` 후 active pane height 증가 확인
+- `tmux-copy-mode`: detached tmux pane output에서 copy mode selection 후 tmux buffer 저장 확인
 - `tmux-vim-edit-write-quit`: attached tmux session 안에서 clean vim 실행, write, quit, shell 복원 확인
 - `htop-version`: `htop --version`
 - `htop-runtime`: `htop` full-screen meter layout snapshot에서 `Tasks:` marker 확인
