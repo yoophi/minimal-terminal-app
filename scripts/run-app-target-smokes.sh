@@ -551,24 +551,25 @@ else
   echo "app target smoke skipped: less not found"
 fi
 
-head_sha="$(git rev-parse --short HEAD)"
+repo_path="$(pwd)"
+head_sha="$(git -C "${repo_path}" rev-parse --short HEAD)"
 run_case_with_followup \
   "git-log" \
-  "git --no-pager log --oneline -1 --no-color" \
+  "git -C \"${repo_path}\" --no-pager log --oneline -1 --no-color" \
   $'\r' \
   "${head_sha}" \
   5000 \
   1000
 run_case_with_followup \
   "git-pager-quit" \
-  $'git log --oneline --graph --decorate -100 --color=never | less; printf "git-pager-quit-ok\\n"\n' \
+  "git -C \"${repo_path}\" log --oneline --graph --decorate -100 --color=never | less; printf \"git-pager-quit-ok\\n\""$'\n' \
   "q" \
   "git-pager-quit-ok" \
   1500 \
   1000
 run_case_with_two_followups \
   "git-pager-page-quit" \
-  $'git log --oneline --graph --decorate -100 --color=never | less; printf "git-pager-page-quit-ok\\n"\n' \
+  "git -C \"${repo_path}\" log --oneline --graph --decorate -100 --color=never | less; printf \"git-pager-page-quit-ok\\n\""$'\n' \
   " " \
   "q" \
   "git-pager-page-quit-ok" \
@@ -577,21 +578,21 @@ run_case_with_two_followups \
   700
 run_case_with_followup \
   "git-pager-search-quit" \
-  $'git log --oneline --graph --decorate -100 --color=never | less; printf "git-pager-search-ok\\n"\n' \
+  "git -C \"${repo_path}\" log --oneline --graph --decorate -100 --color=never | less; printf \"git-pager-search-ok\\n\""$'\n' \
   $'/Implement\rq' \
   "git-pager-search-ok" \
   1500 \
   1000
 run_case_with_followup \
   "git-pager-horizontal-quit" \
-  $'git log --pretty=format:"%H %s" -100 --color=never | less -S; printf "git-pager-horizontal-ok\\n"\n' \
+  "git -C \"${repo_path}\" log --pretty=format:\"%H %s\" -100 --color=never | less -S; printf \"git-pager-horizontal-ok\\n\""$'\n' \
   $'\e[Cq' \
   "git-pager-horizontal-ok" \
   1500 \
   1000
 run_case_with_followup \
   "git-pager-mark-quit" \
-  $'git log --oneline --graph --decorate -100 --color=never | less; printf "git-pager-mark-ok\\n"\n' \
+  "git -C \"${repo_path}\" log --oneline --graph --decorate -100 --color=never | less; printf \"git-pager-mark-ok\\n\""$'\n' \
   $'ma\047aq' \
   "git-pager-mark-ok" \
   1500 \
@@ -641,7 +642,7 @@ if command -v tmux >/dev/null 2>&1; then
       "tmux-vim-workflow-ok:hello from tmux vim" \
       3000 \
       1400
-    tmux_split_vim_script="${LOG_DIR}/tmux-split-vim-resize.sh"
+    tmux_split_vim_script="${repo_path}/${LOG_DIR}/tmux-split-vim-resize.sh"
     cat >"${tmux_split_vim_script}" <<EOF
 #!/usr/bin/env bash
 set -euo pipefail

@@ -66,9 +66,11 @@
 - Phase 048에서 app 내부 `git log ... | less` pager search 뒤 quit workflow를 자동화했다.
 - Phase 049에서 app 내부 `git log ... | less -S` pager horizontal scroll 뒤 quit workflow를 자동화했다.
 - Phase 050에서 app 내부 `git log ... | less` pager mark 뒤 quit workflow를 자동화했다.
+- Phase 117에서 app 내부 login shell이 home directory에서 시작해도 git target들이 current repository를 `git -C`로 명시하도록 안정화했다.
 - Phase 058에서 app 내부 `vim --clean -Nu NONE -n` edit/write/quit workflow를 자동화했다.
 - Phase 059에서 app 내부 `tmux` 안의 clean `vim` edit/write/quit workflow를 자동화했다.
 - Phase 113에서 app 내부 `tmux` split pane 안의 clean `vim` pane resize 후 edit/write/quit workflow를 자동화했다.
+- Phase 117에서 app 내부 login shell이 home directory에서 시작해도 generated helper script를 absolute path로 실행하도록 `tmux-split-vim-resize` target을 안정화했다.
 - Phase 060에서 app 내부 direct `less` basic quit workflow를 자동화했다.
 - Phase 105에서 app 내부 direct `less` search workflow를 자동화했다.
 - Phase 106에서 app 내부 direct `less +F` follow mode append workflow를 자동화했다.
