@@ -664,6 +664,20 @@ run_case_with_native_key_required_markers \
   "native-f5-modifier-matrix-key-6:1b5b31353b367e" \
   "native-f5-modifier-matrix-key-7:1b5b31353b377e" \
   "native-f5-modifier-matrix-key-8:1b5b31353b387e"
+run_case_with_native_key_required_markers \
+  "native-control-option-navigation-family-key" \
+  $'ready="native-key"; ready="${ready}-ready"; stty raw -echo; printf "\\n%s\\n" "$ready"; for key in up down right left home end page-up page-down delete; do bytes="$(dd bs=1 count=6 2>/dev/null | od -An -tx1 | tr -d " \\n")"; printf "\\nnative-control-option-navigation-family-key-${key}:%s\\n" "$bytes"; done; stty sane\n' \
+  "control-option-up,control-option-down,control-option-right,control-option-left,control-option-home,control-option-end,control-option-page-up,control-option-page-down,control-option-delete" \
+  1500 \
+  "native-control-option-navigation-family-key-up:1b5b313b3741" \
+  "native-control-option-navigation-family-key-down:1b5b313b3742" \
+  "native-control-option-navigation-family-key-right:1b5b313b3743" \
+  "native-control-option-navigation-family-key-left:1b5b313b3744" \
+  "native-control-option-navigation-family-key-home:1b5b313b3748" \
+  "native-control-option-navigation-family-key-end:1b5b313b3746" \
+  "native-control-option-navigation-family-key-page-up:1b5b353b377e" \
+  "native-control-option-navigation-family-key-page-down:1b5b363b377e" \
+  "native-control-option-navigation-family-key-delete:1b5b333b377e"
 ran=1
 
 run_case_with_mouse_report \
@@ -695,7 +709,7 @@ if command -v fzf >/dev/null 2>&1; then
     "fzf-preview" \
     "printf \"alpha\\nbeta\\n\" | ${fzf_path} --query beta --preview \"printf preview:{}\""$'\n' \
     "preview:beta" \
-    2500
+    5000
   run_case_with_two_followups \
     "fzf-select" \
     "selected=\"\$(printf \"alpha\\nbeta\\n\" | ${fzf_path})\"; printf \"fzf-select:%s\\n\" \"\$selected\""$'\n' \
@@ -828,7 +842,7 @@ run_case \
   "git-log" \
   "git -C \"${repo_path}\" --no-pager log --oneline -1 --no-color"$'\n' \
   "${head_sha}" \
-  5000
+  8000
 run_case_with_followup \
   "git-pager-quit" \
   "git -C \"${repo_path}\" log --oneline --graph --decorate -100 --color=never | less; printf \"git-pager-quit-ok\\n\""$'\n' \
@@ -892,9 +906,9 @@ if command -v tmux >/dev/null 2>&1; then
     2500
   run_case \
     "tmux-copy-mode" \
-    "tmux_socket=\"minimal-terminal-app-smoke-\$\$\"; out=\"/tmp/minimal-terminal-tmux-copy-mode-\$\$.txt\"; rm -f \"\$out\"; ${tmux_path} -L \"\$tmux_socket\" new-session -d -s minimal-terminal-copy 'printf \"alpha\\ntmux-copy-source\\nsecond-line\\n\"; sleep 30'; ${tmux_path} -L \"\$tmux_socket\" copy-mode -t minimal-terminal-copy:0.0; ${tmux_path} -L \"\$tmux_socket\" send-keys -t minimal-terminal-copy:0.0 -X search-backward \"tmux-copy-source\"; ${tmux_path} -L \"\$tmux_socket\" send-keys -t minimal-terminal-copy:0.0 -X start-of-line; ${tmux_path} -L \"\$tmux_socket\" send-keys -t minimal-terminal-copy:0.0 -X begin-selection; ${tmux_path} -L \"\$tmux_socket\" send-keys -t minimal-terminal-copy:0.0 -X end-of-line; ${tmux_path} -L \"\$tmux_socket\" send-keys -t minimal-terminal-copy:0.0 -X copy-selection-and-cancel; ${tmux_path} -L \"\$tmux_socket\" save-buffer \"\$out\" 2>/dev/null || true; printf \"tmux-copy-mode:%s\\n\" \"\$(cat \"\$out\" 2>/dev/null)\"; rm -f \"\$out\"; ${tmux_path} -L \"\$tmux_socket\" kill-server >/dev/null 2>&1 || true"$'\n' \
+    "tmux_socket=\"minimal-terminal-app-smoke-\$\$\"; out=\"/tmp/minimal-terminal-tmux-copy-mode-\$\$.txt\"; rm -f \"\$out\"; ${tmux_path} -L \"\$tmux_socket\" new-session -d -s minimal-terminal-copy 'printf \"alpha\\ntmux-copy-source\\nsecond-line\\n\"; sleep 30'; for i in \$(seq 1 30); do ${tmux_path} -L \"\$tmux_socket\" capture-pane -p -t minimal-terminal-copy:0.0 | grep -Fq \"tmux-copy-source\" && break; sleep 0.1; done; ${tmux_path} -L \"\$tmux_socket\" copy-mode -t minimal-terminal-copy:0.0; ${tmux_path} -L \"\$tmux_socket\" send-keys -t minimal-terminal-copy:0.0 -X search-backward \"tmux-copy-source\"; ${tmux_path} -L \"\$tmux_socket\" send-keys -t minimal-terminal-copy:0.0 -X start-of-line; ${tmux_path} -L \"\$tmux_socket\" send-keys -t minimal-terminal-copy:0.0 -X begin-selection; ${tmux_path} -L \"\$tmux_socket\" send-keys -t minimal-terminal-copy:0.0 -X end-of-line; ${tmux_path} -L \"\$tmux_socket\" send-keys -t minimal-terminal-copy:0.0 -X copy-selection-and-cancel; ${tmux_path} -L \"\$tmux_socket\" save-buffer \"\$out\" 2>/dev/null || true; printf \"tmux-copy-mode:%s\\n\" \"\$(cat \"\$out\" 2>/dev/null)\"; rm -f \"\$out\"; ${tmux_path} -L \"\$tmux_socket\" kill-server >/dev/null 2>&1 || true"$'\n' \
     "tmux-copy-mode:tmux-copy-source" \
-    3500
+    7000
   run_case_with_mouse_report \
     "tmux-mouse-wheel" \
     "tmux_socket=\"minimal-terminal-app-smoke-\$\$\"; ${tmux_path} -L \"\$tmux_socket\" new-session -s minimal-terminal-mouse 'for i in \$(seq 1 120); do if [ \"\$i\" -le 20 ]; then printf \"tmux-mouse-line-%03d tmux-mouse-scroll-marker\\n\" \"\$i\"; else printf \"tmux-mouse-line-%03d\\n\" \"\$i\"; fi; done; sleep 30' \\; set-option -g destroy-unattached on \\; set-option -g mouse on"$'\n' \

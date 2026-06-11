@@ -806,6 +806,10 @@ impl TerminalView {
     }
 
     fn handle_scrollback_key(&self, event: &NSEvent) -> bool {
+        if !should_handle_scrollback_key_parts(event.keyCode(), event.modifierFlags()) {
+            return false;
+        }
+
         match event.keyCode() {
             KEY_PAGE_UP => {
                 self.scroll_page_up();
@@ -871,6 +875,15 @@ impl TerminalView {
         self.ivars().scrollback_offset.set(next_offset);
         self.as_super().setNeedsDisplay(true);
     }
+}
+
+fn should_handle_scrollback_key_parts(key_code: u16, flags: NSEventModifierFlags) -> bool {
+    matches!(key_code, KEY_PAGE_UP | KEY_PAGE_DOWN)
+        && !flags.intersects(
+            NSEventModifierFlags::Shift
+                | NSEventModifierFlags::Option
+                | NSEventModifierFlags::Control,
+        )
 }
 
 fn is_command_v(event: &NSEvent) -> bool {
@@ -1395,55 +1408,55 @@ fn parse_rows_by_cols(value: &str) -> Option<(usize, usize)> {
 }
 
 fn native_key_smoke_event(value: &str) -> Option<(NSEventModifierFlags, u16)> {
-    match value {
-        "control-f5" => Some((NSEventModifierFlags::Control, 96)),
-        "shift-f5" => Some((NSEventModifierFlags::Shift, 96)),
-        "option-f5" => Some((NSEventModifierFlags::Option, 96)),
-        "shift-option-f5" => Some((
-            NSEventModifierFlags::Shift | NSEventModifierFlags::Option,
-            96,
-        )),
-        "shift-control-f5" => Some((
-            NSEventModifierFlags::Shift | NSEventModifierFlags::Control,
-            96,
-        )),
-        "control-option-f5" => Some((
-            NSEventModifierFlags::Control | NSEventModifierFlags::Option,
-            96,
-        )),
-        "shift-control-option-f5" => Some((
-            NSEventModifierFlags::Shift
-                | NSEventModifierFlags::Control
-                | NSEventModifierFlags::Option,
-            96,
-        )),
-        "shift-up" => Some((NSEventModifierFlags::Shift, 126)),
-        "option-up" => Some((NSEventModifierFlags::Option, 126)),
-        "shift-option-up" => Some((
-            NSEventModifierFlags::Shift | NSEventModifierFlags::Option,
-            126,
-        )),
-        "control-up" => Some((NSEventModifierFlags::Control, 126)),
-        "shift-control-up" => Some((
-            NSEventModifierFlags::Shift | NSEventModifierFlags::Control,
-            126,
-        )),
-        "control-option-up" => Some((
-            NSEventModifierFlags::Control | NSEventModifierFlags::Option,
-            126,
-        )),
-        "shift-control-option-up" => Some((
-            NSEventModifierFlags::Shift
-                | NSEventModifierFlags::Control
-                | NSEventModifierFlags::Option,
-            126,
-        )),
-        "control-option-right" => Some((
-            NSEventModifierFlags::Control | NSEventModifierFlags::Option,
-            124,
-        )),
-        _ => None,
+    let (modifier_part, key_code) = native_key_smoke_key_code(value)?;
+    let mut flags = NSEventModifierFlags::empty();
+
+    if !modifier_part.is_empty() {
+        for modifier in modifier_part.split('-') {
+            match modifier {
+                "shift" => flags |= NSEventModifierFlags::Shift,
+                "option" => flags |= NSEventModifierFlags::Option,
+                "control" => flags |= NSEventModifierFlags::Control,
+                _ => return None,
+            }
+        }
     }
+
+    (!flags.is_empty()).then_some((flags, key_code))
+}
+
+fn native_key_smoke_key_code(value: &str) -> Option<(&str, u16)> {
+    const KEY_SUFFIXES: &[(&str, u16)] = &[
+        ("page-down", 121),
+        ("page-up", 116),
+        ("delete", 117),
+        ("right", 124),
+        ("left", 123),
+        ("down", 125),
+        ("home", 115),
+        ("end", 119),
+        ("f10", 109),
+        ("f11", 103),
+        ("f12", 111),
+        ("f1", 122),
+        ("f2", 120),
+        ("f3", 99),
+        ("f4", 118),
+        ("f5", 96),
+        ("f6", 97),
+        ("f7", 98),
+        ("f8", 100),
+        ("f9", 101),
+        ("up", 126),
+    ];
+
+    for (suffix, key_code) in KEY_SUFFIXES {
+        if let Some(modifier_part) = value.strip_suffix(suffix) {
+            let modifier_part = modifier_part.strip_suffix('-').unwrap_or(modifier_part);
+            return Some((modifier_part, *key_code));
+        }
+    }
+    None
 }
 
 fn native_key_smoke_events(value: &str) -> Option<Vec<(NSEventModifierFlags, u16)>> {
@@ -1526,6 +1539,22 @@ mod tests {
     }
 
     #[test]
+    fn modified_page_keys_skip_native_scrollback_handling() {
+        assert!(super::should_handle_scrollback_key_parts(
+            super::KEY_PAGE_UP,
+            NSEventModifierFlags::empty()
+        ));
+        assert!(!super::should_handle_scrollback_key_parts(
+            super::KEY_PAGE_UP,
+            NSEventModifierFlags::Control
+        ));
+        assert!(!super::should_handle_scrollback_key_parts(
+            super::KEY_PAGE_DOWN,
+            NSEventModifierFlags::Option
+        ));
+    }
+
+    #[test]
     fn text_input_path_excludes_special_keys_even_with_shift_only() {
         assert!(super::should_use_text_input_parts(
             0,
@@ -1582,7 +1611,19 @@ mod tests {
                 124
             ))
         );
+        assert_eq!(
+            super::native_key_smoke_event("control-option-page-up"),
+            Some((
+                NSEventModifierFlags::Control | NSEventModifierFlags::Option,
+                116
+            ))
+        );
+        assert_eq!(
+            super::native_key_smoke_event("shift-delete"),
+            Some((NSEventModifierFlags::Shift, 117))
+        );
         assert_eq!(super::native_key_smoke_event("unknown"), None);
+        assert_eq!(super::native_key_smoke_event("up"), None);
     }
 
     #[test]
