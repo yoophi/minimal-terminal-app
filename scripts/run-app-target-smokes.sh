@@ -731,6 +731,28 @@ run_case_with_native_key_required_markers \
   "native-option-function-f5-f12-key-f11:1b5b32333b337e" \
   "native-option-function-f5-f12-key-f12:1b5b32343b337e"
 run_case_with_native_key_required_markers \
+  "native-shift-option-function-f1-f4-key" \
+  $'ready="native-key"; ready="${ready}-ready"; stty raw -echo; printf "\\n%s\\n" "$ready"; for key in f1 f2 f3 f4; do bytes="$(dd bs=1 count=6 2>/dev/null | od -An -tx1 | tr -d " \\n")"; printf "\\nnative-shift-option-function-f1-f4-key-${key}:%s\\n" "$bytes"; done; stty sane\n' \
+  "shift-option-f1,shift-option-f2,shift-option-f3,shift-option-f4" \
+  1500 \
+  "native-shift-option-function-f1-f4-key-f1:1b5b313b3450" \
+  "native-shift-option-function-f1-f4-key-f2:1b5b313b3451" \
+  "native-shift-option-function-f1-f4-key-f3:1b5b313b3452" \
+  "native-shift-option-function-f1-f4-key-f4:1b5b313b3453"
+run_case_with_native_key_required_markers \
+  "native-shift-option-function-f5-f12-key" \
+  $'ready="native-key"; ready="${ready}-ready"; stty raw -echo; printf "\\n%s\\n" "$ready"; for key in f5 f6 f7 f8 f9 f10 f11 f12; do bytes="$(dd bs=1 count=7 2>/dev/null | od -An -tx1 | tr -d " \\n")"; printf "\\nnative-shift-option-function-f5-f12-key-${key}:%s\\n" "$bytes"; done; stty sane\n' \
+  "shift-option-f5,shift-option-f6,shift-option-f7,shift-option-f8,shift-option-f9,shift-option-f10,shift-option-f11,shift-option-f12" \
+  1500 \
+  "native-shift-option-function-f5-f12-key-f5:1b5b31353b347e" \
+  "native-shift-option-function-f5-f12-key-f6:1b5b31373b347e" \
+  "native-shift-option-function-f5-f12-key-f7:1b5b31383b347e" \
+  "native-shift-option-function-f5-f12-key-f8:1b5b31393b347e" \
+  "native-shift-option-function-f5-f12-key-f9:1b5b32303b347e" \
+  "native-shift-option-function-f5-f12-key-f10:1b5b32313b347e" \
+  "native-shift-option-function-f5-f12-key-f11:1b5b32333b347e" \
+  "native-shift-option-function-f5-f12-key-f12:1b5b32343b347e"
+run_case_with_native_key_required_markers \
   "native-control-option-navigation-family-key" \
   $'ready="native-key"; ready="${ready}-ready"; stty raw -echo; printf "\\n%s\\n" "$ready"; for key in up down right left home end page-up page-down delete; do bytes="$(dd bs=1 count=6 2>/dev/null | od -An -tx1 | tr -d " \\n")"; printf "\\nnative-control-option-navigation-family-key-${key}:%s\\n" "$bytes"; done; stty sane\n' \
   "control-option-up,control-option-down,control-option-right,control-option-left,control-option-home,control-option-end,control-option-page-up,control-option-page-down,control-option-delete" \
