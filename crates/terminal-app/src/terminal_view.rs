@@ -580,13 +580,12 @@ impl TerminalView {
         if self.ivars().native_key_smoke_sent.get() {
             return;
         }
-        if env::var("MINIMAL_TERMINAL_SMOKE_NATIVE_KEY")
+        let Some((flags, key_code)) = env::var("MINIMAL_TERMINAL_SMOKE_NATIVE_KEY")
             .ok()
-            .as_deref()
-            != Some("control-f5")
-        {
+            .and_then(|value| native_key_smoke_event(&value))
+        else {
             return;
-        }
+        };
         if !self.snapshot_contains_text("native-key-ready") {
             return;
         }
@@ -600,14 +599,14 @@ impl TerminalView {
                 NSEvent::class(),
                 keyEventWithType: NSEventType::KeyDown,
                 location: NSPoint::new(0.0, 0.0),
-                modifierFlags: NSEventModifierFlags::Control,
+                modifierFlags: flags,
                 timestamp: 0.0,
                 windowNumber: window.windowNumber() as NSInteger,
                 context: Option::<&AnyObject>::None,
                 characters: &*empty,
                 charactersIgnoringModifiers: &*empty,
                 isARepeat: false,
-                keyCode: 96_u16
+                keyCode: key_code
             ]
         };
         let Some(event) = event else {
@@ -1367,6 +1366,17 @@ fn parse_rows_by_cols(value: &str) -> Option<(usize, usize)> {
     Some((rows, cols))
 }
 
+fn native_key_smoke_event(value: &str) -> Option<(NSEventModifierFlags, u16)> {
+    match value {
+        "control-f5" => Some((NSEventModifierFlags::Control, 96)),
+        "shift-option-up" => Some((
+            NSEventModifierFlags::Shift | NSEventModifierFlags::Option,
+            126,
+        )),
+        _ => None,
+    }
+}
+
 fn text_from_input_object(
     object: &AnyObject,
     pool: objc2::rc::AutoreleasePool<'_>,
@@ -1447,6 +1457,22 @@ mod tests {
         assert_eq!(super::parse_rows_by_cols("24:80"), None);
         assert_eq!(super::parse_rows_by_cols("0x80"), None);
         assert_eq!(super::parse_rows_by_cols("24x0"), None);
+    }
+
+    #[test]
+    fn native_key_smoke_event_maps_known_cases() {
+        assert_eq!(
+            super::native_key_smoke_event("control-f5"),
+            Some((NSEventModifierFlags::Control, 96))
+        );
+        assert_eq!(
+            super::native_key_smoke_event("shift-option-up"),
+            Some((
+                NSEventModifierFlags::Shift | NSEventModifierFlags::Option,
+                126
+            ))
+        );
+        assert_eq!(super::native_key_smoke_event("unknown"), None);
     }
 
     #[test]

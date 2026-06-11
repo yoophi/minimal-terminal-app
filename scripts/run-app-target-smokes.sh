@@ -574,6 +574,12 @@ run_case_with_native_key \
   "control-f5" \
   "native-control-f5-key:1b5b31353b357e" \
   1500
+run_case_with_native_key \
+  "native-shift-option-up-key" \
+  $'ready="native-key"; ready="${ready}-ready"; stty raw -echo; printf "\\n%s\\n" "$ready"; bytes="$(dd bs=1 count=6 2>/dev/null | od -An -tx1 | tr -d " \\n")"; stty sane; printf "\\nnative-shift-option-up-key:%s\\n" "$bytes"\n' \
+  "shift-option-up" \
+  "native-shift-option-up-key:1b5b313b3441" \
+  1500
 ran=1
 
 run_case_with_mouse_report \
