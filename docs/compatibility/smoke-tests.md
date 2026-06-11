@@ -180,7 +180,7 @@ scripts/run-app-target-smokes.sh
 - `less-mouse-wheel-down`: `less --mouse --wheel-lines=10` 실행 후 smoke hook wheel-down reports로 pager 화면 이동 확인
 - `less-search`: `less` 실행 후 follow-up `/less-search-line-080`, Enter로 검색 이동 확인
 - `less-follow`: `less +F` 실행 후 background append marker `less-follow-marker` 확인
-- `git-log`: `git --no-pager log --oneline -1 --no-color`
+- `git-log`: `git -C <repo> --no-pager log --oneline -1 --no-color`
 - `git-pager-quit`: `git log ... | less` 실행 후 follow-up `q`로 pager 종료 확인
 - `git-pager-page-quit`: `git log ... | less` 실행 후 follow-up Space와 `q`로 page navigation 뒤 pager 종료 확인
 - `git-pager-search-quit`: `git log ... | less` 실행 후 follow-up `/Implement`, Enter, `q`로 search 뒤 pager 종료 확인
@@ -193,7 +193,7 @@ scripts/run-app-target-smokes.sh
 - `tmux-copy-mode`: detached tmux pane output에서 copy mode selection 후 tmux buffer 저장 확인
 - `tmux-mouse-wheel`: tmux mouse mode에서 smoke hook wheel reports로 pane history scroll 확인
 - `tmux-vim-edit-write-quit`: attached tmux session 안에서 clean vim 실행, write, quit, shell 복원 확인
-- `tmux-split-vim-resize`: attached tmux split pane 안의 clean vim pane height 변경 후 edit/write/quit와 shell 복원 확인
+- `tmux-split-vim-resize`: absolute helper script로 attached tmux split pane 안의 clean vim pane height 변경 후 edit/write/quit와 shell 복원 확인
 - `htop-version`: `htop --version`
 - `htop-runtime`: `htop` full-screen layout snapshot에서 `Tasks:`, `Load average:`, `PID USER`, `Command`, `F10Quit` marker를 모두 확인해 meter/status/table/function-key row가 유지되는지 확인
 - `htop-quit`: `htop` 실행 후 follow-up `q`로 종료 확인
