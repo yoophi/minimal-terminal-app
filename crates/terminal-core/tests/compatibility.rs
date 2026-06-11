@@ -138,6 +138,7 @@ fn tui_private_modes_and_editing_sequences_have_core_evidence() {
     let snapshot = terminal.snapshot(5);
     assert!(!snapshot.modes.cursor_visible);
     assert!(snapshot.modes.bracketed_paste);
+    assert!(snapshot.modes.autowrap);
     assert!(snapshot.modes.application_cursor_keys);
     assert!(snapshot.modes.application_keypad);
 
@@ -151,6 +152,21 @@ fn tui_private_modes_and_editing_sequences_have_core_evidence() {
 
     terminal.append_bytes(b"\x1b[2;4r\x1b[4;1H\nx");
     assert_eq!(terminal.snapshot(5).lines, vec!["abdef", "", "", "x", ""]);
+}
+
+#[test]
+fn autowrap_private_mode_has_core_evidence() {
+    let mut terminal = TerminalState::new(2, 6);
+
+    terminal.append_bytes(b"\x1b[?7labcdefZ");
+    let snapshot = terminal.snapshot(2);
+    assert_eq!(snapshot.lines, vec!["abcdeZ", ""]);
+    assert!(!snapshot.modes.autowrap);
+
+    terminal.append_bytes(b"\x1b[?7hQ");
+    let snapshot = terminal.snapshot(2);
+    assert_eq!(snapshot.lines, vec!["abcdeQ", ""]);
+    assert!(snapshot.modes.autowrap);
 }
 
 #[test]

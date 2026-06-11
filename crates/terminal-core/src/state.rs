@@ -18,6 +18,7 @@ pub struct TerminalModes {
     pub cursor_visible: bool,
     pub cursor_style: CursorStyle,
     pub bracketed_paste: bool,
+    pub autowrap: bool,
     pub application_cursor_keys: bool,
     pub application_keypad: bool,
     pub mouse_reporting: bool,
@@ -30,6 +31,7 @@ impl Default for TerminalModes {
             cursor_visible: true,
             cursor_style: CursorStyle::Block,
             bracketed_paste: false,
+            autowrap: true,
             application_cursor_keys: false,
             application_keypad: false,
             mouse_reporting: false,
@@ -292,6 +294,12 @@ impl TerminalState {
             }
             Action::SetApplicationKeypad(enabled) => self.modes.application_keypad = enabled,
             Action::SetBracketedPaste(enabled) => self.modes.bracketed_paste = enabled,
+            Action::SetAutoWrap(enabled) => {
+                self.modes.autowrap = enabled;
+                if !enabled {
+                    self.pending_wrap = false;
+                }
+            }
             Action::SetCursorVisible(visible) => self.modes.cursor_visible = visible,
             Action::SetCursorStyle(style) => self.modes.cursor_style = style,
             Action::SetMouseReporting(enabled) => self.modes.mouse_reporting = enabled,
@@ -402,11 +410,14 @@ impl TerminalState {
 
     fn print_char(&mut self, ch: char) {
         if self.pending_wrap {
-            self.grid
-                .newline_in_region(&mut self.cursor, self.scroll_region);
+            if self.modes.autowrap {
+                self.grid
+                    .newline_in_region(&mut self.cursor, self.scroll_region);
+            }
             self.pending_wrap = false;
         }
-        self.pending_wrap = self.grid.put_char(&mut self.cursor, ch, self.current_style);
+        self.pending_wrap =
+            self.grid.put_char(&mut self.cursor, ch, self.current_style) && self.modes.autowrap;
     }
 }
 
@@ -488,6 +499,28 @@ mod tests {
         let snapshot = terminal.snapshot(2);
         assert_eq!(snapshot.lines, vec!["abcde", "Z"]);
         assert_eq!(snapshot.cursor, Cursor::new(1, 1));
+    }
+
+    #[test]
+    fn autowrap_mode_can_disable_right_margin_wrap() {
+        let mut terminal = TerminalState::new(2, 5);
+        terminal.append_bytes(b"\x1b[?7labcdeZ");
+
+        let snapshot = terminal.snapshot(2);
+        assert_eq!(snapshot.lines, vec!["abcdZ", ""]);
+        assert_eq!(snapshot.cursor, Cursor::new(0, 4));
+        assert!(!snapshot.modes.autowrap);
+    }
+
+    #[test]
+    fn autowrap_mode_can_be_reenabled() {
+        let mut terminal = TerminalState::new(2, 5);
+        terminal.append_bytes(b"\x1b[?7labcde\x1b[?7hZY");
+
+        let snapshot = terminal.snapshot(2);
+        assert_eq!(snapshot.lines, vec!["abcdZ", "Y"]);
+        assert_eq!(snapshot.cursor, Cursor::new(1, 1));
+        assert!(snapshot.modes.autowrap);
     }
 
     #[test]

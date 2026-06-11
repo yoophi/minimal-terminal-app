@@ -96,6 +96,7 @@ pub(crate) enum Action {
     SetApplicationCursorKeys(bool),
     SetApplicationKeypad(bool),
     SetBracketedPaste(bool),
+    SetAutoWrap(bool),
     SetCursorVisible(bool),
     SetCursorStyle(CursorStyle),
     SetMouseReporting(bool),
@@ -1823,6 +1824,8 @@ fn parse_private_csi(numbers: &[usize], final_byte: char) -> Action {
     match final_byte {
         'h' if contains_any(&numbers, &[1]) => Action::SetApplicationCursorKeys(true),
         'l' if contains_any(&numbers, &[1]) => Action::SetApplicationCursorKeys(false),
+        'h' if contains_any(&numbers, &[7]) => Action::SetAutoWrap(true),
+        'l' if contains_any(&numbers, &[7]) => Action::SetAutoWrap(false),
         'h' if contains_any(&numbers, &[25]) => Action::SetCursorVisible(true),
         'l' if contains_any(&numbers, &[25]) => Action::SetCursorVisible(false),
         'h' if contains_any(&numbers, &[47, 1047, 1049]) => Action::EnterAlternateScreen,
@@ -3235,6 +3238,14 @@ mod tests {
         assert_eq!(
             parser.advance_bytes(b"\x1b[?2004h"),
             vec![Action::SetBracketedPaste(true)]
+        );
+        assert_eq!(
+            parser.advance_bytes(b"\x1b[?7l"),
+            vec![Action::SetAutoWrap(false)]
+        );
+        assert_eq!(
+            parser.advance_bytes(b"\x1b[?7h"),
+            vec![Action::SetAutoWrap(true)]
         );
         assert_eq!(
             parser.advance_bytes(b"\x1b[?1h"),

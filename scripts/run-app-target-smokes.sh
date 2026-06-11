@@ -1020,10 +1020,12 @@ if command -v htop >/dev/null 2>&1; then
     "htop-runtime" \
     "${htop_path}"$'\n' \
     3000 \
+    "Mem[" \
     "Tasks:" \
     "Load average:" \
     "PID USER" \
     "Command" \
+    "F1Help  F2Setup" \
     "F10Quit"
   run_case_with_followup \
     "htop-quit" \

@@ -208,7 +208,7 @@ scripts/run-app-target-smokes.sh
 - `tmux-vim-edit-write-quit`: attached tmux session 안에서 clean vim 실행, write, quit, shell 복원 확인
 - `tmux-split-vim-resize`: absolute helper script로 attached tmux split pane 안의 clean vim pane height 변경 후 edit/write/quit와 shell 복원 확인
 - `htop-version`: `htop --version`
-- `htop-runtime`: `htop` full-screen layout snapshot에서 `Tasks:`, `Load average:`, `PID USER`, `Command`, `F10Quit` marker를 모두 확인해 meter/status/table/function-key row가 유지되는지 확인. Phase 119 이후 styled cell background rendering은 core styled snapshot test와 AppKit span background draw path로 보강한다. Phase 125 이후 erase/insert/delete 계열 blank cell은 현재 SGR 배경색을 보존해 htop meter/header의 background color erase 기대 동작을 맞춘다.
+- `htop-runtime`: `htop` full-screen layout snapshot에서 `Mem[`, `Tasks:`, `Load average:`, `PID USER`, `Command`, `F1Help  F2Setup`, `F10Quit` marker를 모두 확인해 meter/status/table/function-key row가 유지되는지 확인. Phase 119 이후 styled cell background rendering은 core styled snapshot test와 AppKit span background draw path로 보강한다. Phase 125 이후 erase/insert/delete 계열 blank cell은 현재 SGR 배경색을 보존해 htop meter/header의 background color erase 기대 동작을 맞춘다. Phase 134 이후 `CSI ? 7 h/l` DEC autowrap mode를 core에서 처리해 htop의 right-margin redraw를 보강한다.
 - `htop-quit`: `htop` 실행 후 follow-up `q`로 종료 확인
 - `htop-f10-quit`: `htop` 실행 후 follow-up F10 sequence로 종료 확인
 - `htop-f1-help-quit`: `htop` 실행 후 follow-up F1 sequence와 `q q`로 help와 htop 종료 확인
