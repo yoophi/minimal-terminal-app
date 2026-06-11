@@ -1321,6 +1321,7 @@ fi
 
 if command -v vttest >/dev/null 2>&1; then
   vttest_path="$(command -v vttest)"
+  run_case "vttest-version" "${vttest_path} -V"$'\n' "VT100 test program"
   run_case "vttest-menu" "${vttest_path}"$'\n' "VT100 test program"
   ran=1
 else
