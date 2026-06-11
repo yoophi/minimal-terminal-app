@@ -192,6 +192,7 @@ scripts/run-app-target-smokes.sh
 - `tmux-copy-mode`: detached tmux pane output에서 copy mode selection 후 tmux buffer 저장 확인
 - `tmux-mouse-wheel`: tmux mouse mode에서 smoke hook wheel reports로 pane history scroll 확인
 - `tmux-vim-edit-write-quit`: attached tmux session 안에서 clean vim 실행, write, quit, shell 복원 확인
+- `tmux-split-vim-resize`: attached tmux split pane 안의 clean vim pane height 변경 후 edit/write/quit와 shell 복원 확인
 - `htop-version`: `htop --version`
 - `htop-runtime`: `htop` full-screen meter layout snapshot에서 `Tasks:` marker 확인, 실제 AppKit 화면에서 meter/table이 고정 cell grid에 맞는지 확인
 - `htop-quit`: `htop` 실행 후 follow-up `q`로 종료 확인
@@ -275,10 +276,13 @@ tmux new -s minimal-terminal-nested 'vim /tmp/minimal-terminal-smoke.txt'
 
 자동 smoke `tmux-vim-edit-write-quit`은 app 내부 PTY에서 tmux 안의 clean vim tempfile edit/write/quit와 shell 복원을 확인한다.
 
+자동 smoke `tmux-split-vim-resize`는 attached tmux split pane 내부의 clean vim pane height가 변경된 뒤에도 edit/write/quit와 shell 복원이 되는지 확인한다.
+
 확인 항목:
 
 - nested alternate screen
 - cursor mode restore
+- split pane 내부 resize 후 redraw/input 유지
 - tmux 종료 후 shell 복원
 
 ### claude / codex-cli

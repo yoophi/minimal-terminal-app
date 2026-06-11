@@ -434,7 +434,13 @@ else
 fi
 
 head_sha="$(git rev-parse --short HEAD)"
-run_case "git-log" $'git --no-pager log --oneline -1 --no-color\r\r' "${head_sha}" 5000
+run_case_with_followup \
+  "git-log" \
+  "git --no-pager log --oneline -1 --no-color" \
+  $'\r' \
+  "${head_sha}" \
+  5000 \
+  1000
 run_case_with_followup \
   "git-pager-quit" \
   $'git log --oneline --graph --decorate -100 --color=never | less; printf "git-pager-quit-ok\\n"\n' \
@@ -517,8 +523,15 @@ if command -v tmux >/dev/null 2>&1; then
       "tmux-vim-workflow-ok:hello from tmux vim" \
       3000 \
       1400
+    run_case_with_followup \
+      "tmux-split-vim-resize" \
+      "tmp=\"/tmp/minimal-terminal-tmux-split-vim-smoke-\$\$.txt\"; resize_out=\"/tmp/minimal-terminal-tmux-split-vim-resize-\$\$.txt\"; tmux_socket=\"minimal-terminal-app-smoke-\$\$\"; rm -f \"\$tmp\" \"\$resize_out\"; (sleep 1.0; before=\"\$(${tmux_path} -L \"\$tmux_socket\" display-message -p -t minimal-terminal-split-vim:0.1 '#{pane_height}' 2>/dev/null || true)\"; ${tmux_path} -L \"\$tmux_socket\" resize-pane -t minimal-terminal-split-vim:0.1 -D 2; after=\"\$(${tmux_path} -L \"\$tmux_socket\" display-message -p -t minimal-terminal-split-vim:0.1 '#{pane_height}' 2>/dev/null || true)\"; if [ -n \"\$before\" ] && [ -n \"\$after\" ] && [ \"\$after\" != \"\$before\" ]; then printf \"resize-ok:%s->%s\\n\" \"\$before\" \"\$after\" >\"\$resize_out\"; else printf \"resize-failed:%s->%s\\n\" \"\$before\" \"\$after\" >\"\$resize_out\"; fi) & ${tmux_path} -L \"\$tmux_socket\" new-session -s minimal-terminal-split-vim 'printf \"tmux-top-ready\\n\"; read -r line' \\; set-hook -g pane-exited 'kill-session' \\; split-window -v \"${vim_path} --clean -Nu NONE -n \\\"\$tmp\\\"\" \\; select-pane -t minimal-terminal-split-vim:0.1; resize_result=\"\$(cat \"\$resize_out\" 2>/dev/null)\"; case \"\$resize_result\" in resize-ok:*) printf \"tmux-split-vim-resize-ok:%s:%s\\n\" \"\$(cat \"\$tmp\")\" \"\$resize_result\" ;; *) printf \"tmux-split-vim-resize-failed:%s:%s\\n\" \"\$(cat \"\$tmp\" 2>/dev/null)\" \"\$resize_result\"; exit 1 ;; esac; rm -f \"\$tmp\" \"\$resize_out\"; ${tmux_path} -L \"\$tmux_socket\" kill-server >/dev/null 2>&1 || true"$'\n' \
+      $'ihello from split tmux vim\e:wq\r' \
+      "tmux-split-vim-resize-ok:hello from split tmux vim:resize-ok" \
+      4500 \
+      2100
   else
-    echo "app target smoke skipped: tmux-vim-edit-write-quit requires vim"
+    echo "app target smoke skipped: tmux vim targets require vim"
   fi
   ran=1
 else
