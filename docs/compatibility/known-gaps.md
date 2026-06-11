@@ -67,6 +67,7 @@
 - Phase 123에서 `fzf-preview` target을 follow-up query input 대신 `--query beta` 기반 preloaded query workflow로 바꿔 preview marker 검증을 안정화했다.
 - Phase 062에서 app 내부 zsh `fzf` Ctrl-T shell integration workflow를 자동화했다.
 - Phase 063에서 app 내부 zsh `fzf` Alt-C directory widget workflow를 자동화했다.
+- Phase 144에서 `fzf-shell-alt-c` target의 후보 디렉터리를 deterministic 하게 줄여 query timing 의존성을 낮췄다.
 - Phase 064에서 app 내부 zsh `fzf` Ctrl-R history widget workflow를 자동화했다.
 - Phase 048에서 app 내부 `git log ... | less` pager search 뒤 quit workflow를 자동화했다.
 - Phase 049에서 app 내부 `git log ... | less -S` pager horizontal scroll 뒤 quit workflow를 자동화했다.
