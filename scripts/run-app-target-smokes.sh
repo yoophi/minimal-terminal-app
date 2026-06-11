@@ -550,6 +550,60 @@ run_case_with_native_key() {
   echo "app target smoke passed: ${name}"
 }
 
+run_case_with_native_key_required_markers() {
+  local name="$1"
+  local input="$2"
+  local native_key="$3"
+  local snapshot_delay_ms="$4"
+  shift 4
+  local case_dir="${LOG_DIR}/${name}"
+  local snapshot_path="${case_dir}/snapshot.txt"
+  local stdout_path="${case_dir}/stdout.log"
+  local stderr_path="${case_dir}/stderr.log"
+
+  mkdir -p "${case_dir}"
+  rm -f "${snapshot_path}" "${stdout_path}" "${stderr_path}"
+
+  MINIMAL_TERMINAL_SMOKE_INPUT="${input}" \
+  MINIMAL_TERMINAL_SMOKE_NATIVE_KEY="${native_key}" \
+  MINIMAL_TERMINAL_SMOKE_SNAPSHOT_PATH="${snapshot_path}" \
+  MINIMAL_TERMINAL_SMOKE_INPUT_DELAY_MS=500 \
+  MINIMAL_TERMINAL_SMOKE_SNAPSHOT_DELAY_MS="${snapshot_delay_ms}" \
+  MINIMAL_TERMINAL_SMOKE_EXIT=1 \
+  "${APP_BINARY}" >"${stdout_path}" 2>"${stderr_path}" &
+  local pid=$!
+
+  local deadline=$((SECONDS + WAIT_SECONDS))
+  while kill -0 "${pid}" >/dev/null 2>&1 && [[ "${SECONDS}" -lt "${deadline}" ]]; do
+    sleep 0.2
+  done
+
+  if kill -0 "${pid}" >/dev/null 2>&1; then
+    kill "${pid}" >/dev/null 2>&1 || true
+    wait "${pid}" >/dev/null 2>&1 || true
+    echo "app target smoke failed: ${name} did not exit within ${WAIT_SECONDS}s" >&2
+    exit 1
+  fi
+
+  wait "${pid}"
+
+  if [[ ! -f "${snapshot_path}" ]]; then
+    echo "app target smoke failed: ${name} missing snapshot ${snapshot_path}" >&2
+    exit 1
+  fi
+
+  local marker
+  for marker in "$@"; do
+    if ! grep -Fq "${marker}" "${snapshot_path}"; then
+      echo "app target smoke failed: ${name} marker not found: ${marker}" >&2
+      echo "snapshot: ${snapshot_path}" >&2
+      exit 1
+    fi
+  done
+
+  echo "app target smoke passed: ${name}"
+}
+
 ran=0
 
 run_case \
@@ -586,6 +640,18 @@ run_case_with_native_key \
   "control-option-right" \
   "native-control-option-right-key:1b5b313b3743" \
   1500
+run_case_with_native_key_required_markers \
+  "native-up-modifier-matrix-key" \
+  $'ready="native-key"; ready="${ready}-ready"; stty raw -echo; printf "\\n%s\\n" "$ready"; for modifier in 2 3 4 5 6 7 8; do bytes="$(dd bs=1 count=6 2>/dev/null | od -An -tx1 | tr -d " \\n")"; printf "\\nnative-up-modifier-matrix-key-${modifier}:%s\\n" "$bytes"; done; stty sane\n' \
+  "shift-up,option-up,shift-option-up,control-up,shift-control-up,control-option-up,shift-control-option-up" \
+  1500 \
+  "native-up-modifier-matrix-key-2:1b5b313b3241" \
+  "native-up-modifier-matrix-key-3:1b5b313b3341" \
+  "native-up-modifier-matrix-key-4:1b5b313b3441" \
+  "native-up-modifier-matrix-key-5:1b5b313b3541" \
+  "native-up-modifier-matrix-key-6:1b5b313b3641" \
+  "native-up-modifier-matrix-key-7:1b5b313b3741" \
+  "native-up-modifier-matrix-key-8:1b5b313b3841"
 ran=1
 
 run_case_with_mouse_report \

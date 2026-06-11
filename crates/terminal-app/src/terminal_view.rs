@@ -580,9 +580,9 @@ impl TerminalView {
         if self.ivars().native_key_smoke_sent.get() {
             return;
         }
-        let Some((flags, key_code)) = env::var("MINIMAL_TERMINAL_SMOKE_NATIVE_KEY")
+        let Some(events) = env::var("MINIMAL_TERMINAL_SMOKE_NATIVE_KEY")
             .ok()
-            .and_then(|value| native_key_smoke_event(&value))
+            .and_then(|value| native_key_smoke_events(&value))
         else {
             return;
         };
@@ -593,30 +593,31 @@ impl TerminalView {
         let Some(window) = self.as_super().window() else {
             return;
         };
-        let empty = NSString::from_str("");
-        let event: Option<Retained<NSEvent>> = unsafe {
-            msg_send![
-                NSEvent::class(),
-                keyEventWithType: NSEventType::KeyDown,
-                location: NSPoint::new(0.0, 0.0),
-                modifierFlags: flags,
-                timestamp: 0.0,
-                windowNumber: window.windowNumber() as NSInteger,
-                context: Option::<&AnyObject>::None,
-                characters: &*empty,
-                charactersIgnoringModifiers: &*empty,
-                isARepeat: false,
-                keyCode: key_code
-            ]
-        };
-        let Some(event) = event else {
-            logging::pty_error("native key smoke skipped: failed to create NSEvent");
-            self.ivars().native_key_smoke_sent.set(true);
-            return;
-        };
-
         self.ivars().native_key_smoke_sent.set(true);
-        let _: () = unsafe { msg_send![self, keyDown: &*event] };
+        for (flags, key_code) in events {
+            let empty = NSString::from_str("");
+            let event: Option<Retained<NSEvent>> = unsafe {
+                msg_send![
+                    NSEvent::class(),
+                    keyEventWithType: NSEventType::KeyDown,
+                    location: NSPoint::new(0.0, 0.0),
+                    modifierFlags: flags,
+                    timestamp: 0.0,
+                    windowNumber: window.windowNumber() as NSInteger,
+                    context: Option::<&AnyObject>::None,
+                    characters: &*empty,
+                    charactersIgnoringModifiers: &*empty,
+                    isARepeat: false,
+                    keyCode: key_code
+                ]
+            };
+            let Some(event) = event else {
+                logging::pty_error("native key smoke event skipped: failed to create NSEvent");
+                continue;
+            };
+
+            let _: () = unsafe { msg_send![self, keyDown: &*event] };
+        }
     }
 
     fn snapshot_contains_text(&self, needle: &str) -> bool {
@@ -1369,8 +1370,25 @@ fn parse_rows_by_cols(value: &str) -> Option<(usize, usize)> {
 fn native_key_smoke_event(value: &str) -> Option<(NSEventModifierFlags, u16)> {
     match value {
         "control-f5" => Some((NSEventModifierFlags::Control, 96)),
+        "shift-up" => Some((NSEventModifierFlags::Shift, 126)),
+        "option-up" => Some((NSEventModifierFlags::Option, 126)),
         "shift-option-up" => Some((
             NSEventModifierFlags::Shift | NSEventModifierFlags::Option,
+            126,
+        )),
+        "control-up" => Some((NSEventModifierFlags::Control, 126)),
+        "shift-control-up" => Some((
+            NSEventModifierFlags::Shift | NSEventModifierFlags::Control,
+            126,
+        )),
+        "control-option-up" => Some((
+            NSEventModifierFlags::Control | NSEventModifierFlags::Option,
+            126,
+        )),
+        "shift-control-option-up" => Some((
+            NSEventModifierFlags::Shift
+                | NSEventModifierFlags::Control
+                | NSEventModifierFlags::Option,
             126,
         )),
         "control-option-right" => Some((
@@ -1379,6 +1397,15 @@ fn native_key_smoke_event(value: &str) -> Option<(NSEventModifierFlags, u16)> {
         )),
         _ => None,
     }
+}
+
+fn native_key_smoke_events(value: &str) -> Option<Vec<(NSEventModifierFlags, u16)>> {
+    let events = value
+        .split(',')
+        .map(str::trim)
+        .map(native_key_smoke_event)
+        .collect::<Option<Vec<_>>>()?;
+    (!events.is_empty()).then_some(events)
 }
 
 fn text_from_input_object(
@@ -1484,6 +1511,19 @@ mod tests {
             ))
         );
         assert_eq!(super::native_key_smoke_event("unknown"), None);
+    }
+
+    #[test]
+    fn native_key_smoke_events_maps_comma_separated_cases() {
+        assert_eq!(
+            super::native_key_smoke_events("shift-up, control-up"),
+            Some(vec![
+                (NSEventModifierFlags::Shift, 126),
+                (NSEventModifierFlags::Control, 126)
+            ])
+        );
+        assert_eq!(super::native_key_smoke_events("shift-up,unknown"), None);
+        assert_eq!(super::native_key_smoke_events(""), None);
     }
 
     #[test]
