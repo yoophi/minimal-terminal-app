@@ -54,6 +54,7 @@
 - Phase 134에서 `CSI ? 7 h/l` DEC autowrap private mode를 구현하고 `htop-runtime` marker를 `Mem[` 및 `F1Help  F2Setup`까지 강화해 right-margin redraw와 function-key row layout을 보강했다.
 - Phase 149에서 `ESC D`, `ESC E`, `ESC M`, `CSI Ps S`, `CSI Ps T` index/scroll 계열을 구현해 scroll region 기반 htop redraw를 보강했다.
 - Phase 158에서 `CSI ?1006;1000h/l`처럼 여러 DEC private mode parameter가 한 sequence에 묶인 htop mouse mode set/reset을 모두 반영하도록 수정했다.
+- Phase 161에서 AppKit renderer가 glyph fallback 폭과 attributed background 폭 때문에 htop layout을 침범하지 않도록 per-cell clip과 cell-aligned background-only rendering을 적용했다.
 - Phase 039에서 app 내부 `fzf` interactive query redraw snapshot smoke를 자동화했다.
 - Phase 040에서 app 내부 `git log ... | less` pager quit workflow를 자동화했다.
 - Phase 041에서 app 내부 `htop` quit workflow를 자동화했다.

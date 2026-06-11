@@ -6,9 +6,9 @@ use objc2::rc::{autoreleasepool, Retained};
 use objc2::runtime::{AnyObject, Sel};
 use objc2::{define_class, msg_send, sel, ClassType, DefinedClass, MainThreadOnly};
 use objc2_app_kit::{
-    NSApplication, NSBackgroundColorAttributeName, NSColor, NSEvent, NSEventModifierFlags,
-    NSEventType, NSFont, NSFontAttributeName, NSForegroundColorAttributeName, NSPasteboard,
-    NSPasteboardTypeString, NSRectFill, NSResponder, NSTextInputClient,
+    NSApplication, NSColor, NSEvent, NSEventModifierFlags, NSEventType, NSFont,
+    NSFontAttributeName, NSForegroundColorAttributeName, NSGraphicsContext, NSPasteboard,
+    NSPasteboardTypeString, NSRectClip, NSRectFill, NSResponder, NSTextInputClient,
     NSUnderlineStyleAttributeName, NSView, NSWindow,
 };
 use objc2_foundation::{
@@ -1101,18 +1101,34 @@ fn draw_styled_line_backgrounds(line: &StyledLine, y: f64) {
 fn draw_text_cells_at(text: &str, x: f64, y: f64, attributes: &NSMutableDictionary) {
     let mut current_x = x;
     let mut previous_x = x;
+    let mut previous_width = terminal_cell_width();
     let cell_width = terminal_cell_width();
 
     for ch in text.chars() {
         let width = char_width(ch);
-        let draw_x = if width == 0 { previous_x } else { current_x };
-        draw_text_at(&ch.to_string(), draw_x, y, attributes);
+        let (draw_x, clip_width) = if width == 0 {
+            (previous_x, previous_width)
+        } else {
+            (current_x, width as f64 * cell_width)
+        };
+        draw_text_cell_at(&ch.to_string(), draw_x, y, clip_width, attributes);
 
         if width > 0 {
             previous_x = current_x;
+            previous_width = width as f64 * cell_width;
             current_x += width as f64 * cell_width;
         }
     }
+}
+
+fn draw_text_cell_at(text: &str, x: f64, y: f64, width: f64, attributes: &NSMutableDictionary) {
+    NSGraphicsContext::saveGraphicsState_class();
+    NSRectClip(NSRect::new(
+        NSPoint::new(x, y),
+        objc2_foundation::NSSize::new(width, LINE_HEIGHT),
+    ));
+    draw_text_at(text, x, y, attributes);
+    NSGraphicsContext::restoreGraphicsState_class();
 }
 
 fn draw_text_at(text: &str, x: f64, y: f64, attributes: &NSMutableDictionary) {
@@ -1163,17 +1179,6 @@ fn terminal_text_attributes(style: Style) -> Retained<NSMutableDictionary> {
             forKey: &*NSForegroundColorAttributeName
         ]
     };
-
-    if let Some(background) = terminal_background_color(style) {
-        let background_object: &AnyObject = background.as_ref();
-        let _: () = unsafe {
-            msg_send![
-                &*attributes,
-                setObject: background_object,
-                forKey: &*NSBackgroundColorAttributeName
-            ]
-        };
-    }
 
     if style.underline {
         let underline = NSNumber::new_i32(1);
