@@ -155,6 +155,12 @@ fn mouse_report_bytes(buffer: &Arc<Mutex<TerminalBuffer>>, report: &str) -> Opti
         "wheel-down-5" => (0..5)
             .map(|_| mouse::legacy_mouse_report(mouse::WHEEL_DOWN, 0, 1, 2, false))
             .collect(),
+        "wheel-down-20" if modes.sgr_mouse => (0..20)
+            .map(|_| mouse::sgr_mouse_report(mouse::WHEEL_DOWN, 0, 1, 2, false))
+            .collect(),
+        "wheel-down-20" => (0..20)
+            .map(|_| mouse::legacy_mouse_report(mouse::WHEEL_DOWN, 0, 1, 2, false))
+            .collect(),
         _ => {
             logging::pty_error(&format!(
                 "smoke mouse report skipped: unknown report {report}"
