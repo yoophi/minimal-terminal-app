@@ -745,6 +745,13 @@ if command -v htop >/dev/null 2>&1; then
     "[Setup]" \
     2500 \
     1200
+  run_case_with_followup \
+    "htop-setup-save" \
+    "tmpdir=\"\$(mktemp -d /tmp/minimal-terminal-htop-setup.XXXXXX)\"; rc=\"\$tmpdir/htoprc\"; HTOPRC=\"\$rc\" ${htop_path}; if [ -s \"\$rc\" ]; then printf \"htop-setup-save-ok\\n\"; else printf \"htop-setup-save-missing\\n\"; exit 1; fi; rm -rf \"\$tmpdir\""$'\n' \
+    $'\eOQ\e[21~q' \
+    "htop-setup-save-ok" \
+    3000 \
+    1200
   ran=1
 else
   echo "app target smoke skipped: htop not found"
