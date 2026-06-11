@@ -1351,6 +1351,13 @@ if command -v vttest >/dev/null 2>&1; then
     "Test of WRAP AROUND mode setting" \
     1500 \
     1000
+  run_case_with_followup \
+    "vttest-character-sets" \
+    "${vttest_path}"$'\n' \
+    $'3\r' \
+    "These are the installed character sets" \
+    1500 \
+    1000
   ran=1
 else
   echo "app target smoke skipped: vttest not found"
