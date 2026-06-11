@@ -173,6 +173,8 @@ scripts/run-app-target-smokes.sh
 - `native-control-option-right-key`: synthetic Control+Option+Right `NSEvent`가 `TerminalView keyDown:`을 지나 PTY에 modified navigation key bytes `ESC [ 1 ; 7 C`를 쓰는지 확인
 - `native-up-modifier-matrix-key`: synthetic Up key `NSEvent` 7개가 Shift/Option/Control 전체 modifier 조합별 modified navigation key bytes `ESC [ 1 ; 2 A`부터 `ESC [ 1 ; 8 A`까지 쓰는지 확인
 - `native-f5-modifier-matrix-key`: synthetic F5 key `NSEvent` 7개가 Shift/Option/Control 전체 modifier 조합별 modified function key bytes `ESC [ 15 ; 2 ~`부터 `ESC [ 15 ; 8 ~`까지 쓰는지 확인
+- `native-shift-function-f1-f4-key`: synthetic Shift+F1-F4 `NSEvent` 4개가 modified function key bytes를 쓰는지 확인
+- `native-shift-function-f5-f12-key`: synthetic Shift+F5-F12 `NSEvent` 8개가 modified function key bytes를 쓰는지 확인
 - `native-control-option-navigation-family-key`: synthetic Control+Option navigation key `NSEvent` 9개가 Up/Down/Right/Left/Home/End/PageUp/PageDown/Delete modified navigation key bytes를 쓰는지 확인
 - `native-shift-control-navigation-family-key`: synthetic Shift+Control navigation key `NSEvent` 9개가 Up/Down/Right/Left/Home/End/PageUp/PageDown/Delete modified navigation key bytes를 쓰는지 확인
 - `native-shift-option-navigation-family-key`: synthetic Shift+Option navigation key `NSEvent` 9개가 Up/Down/Right/Left/Home/End/PageUp/PageDown/Delete modified navigation key bytes를 쓰는지 확인
