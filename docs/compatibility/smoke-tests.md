@@ -175,6 +175,7 @@ scripts/run-app-target-smokes.sh
 - `vim-edit-write-quit`: `vim --clean -Nu NONE -n <tempfile>` 실행 후 insert, write, quit, shell 복원 확인
 - `vim-mouse-left-press`: clean `vim`에서 `mouse=a`, SGR mouse mode를 켠 뒤 smoke hook SGR left press가 `<LeftMouse>` mapping을 실행하는지 확인
 - `vim-window-split`: clean `vim`에서 `<C-W>s` split key chord 실행 뒤 Vim window count `2` 확인
+- `vim-resize-redraw`: clean `vim` 실행 중 smoke resize hook으로 PTY/grid를 `24x80`으로 바꾼 뒤 `&lines`, `&columns`와 shell 복원 확인
 - `less-basic-quit`: `printf 'one\ntwo\nthree\n' | less` 실행 후 follow-up `q`로 pager 종료 확인
 - `less-mouse-wheel-down`: `less --mouse --wheel-lines=10` 실행 후 smoke hook wheel-down reports로 pager 화면 이동 확인
 - `less-search`: `less` 실행 후 follow-up `/less-search-line-080`, Enter로 검색 이동 확인

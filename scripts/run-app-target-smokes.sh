@@ -117,6 +117,63 @@ run_case_with_followup() {
   echo "app target smoke passed: ${name}"
 }
 
+run_case_with_resize_followup() {
+  local name="$1"
+  local input="$2"
+  local resize="$3"
+  local followup_input="$4"
+  local marker="$5"
+  local snapshot_delay_ms="${6:-2500}"
+  local resize_delay_ms="${7:-1000}"
+  local followup_delay_ms="${8:-1000}"
+  local case_dir="${LOG_DIR}/${name}"
+  local snapshot_path="${case_dir}/snapshot.txt"
+  local stdout_path="${case_dir}/stdout.log"
+  local stderr_path="${case_dir}/stderr.log"
+
+  mkdir -p "${case_dir}"
+  rm -f "${snapshot_path}" "${stdout_path}" "${stderr_path}"
+
+  MINIMAL_TERMINAL_SMOKE_INPUT="${input}" \
+  MINIMAL_TERMINAL_SMOKE_RESIZE="${resize}" \
+  MINIMAL_TERMINAL_SMOKE_FOLLOWUP_INPUT="${followup_input}" \
+  MINIMAL_TERMINAL_SMOKE_SNAPSHOT_PATH="${snapshot_path}" \
+  MINIMAL_TERMINAL_SMOKE_INPUT_DELAY_MS=500 \
+  MINIMAL_TERMINAL_SMOKE_RESIZE_DELAY_MS="${resize_delay_ms}" \
+  MINIMAL_TERMINAL_SMOKE_FOLLOWUP_INPUT_DELAY_MS="${followup_delay_ms}" \
+  MINIMAL_TERMINAL_SMOKE_SNAPSHOT_DELAY_MS="${snapshot_delay_ms}" \
+  MINIMAL_TERMINAL_SMOKE_EXIT=1 \
+  "${APP_BINARY}" >"${stdout_path}" 2>"${stderr_path}" &
+  local pid=$!
+
+  local deadline=$((SECONDS + WAIT_SECONDS))
+  while kill -0 "${pid}" >/dev/null 2>&1 && [[ "${SECONDS}" -lt "${deadline}" ]]; do
+    sleep 0.2
+  done
+
+  if kill -0 "${pid}" >/dev/null 2>&1; then
+    kill "${pid}" >/dev/null 2>&1 || true
+    wait "${pid}" >/dev/null 2>&1 || true
+    echo "app target smoke failed: ${name} did not exit within ${WAIT_SECONDS}s" >&2
+    exit 1
+  fi
+
+  wait "${pid}"
+
+  if [[ ! -f "${snapshot_path}" ]]; then
+    echo "app target smoke failed: ${name} missing snapshot ${snapshot_path}" >&2
+    exit 1
+  fi
+
+  if ! grep -Fq "${marker}" "${snapshot_path}"; then
+    echo "app target smoke failed: ${name} marker not found: ${marker}" >&2
+    echo "snapshot: ${snapshot_path}" >&2
+    exit 1
+  fi
+
+  echo "app target smoke passed: ${name}"
+}
+
 run_case_with_two_followups() {
   local name="$1"
   local input="$2"
@@ -395,6 +452,15 @@ if command -v vim >/dev/null 2>&1; then
     "vim-split-count:2" \
     3200 \
     1400
+  run_case_with_resize_followup \
+    "vim-resize-redraw" \
+    "tmp=\"/tmp/minimal-terminal-vim-resize-smoke.txt\"; rm -f \"\$tmp\"; ${vim_path} --clean -Nu NONE -n; printf \"vim-resize-result:%s\\n\" \"\$(cat \"\$tmp\")\"; rm -f \"\$tmp\""$'\n' \
+    "24x80" \
+    $':call writefile([printf("lines=%d columns=%d", &lines, &columns)], "/tmp/minimal-terminal-vim-resize-smoke.txt")\r:qall!\r' \
+    "vim-resize-result:lines=24 columns=80" \
+    3600 \
+    1000 \
+    1200
   ran=1
 else
   echo "app target smoke skipped: vim not found"
@@ -523,9 +589,38 @@ if command -v tmux >/dev/null 2>&1; then
       "tmux-vim-workflow-ok:hello from tmux vim" \
       3000 \
       1400
+    tmux_split_vim_script="${LOG_DIR}/tmux-split-vim-resize.sh"
+    cat >"${tmux_split_vim_script}" <<EOF
+#!/usr/bin/env bash
+set -euo pipefail
+tmp="/tmp/minimal-terminal-tmux-split-vim-smoke-\$\$.txt"
+resize_out="/tmp/minimal-terminal-tmux-split-vim-resize-\$\$.txt"
+tmux_socket="minimal-terminal-app-smoke-\$\$"
+rm -f "\${tmp}" "\${resize_out}"
+(
+  sleep 1.0
+  before="\$(${tmux_path} -L "\${tmux_socket}" display-message -p -t minimal-terminal-split-vim:0.1 '#{pane_height}' 2>/dev/null || true)"
+  ${tmux_path} -L "\${tmux_socket}" resize-pane -t minimal-terminal-split-vim:0.1 -D 2
+  after="\$(${tmux_path} -L "\${tmux_socket}" display-message -p -t minimal-terminal-split-vim:0.1 '#{pane_height}' 2>/dev/null || true)"
+  if [ -n "\${before}" ] && [ -n "\${after}" ] && [ "\${after}" != "\${before}" ]; then
+    printf "resize-ok:%s->%s\n" "\${before}" "\${after}" >"\${resize_out}"
+  else
+    printf "resize-failed:%s->%s\n" "\${before}" "\${after}" >"\${resize_out}"
+  fi
+) &
+${tmux_path} -L "\${tmux_socket}" new-session -s minimal-terminal-split-vim 'printf "tmux-top-ready\n"; read -r line' \; set-hook -g pane-exited 'kill-session' \; split-window -v "${vim_path} --clean -Nu NONE -n \"\${tmp}\"" \; select-pane -t minimal-terminal-split-vim:0.1
+resize_result="\$(cat "\${resize_out}" 2>/dev/null)"
+case "\${resize_result}" in
+  resize-ok:*) printf "tmux-split-vim-resize-ok:%s:%s\n" "\$(cat "\${tmp}")" "\${resize_result}" ;;
+  *) printf "tmux-split-vim-resize-failed:%s:%s\n" "\$(cat "\${tmp}" 2>/dev/null)" "\${resize_result}"; exit 1 ;;
+esac
+rm -f "\${tmp}" "\${resize_out}" "\${BASH_SOURCE[0]}"
+${tmux_path} -L "\${tmux_socket}" kill-server >/dev/null 2>&1 || true
+EOF
+    chmod +x "${tmux_split_vim_script}"
     run_case_with_followup \
       "tmux-split-vim-resize" \
-      "tmp=\"/tmp/minimal-terminal-tmux-split-vim-smoke-\$\$.txt\"; resize_out=\"/tmp/minimal-terminal-tmux-split-vim-resize-\$\$.txt\"; tmux_socket=\"minimal-terminal-app-smoke-\$\$\"; rm -f \"\$tmp\" \"\$resize_out\"; (sleep 1.0; before=\"\$(${tmux_path} -L \"\$tmux_socket\" display-message -p -t minimal-terminal-split-vim:0.1 '#{pane_height}' 2>/dev/null || true)\"; ${tmux_path} -L \"\$tmux_socket\" resize-pane -t minimal-terminal-split-vim:0.1 -D 2; after=\"\$(${tmux_path} -L \"\$tmux_socket\" display-message -p -t minimal-terminal-split-vim:0.1 '#{pane_height}' 2>/dev/null || true)\"; if [ -n \"\$before\" ] && [ -n \"\$after\" ] && [ \"\$after\" != \"\$before\" ]; then printf \"resize-ok:%s->%s\\n\" \"\$before\" \"\$after\" >\"\$resize_out\"; else printf \"resize-failed:%s->%s\\n\" \"\$before\" \"\$after\" >\"\$resize_out\"; fi) & ${tmux_path} -L \"\$tmux_socket\" new-session -s minimal-terminal-split-vim 'printf \"tmux-top-ready\\n\"; read -r line' \\; set-hook -g pane-exited 'kill-session' \\; split-window -v \"${vim_path} --clean -Nu NONE -n \\\"\$tmp\\\"\" \\; select-pane -t minimal-terminal-split-vim:0.1; resize_result=\"\$(cat \"\$resize_out\" 2>/dev/null)\"; case \"\$resize_result\" in resize-ok:*) printf \"tmux-split-vim-resize-ok:%s:%s\\n\" \"\$(cat \"\$tmp\")\" \"\$resize_result\" ;; *) printf \"tmux-split-vim-resize-failed:%s:%s\\n\" \"\$(cat \"\$tmp\" 2>/dev/null)\" \"\$resize_result\"; exit 1 ;; esac; rm -f \"\$tmp\" \"\$resize_out\"; ${tmux_path} -L \"\$tmux_socket\" kill-server >/dev/null 2>&1 || true"$'\n' \
+      "${tmux_split_vim_script}"$'\n' \
       $'ihello from split tmux vim\e:wq\r' \
       "tmux-split-vim-resize-ok:hello from split tmux vim:resize-ok" \
       4500 \

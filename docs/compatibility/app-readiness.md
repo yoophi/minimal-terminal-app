@@ -22,7 +22,7 @@ Phase 009-018은 1-5번의 많은 부분을 구현하거나 검증 대상으로 
 
 | 대상 | Phase 019 확인 결과 | 남는 리스크 |
 | --- | --- | --- |
-| `vim` | replay evidence와 app-internal edit/write/quit, mouse left press, window split key chord smoke가 있어 `partially supported`. | resize, plugin redraw |
+| `vim` | replay evidence와 app-internal edit/write/quit, mouse left press, window split key chord, PTY/grid resize redraw smoke가 있어 `partially supported`. | plugin redraw, 실제 AppKit window resize end-to-end |
 | `less` | replay evidence, app-internal basic quit/search/follow smoke, mouse wheel-down smoke가 있어 `partially supported`. | 장시간 follow/log rotation 같은 확장 workflow |
 | `emacs -nw` | local PATH에서 `emacs` 미확인, `not supported`. | 설치 후 Meta/Option key, 복잡한 key chord, mouse 확인 필요 |
 | `tmux` | `tmux 3.6b` version smoke, attached session workflow smoke, split-pane workflow smoke, pane resize height 비교 smoke, copy mode buffer smoke, mouse wheel smoke, nested vim edit/write/quit smoke, split-pane 내부 nested vim resize/edit/write/quit smoke 통과, `partially supported`. | native GUI mouse end-to-end, host window resize/SIGWINCH, 사용자 tmux 설정 workflow |

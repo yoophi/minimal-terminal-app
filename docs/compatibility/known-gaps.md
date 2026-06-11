@@ -121,7 +121,7 @@
 
 대상:
 
-- `vim`: clean vim edit/write/quit, mouse left press, window split key chord workflow smoke는 통과했다.
+- `vim`: clean vim edit/write/quit, mouse left press, window split key chord, PTY/grid resize redraw workflow smoke는 통과했다.
 - `emacs -nw`: local verification environment의 PATH에서 `emacs`를 찾지 못했다.
 - `tmux`: `tmux 3.6b` version smoke, attached session workflow smoke, split-pane workflow smoke, pane resize smoke, copy mode buffer smoke, mouse wheel smoke, split pane 내부 nested vim resize workflow는 통과했다.
 - `tmux` 안의 `vim`: clean nested edit/write/quit workflow와 split pane 내부 resize 후 edit/write/quit workflow smoke는 통과했다.
@@ -134,6 +134,7 @@
 - `TERM=xterm-256color`를 선언하는 이상 앱별 terminal capability 기대치와 실제 구현이 어긋날 수 있다.
 - `tmux`와 editor, agent-style CLI는 DSR/DA, key encoding, resize, alternate screen, paste, mouse reporting 같은 여러 기능을 조합해서 사용한다.
 - Phase 107에서 app 내부 clean Vim의 `<C-W>s` window split key chord workflow를 자동화했다.
+- Phase 114에서 app 내부 clean Vim 실행 중 PTY/grid resize 후 redraw/input workflow를 자동화했다.
 
 권장 다음 작업:
 
