@@ -980,13 +980,23 @@ fn terminal_font(bold: bool) -> Option<Retained<NSFont>> {
 }
 
 fn terminal_cell_width() -> f64 {
-    let Some(font) = terminal_font(false) else {
-        return FALLBACK_CELL_WIDTH;
-    };
+    let regular_width = terminal_font(false)
+        .and_then(|font| measured_cell_width_for_font(&font))
+        .unwrap_or(FALLBACK_CELL_WIDTH);
+    let bold_width = terminal_font(true)
+        .and_then(|font| measured_cell_width_for_font(&font))
+        .unwrap_or(regular_width);
 
+    regular_width
+        .max(bold_width)
+        .ceil()
+        .max(FALLBACK_CELL_WIDTH)
+}
+
+fn measured_cell_width_for_font(font: &NSFont) -> Option<f64> {
     let attributes: Retained<NSMutableDictionary<NSAttributedStringKey, AnyObject>> =
         NSMutableDictionary::new();
-    let font_object: &AnyObject = font.as_ref();
+    let font_object: &AnyObject = font;
     let _: () = unsafe {
         msg_send![
             &*attributes,
@@ -1003,9 +1013,9 @@ fn terminal_cell_width() -> f64 {
         ]
     };
     if size.width.is_finite() && size.width > 0.0 {
-        size.width
+        Some(size.width)
     } else {
-        FALLBACK_CELL_WIDTH
+        None
     }
 }
 
@@ -1176,5 +1186,21 @@ mod tests {
             20
         );
         assert_eq!(super::mouse_modifier_mask(NSEventModifierFlags::Option), 8);
+    }
+
+    #[test]
+    fn terminal_cell_width_covers_regular_and_bold_fonts() {
+        let cell_width = super::terminal_cell_width();
+        assert!(cell_width >= super::FALLBACK_CELL_WIDTH);
+        assert_eq!(cell_width.fract(), 0.0);
+
+        if let Some(font) = super::terminal_font(false) {
+            let measured = super::measured_cell_width_for_font(&font).unwrap();
+            assert!(cell_width >= measured);
+        }
+        if let Some(font) = super::terminal_font(true) {
+            let measured = super::measured_cell_width_for_font(&font).unwrap();
+            assert!(cell_width >= measured);
+        }
     }
 }
