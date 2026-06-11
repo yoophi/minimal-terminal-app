@@ -686,6 +686,16 @@ mod tests {
         let snapshot = terminal.snapshot(3);
         assert!(snapshot.modes.mouse_reporting);
         assert!(snapshot.modes.sgr_mouse);
+
+        terminal.append_bytes(b"\x1b[?1006;1000l");
+        let snapshot = terminal.snapshot(3);
+        assert!(!snapshot.modes.mouse_reporting);
+        assert!(!snapshot.modes.sgr_mouse);
+
+        terminal.append_bytes(b"\x1b[?1006;1000h");
+        let snapshot = terminal.snapshot(3);
+        assert!(snapshot.modes.mouse_reporting);
+        assert!(snapshot.modes.sgr_mouse);
     }
 
     #[test]

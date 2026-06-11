@@ -376,8 +376,11 @@ impl vte::Perform for ActionCollector {
             return;
         }
 
-        self.actions
-            .push(parse_csi(&params_to_numbers(params), intermediates, action));
+        self.actions.extend(parse_csi_actions(
+            &params_to_numbers(params),
+            intermediates,
+            action,
+        ));
     }
 
     fn esc_dispatch(&mut self, intermediates: &[u8], ignore: bool, byte: u8) {
@@ -1750,6 +1753,14 @@ fn parse_osc_title(title: &[u8]) -> Action {
     }
 }
 
+fn parse_csi_actions(numbers: &[usize], intermediates: &[u8], final_byte: char) -> Vec<Action> {
+    if intermediates == b"?" && matches!(final_byte, 'h' | 'l') {
+        return parse_private_csi_modes(numbers, final_byte);
+    }
+
+    vec![parse_csi(numbers, intermediates, final_byte)]
+}
+
 fn parse_csi(numbers: &[usize], intermediates: &[u8], final_byte: char) -> Action {
     if intermediates == b"?" {
         return parse_private_csi(numbers, final_byte);
@@ -1848,6 +1859,39 @@ fn parse_private_csi(numbers: &[usize], final_byte: char) -> Action {
         'l' if contains_any(&numbers, &[1006]) => Action::SetSgrMouse(false),
         'h' | 'l' => Action::Ignore,
         _ => Action::Ignore,
+    }
+}
+
+fn parse_private_csi_modes(numbers: &[usize], final_byte: char) -> Vec<Action> {
+    let actions: Vec<Action> = numbers
+        .iter()
+        .filter_map(|number| parse_private_csi_mode(*number, final_byte))
+        .collect();
+
+    if actions.is_empty() {
+        vec![Action::Ignore]
+    } else {
+        actions
+    }
+}
+
+fn parse_private_csi_mode(number: usize, final_byte: char) -> Option<Action> {
+    match (final_byte, number) {
+        ('h', 1) => Some(Action::SetApplicationCursorKeys(true)),
+        ('l', 1) => Some(Action::SetApplicationCursorKeys(false)),
+        ('h', 7) => Some(Action::SetAutoWrap(true)),
+        ('l', 7) => Some(Action::SetAutoWrap(false)),
+        ('h', 25) => Some(Action::SetCursorVisible(true)),
+        ('l', 25) => Some(Action::SetCursorVisible(false)),
+        ('h', 47 | 1047 | 1049) => Some(Action::EnterAlternateScreen),
+        ('l', 47 | 1047 | 1049) => Some(Action::ExitAlternateScreen),
+        ('h', 2004) => Some(Action::SetBracketedPaste(true)),
+        ('l', 2004) => Some(Action::SetBracketedPaste(false)),
+        ('h', 1000 | 1002 | 1003) => Some(Action::SetMouseReporting(true)),
+        ('l', 1000 | 1002 | 1003) => Some(Action::SetMouseReporting(false)),
+        ('h', 1006) => Some(Action::SetSgrMouse(true)),
+        ('l', 1006) => Some(Action::SetSgrMouse(false)),
+        _ => None,
     }
 }
 
@@ -3276,6 +3320,14 @@ mod tests {
         assert_eq!(
             parser.advance_bytes(b"\x1b[?1006h"),
             vec![Action::SetSgrMouse(true)]
+        );
+        assert_eq!(
+            parser.advance_bytes(b"\x1b[?1006;1000h"),
+            vec![Action::SetSgrMouse(true), Action::SetMouseReporting(true)]
+        );
+        assert_eq!(
+            parser.advance_bytes(b"\x1b[?1006;1000l"),
+            vec![Action::SetSgrMouse(false), Action::SetMouseReporting(false)]
         );
     }
 

@@ -1264,10 +1264,10 @@ if command -v htop >/dev/null 2>&1; then
     2000 \
     1200
   run_case_with_mouse_report \
-    "htop-mouse-open-files" \
+    "htop-mouse-setup" \
     "${htop_path}"$'\n' \
-    "left-click:28:75" \
-    "Snapshot of files open in process" \
+    "left-click:28:10" \
+    "[Setup]" \
     2000 \
     1200
   run_case_with_followup \
