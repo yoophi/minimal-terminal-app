@@ -425,7 +425,7 @@ if command -v less >/dev/null 2>&1; then
     1800
   run_case \
     "less-follow" \
-    "tmp=\"/tmp/minimal-terminal-less-follow-\$\$.log\"; rm -f \"\$tmp\"; printf \"less-follow-line-001\\n\" > \"\$tmp\"; (sleep 1; printf \"less-follow-line-002\\nless-follow-marker\\n\" >> \"\$tmp\"; sleep 2; rm -f \"\$tmp\") & ${less_path} +F \"\$tmp\""$'\n' \
+    "tmp=\"/tmp/minimal-terminal-less-follow-\$\$.log\"; rm -f \"\$tmp\"; printf \"less-follow-line-001\\n\" > \"\$tmp\"; (sleep 1; printf \"less-follow-line-002\\nless-follow-marker\\n\" >> \"\$tmp\"; sleep 10; rm -f \"\$tmp\") & ${less_path} +F \"\$tmp\""$'\n' \
     "less-follow-marker" \
     3500
   ran=1
@@ -434,7 +434,7 @@ else
 fi
 
 head_sha="$(git rev-parse --short HEAD)"
-run_case "git-log" $'git log --oneline -1 --no-color\n' "${head_sha}" 5000
+run_case "git-log" $'git --no-pager log --oneline -1 --no-color\r' "${head_sha}" 5000
 run_case_with_followup \
   "git-pager-quit" \
   $'git log --oneline --graph --decorate -100 --color=never | less; printf "git-pager-quit-ok\\n"\n' \

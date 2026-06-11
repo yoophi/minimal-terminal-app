@@ -179,7 +179,7 @@ scripts/run-app-target-smokes.sh
 - `less-mouse-wheel-down`: `less --mouse --wheel-lines=10` 실행 후 smoke hook wheel-down reports로 pager 화면 이동 확인
 - `less-search`: `less` 실행 후 follow-up `/less-search-line-080`, Enter로 검색 이동 확인
 - `less-follow`: `less +F` 실행 후 background append marker `less-follow-marker` 확인
-- `git-log`: `git log --oneline -1 --no-color`
+- `git-log`: `git --no-pager log --oneline -1 --no-color`
 - `git-pager-quit`: `git log ... | less` 실행 후 follow-up `q`로 pager 종료 확인
 - `git-pager-page-quit`: `git log ... | less` 실행 후 follow-up Space와 `q`로 page navigation 뒤 pager 종료 확인
 - `git-pager-search-quit`: `git log ... | less` 실행 후 follow-up `/Implement`, Enter, `q`로 search 뒤 pager 종료 확인
