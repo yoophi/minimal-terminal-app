@@ -71,6 +71,7 @@
 - Phase 059에서 app 내부 `tmux` 안의 clean `vim` edit/write/quit workflow를 자동화했다.
 - Phase 113에서 app 내부 `tmux` split pane 안의 clean `vim` pane resize 후 edit/write/quit workflow를 자동화했다.
 - Phase 117에서 app 내부 login shell이 home directory에서 시작해도 generated helper script를 absolute path로 실행하도록 `tmux-split-vim-resize` target을 안정화했다.
+- Phase 120에서 긴 follow-up 입력과 snapshot delay를 함께 쓰는 target이 기본 종료 제한에 걸리지 않도록 app target smoke 기본 wait budget을 12초로 늘렸다.
 - Phase 060에서 app 내부 direct `less` basic quit workflow를 자동화했다.
 - Phase 105에서 app 내부 direct `less` search workflow를 자동화했다.
 - Phase 106에서 app 내부 direct `less +F` follow mode append workflow를 자동화했다.
@@ -265,7 +266,7 @@ Phase 118에서 `scripts/run-app-target-smokes.sh`에 `shell-home`과 `shell-exi
 
 상태: `supported`
 
-Phase 034에서 `scripts/run-app-target-smokes.sh`에 `tmux -V`, `htop --version`, `claude --version`, `codex-cli --version` target을 추가했다. Phase 055에서 현재 local verification environment의 `codex --version` fallback을 추가했다. Phase 056에서 attached `tmux new-session` workflow를 추가했고, Phase 057에서 `tmux split-window` workflow를 추가했다. Phase 104에서 detached tmux split pane resize height 비교 workflow를 추가했다. Phase 108에서 tmux copy mode buffer workflow를 추가했다. Phase 109에서 tmux mouse mode wheel workflow를 추가했다. Phase 113에서 attached tmux split pane 내부 clean vim pane resize 후 edit/write/quit workflow를 추가했다. Phase 112에서 `claude --help`와 `codex`/`codex-cli --help` output smoke를 추가했다. `tmux-version`, `tmux-attached-session`, `tmux-split-pane`, `tmux-pane-resize`, `tmux-copy-mode`, `tmux-mouse-wheel`, `tmux-split-vim-resize`, `htop-version`, `claude-version`, `claude-help`, `codex-version`/`codex-cli-version`, `codex-help`/`codex-cli-help`가 app 내부 PTY snapshot smoke를 통과한다. 실제 interactive workflow는 대표 CLI/TUI Application Certification gap으로 계속 추적한다.
+Phase 034에서 `scripts/run-app-target-smokes.sh`에 `tmux -V`, `htop --version`, `claude --version`, `codex-cli --version` target을 추가했다. Phase 055에서 현재 local verification environment의 `codex --version` fallback을 추가했다. Phase 056에서 attached `tmux new-session` workflow를 추가했고, Phase 057에서 `tmux split-window` workflow를 추가했다. Phase 104에서 detached tmux split pane resize height 비교 workflow를 추가했다. Phase 108에서 tmux copy mode buffer workflow를 추가했다. Phase 109에서 tmux mouse mode wheel workflow를 추가했다. Phase 113에서 attached tmux split pane 내부 clean vim pane resize 후 edit/write/quit workflow를 추가했다. Phase 120에서 긴 follow-up/snapshot target의 기본 wait budget을 12초로 늘렸다. Phase 112에서 `claude --help`와 `codex`/`codex-cli --help` output smoke를 추가했다. `tmux-version`, `tmux-attached-session`, `tmux-split-pane`, `tmux-pane-resize`, `tmux-copy-mode`, `tmux-mouse-wheel`, `tmux-split-vim-resize`, `htop-version`, `claude-version`, `claude-help`, `codex-version`/`codex-cli-version`, `codex-help`/`codex-cli-help`가 app 내부 PTY snapshot smoke를 통과한다. 실제 interactive workflow는 대표 CLI/TUI Application Certification gap으로 계속 추적한다.
 
 ### DEC Special Graphics Charset
 

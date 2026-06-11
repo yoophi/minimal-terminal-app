@@ -4,7 +4,7 @@ set -euo pipefail
 APP_DIR="target/debug/Minimal Terminal.app"
 APP_BINARY="${APP_DIR}/Contents/MacOS/terminal-app"
 LOG_DIR="target/debug/app-target-smokes"
-WAIT_SECONDS="${WAIT_SECONDS:-8}"
+WAIT_SECONDS="${WAIT_SECONDS:-12}"
 
 scripts/bundle-macos-app.sh >/dev/null
 

@@ -161,6 +161,8 @@ scripts/run-app-command-smoke.sh
 scripts/run-app-target-smokes.sh
 ```
 
+이 script의 기본 app 종료 대기 시간은 12초다. 긴 follow-up 입력과 snapshot delay를 함께 쓰는 target은 `WAIT_SECONDS=<seconds>`로 더 늘려 실행할 수 있다.
+
 현재 자동 target:
 
 - `shell-home`: app 내부 login shell이 `$HOME`에서 시작하는지 확인
