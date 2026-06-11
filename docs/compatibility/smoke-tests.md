@@ -172,6 +172,7 @@ scripts/run-app-target-smokes.sh
 - `native-shift-option-up-key`: synthetic Shift+Option+Up `NSEvent`가 `TerminalView keyDown:`을 지나 PTY에 modified navigation key bytes `ESC [ 1 ; 4 A`를 쓰는지 확인
 - `native-control-option-right-key`: synthetic Control+Option+Right `NSEvent`가 `TerminalView keyDown:`을 지나 PTY에 modified navigation key bytes `ESC [ 1 ; 7 C`를 쓰는지 확인
 - `native-up-modifier-matrix-key`: synthetic Up key `NSEvent` 7개가 Shift/Option/Control 전체 modifier 조합별 modified navigation key bytes `ESC [ 1 ; 2 A`부터 `ESC [ 1 ; 8 A`까지 쓰는지 확인
+- `native-f5-modifier-matrix-key`: synthetic F5 key `NSEvent` 7개가 Shift/Option/Control 전체 modifier 조합별 modified function key bytes `ESC [ 15 ; 2 ~`부터 `ESC [ 15 ; 8 ~`까지 쓰는지 확인
 - `mouse-sgr-report`: mouse reporting / SGR mouse mode enable 뒤 app smoke hook이 보낸 SGR left press bytes 확인
 - `native-mouse-sgr-report`: mouse reporting / SGR mouse mode enable 뒤 synthetic `NSEvent`가 `TerminalView`의 `mouseDown:` path를 통해 보낸 SGR left press bytes 확인
 - `fzf-filter`: `printf 'alpha\nbeta\n' | fzf --filter alpha`

@@ -40,6 +40,18 @@ const KEY_KEYPAD_ENTER: u16 = 76;
 const KEY_Q: u16 = 12;
 const KEY_W: u16 = 13;
 const KEY_N: u16 = 45;
+const KEY_F1: u16 = 122;
+const KEY_F2: u16 = 120;
+const KEY_F3: u16 = 99;
+const KEY_F4: u16 = 118;
+const KEY_F5: u16 = 96;
+const KEY_F6: u16 = 97;
+const KEY_F7: u16 = 98;
+const KEY_F8: u16 = 100;
+const KEY_F9: u16 = 101;
+const KEY_F10: u16 = 109;
+const KEY_F11: u16 = 103;
+const KEY_F12: u16 = 111;
 const KEY_PAGE_UP: u16 = 116;
 const KEY_PAGE_DOWN: u16 = 121;
 const TERMINAL_FONT_NAMES: &[&str] = &[
@@ -887,7 +899,10 @@ fn is_command_key_parts(
 }
 
 fn should_use_text_input(event: &NSEvent) -> bool {
-    let flags = event.modifierFlags();
+    should_use_text_input_parts(event.keyCode(), event.modifierFlags())
+}
+
+fn should_use_text_input_parts(key_code: u16, flags: NSEventModifierFlags) -> bool {
     if flags.intersects(
         objc2_app_kit::NSEventModifierFlags::Command
             | objc2_app_kit::NSEventModifierFlags::Control
@@ -897,11 +912,23 @@ fn should_use_text_input(event: &NSEvent) -> bool {
     }
 
     !matches!(
-        event.keyCode(),
+        key_code,
         KEY_RETURN
             | KEY_TAB
             | KEY_ESCAPE
             | KEY_KEYPAD_ENTER
+            | KEY_F1
+            | KEY_F2
+            | KEY_F3
+            | KEY_F4
+            | KEY_F5
+            | KEY_F6
+            | KEY_F7
+            | KEY_F8
+            | KEY_F9
+            | KEY_F10
+            | KEY_F11
+            | KEY_F12
             | KEY_PAGE_UP
             | KEY_PAGE_DOWN
             | 51
@@ -1370,6 +1397,26 @@ fn parse_rows_by_cols(value: &str) -> Option<(usize, usize)> {
 fn native_key_smoke_event(value: &str) -> Option<(NSEventModifierFlags, u16)> {
     match value {
         "control-f5" => Some((NSEventModifierFlags::Control, 96)),
+        "shift-f5" => Some((NSEventModifierFlags::Shift, 96)),
+        "option-f5" => Some((NSEventModifierFlags::Option, 96)),
+        "shift-option-f5" => Some((
+            NSEventModifierFlags::Shift | NSEventModifierFlags::Option,
+            96,
+        )),
+        "shift-control-f5" => Some((
+            NSEventModifierFlags::Shift | NSEventModifierFlags::Control,
+            96,
+        )),
+        "control-option-f5" => Some((
+            NSEventModifierFlags::Control | NSEventModifierFlags::Option,
+            96,
+        )),
+        "shift-control-option-f5" => Some((
+            NSEventModifierFlags::Shift
+                | NSEventModifierFlags::Control
+                | NSEventModifierFlags::Option,
+            96,
+        )),
         "shift-up" => Some((NSEventModifierFlags::Shift, 126)),
         "option-up" => Some((NSEventModifierFlags::Option, 126)),
         "shift-option-up" => Some((
@@ -1479,6 +1526,22 @@ mod tests {
     }
 
     #[test]
+    fn text_input_path_excludes_special_keys_even_with_shift_only() {
+        assert!(super::should_use_text_input_parts(
+            0,
+            NSEventModifierFlags::Shift
+        ));
+        assert!(!super::should_use_text_input_parts(
+            super::KEY_F5,
+            NSEventModifierFlags::Shift
+        ));
+        assert!(!super::should_use_text_input_parts(
+            126,
+            NSEventModifierFlags::Shift
+        ));
+    }
+
+    #[test]
     fn parse_rows_by_cols_accepts_valid_terminal_size() {
         assert_eq!(super::parse_rows_by_cols("24x80"), Some((24, 80)));
     }
@@ -1495,6 +1558,15 @@ mod tests {
         assert_eq!(
             super::native_key_smoke_event("control-f5"),
             Some((NSEventModifierFlags::Control, 96))
+        );
+        assert_eq!(
+            super::native_key_smoke_event("shift-control-option-f5"),
+            Some((
+                NSEventModifierFlags::Shift
+                    | NSEventModifierFlags::Control
+                    | NSEventModifierFlags::Option,
+                96
+            ))
         );
         assert_eq!(
             super::native_key_smoke_event("shift-option-up"),

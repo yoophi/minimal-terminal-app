@@ -652,6 +652,18 @@ run_case_with_native_key_required_markers \
   "native-up-modifier-matrix-key-6:1b5b313b3641" \
   "native-up-modifier-matrix-key-7:1b5b313b3741" \
   "native-up-modifier-matrix-key-8:1b5b313b3841"
+run_case_with_native_key_required_markers \
+  "native-f5-modifier-matrix-key" \
+  $'ready="native-key"; ready="${ready}-ready"; stty raw -echo; printf "\\n%s\\n" "$ready"; for modifier in 2 3 4 5 6 7 8; do bytes="$(dd bs=1 count=7 2>/dev/null | od -An -tx1 | tr -d " \\n")"; printf "\\nnative-f5-modifier-matrix-key-${modifier}:%s\\n" "$bytes"; done; stty sane\n' \
+  "shift-f5,option-f5,shift-option-f5,control-f5,shift-control-f5,control-option-f5,shift-control-option-f5" \
+  1500 \
+  "native-f5-modifier-matrix-key-2:1b5b31353b327e" \
+  "native-f5-modifier-matrix-key-3:1b5b31353b337e" \
+  "native-f5-modifier-matrix-key-4:1b5b31353b347e" \
+  "native-f5-modifier-matrix-key-5:1b5b31353b357e" \
+  "native-f5-modifier-matrix-key-6:1b5b31353b367e" \
+  "native-f5-modifier-matrix-key-7:1b5b31353b377e" \
+  "native-f5-modifier-matrix-key-8:1b5b31353b387e"
 ran=1
 
 run_case_with_mouse_report \
@@ -812,13 +824,11 @@ fi
 
 repo_path="$(pwd)"
 head_sha="$(git -C "${repo_path}" rev-parse --short HEAD)"
-run_case_with_followup \
+run_case \
   "git-log" \
-  "git -C \"${repo_path}\" --no-pager log --oneline -1 --no-color" \
-  $'\r' \
+  "git -C \"${repo_path}\" --no-pager log --oneline -1 --no-color"$'\n' \
   "${head_sha}" \
-  5000 \
-  1000
+  5000
 run_case_with_followup \
   "git-pager-quit" \
   "git -C \"${repo_path}\" log --oneline --graph --decorate -100 --color=never | less; printf \"git-pager-quit-ok\\n\""$'\n' \
