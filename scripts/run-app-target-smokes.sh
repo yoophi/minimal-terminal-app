@@ -878,7 +878,7 @@ if command -v fzf >/dev/null 2>&1; then
     700
   run_case_with_three_followups \
     "fzf-shell-ctrl-t" \
-    "tmpdir=\"\$(mktemp -d /tmp/minimal-terminal-fzf-shell.XXXXXX)\"; touch \"\$tmpdir/alpha-file\" \"\$tmpdir/phase-fzf-shell-target\"; cd \"\$tmpdir\"; source /opt/homebrew/opt/fzf/shell/key-bindings.zsh; printf \"fzf-shell-ready\\n\""$'\n' \
+    "tmpdir=\"\$(mktemp -d /tmp/minimal-terminal-fzf-shell.XXXXXX)\"; touch \"\$tmpdir/phase-fzf-shell-target\"; cd \"\$tmpdir\"; source /opt/homebrew/opt/fzf/shell/key-bindings.zsh; printf \"fzf-shell-ready\\n\""$'\n' \
     $'printf "fzf-shell:%s\\n" \024' \
     "phase-fzf-shell-target"$'\r' \
     $'\r' \

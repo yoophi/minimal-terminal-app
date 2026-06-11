@@ -66,6 +66,7 @@
 - Phase 116에서 `fzf-preview` target의 follow-up/snapshot delay를 늘려 preview pane 준비 전에 query가 shell prompt로 전달되는 smoke timing 문제를 완화했다.
 - Phase 123에서 `fzf-preview` target을 follow-up query input 대신 `--query beta` 기반 preloaded query workflow로 바꿔 preview marker 검증을 안정화했다.
 - Phase 062에서 app 내부 zsh `fzf` Ctrl-T shell integration workflow를 자동화했다.
+- Phase 145에서 `fzf-shell-ctrl-t` target의 후보 파일을 deterministic 하게 줄여 query timing 의존성을 낮췄다.
 - Phase 063에서 app 내부 zsh `fzf` Alt-C directory widget workflow를 자동화했다.
 - Phase 144에서 `fzf-shell-alt-c` target의 후보 디렉터리를 deterministic 하게 줄여 query timing 의존성을 낮췄다.
 - Phase 064에서 app 내부 zsh `fzf` Ctrl-R history widget workflow를 자동화했다.
