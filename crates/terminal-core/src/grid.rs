@@ -401,9 +401,15 @@ fn render_styled_line(line: &[Cell]) -> StyledLine {
 
 fn last_nonblank_cell_index(line: &[Cell]) -> usize {
     line.iter()
-        .rposition(|cell| cell.ch() != ' ' || cell.is_wide_continuation())
+        .rposition(|cell| {
+            cell.ch() != ' ' || cell.is_wide_continuation() || cell_has_visible_style(cell)
+        })
         .map(|index| index + 1)
         .unwrap_or(0)
+}
+
+fn cell_has_visible_style(cell: &Cell) -> bool {
+    cell.style().background.is_some() || cell.style().inverse
 }
 
 fn trim_trailing_blanks(mut text: String) -> String {

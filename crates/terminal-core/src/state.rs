@@ -683,6 +683,20 @@ mod tests {
     }
 
     #[test]
+    fn preserves_trailing_styled_background_cells() {
+        let mut terminal = TerminalState::new(3, 8);
+        terminal.append_bytes(b"\x1b[48;5;2m  ");
+
+        let snapshot = terminal.snapshot(3);
+        assert_eq!(snapshot.lines[0], "");
+        assert_eq!(snapshot.styled_lines[0].spans[0].text, "  ");
+        assert_eq!(
+            snapshot.styled_lines[0].spans[0].style.background,
+            Some(Color::Indexed(2))
+        );
+    }
+
+    #[test]
     fn queues_device_status_report_responses() {
         let mut terminal = TerminalState::new(4, 10);
 

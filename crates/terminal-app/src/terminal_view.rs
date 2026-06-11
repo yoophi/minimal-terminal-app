@@ -889,6 +889,8 @@ fn draw_plain_terminal_text(lines: &[String]) {
 }
 
 fn draw_styled_line(line: &StyledLine, y: f64) {
+    draw_styled_line_backgrounds(line, y);
+
     let mut x = PADDING_X;
     let cell_width = terminal_cell_width();
 
@@ -896,6 +898,25 @@ fn draw_styled_line(line: &StyledLine, y: f64) {
         let attributes = terminal_text_attributes(span.style);
         draw_text_cells_at(&span.text, x, y, &attributes);
         x += display_width(&span.text) as f64 * cell_width;
+    }
+}
+
+fn draw_styled_line_backgrounds(line: &StyledLine, y: f64) {
+    let mut x = PADDING_X;
+    let cell_width = terminal_cell_width();
+
+    for span in &line.spans {
+        let width = display_width(&span.text);
+        if width > 0 {
+            if let Some(background) = terminal_background_color(span.style) {
+                background.setFill();
+                NSRectFill(NSRect::new(
+                    NSPoint::new(x, y),
+                    objc2_foundation::NSSize::new(width as f64 * cell_width, LINE_HEIGHT),
+                ));
+            }
+        }
+        x += width as f64 * cell_width;
     }
 }
 
