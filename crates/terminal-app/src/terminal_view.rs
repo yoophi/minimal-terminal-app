@@ -1373,6 +1373,10 @@ fn native_key_smoke_event(value: &str) -> Option<(NSEventModifierFlags, u16)> {
             NSEventModifierFlags::Shift | NSEventModifierFlags::Option,
             126,
         )),
+        "control-option-right" => Some((
+            NSEventModifierFlags::Control | NSEventModifierFlags::Option,
+            124,
+        )),
         _ => None,
     }
 }
@@ -1470,6 +1474,13 @@ mod tests {
             Some((
                 NSEventModifierFlags::Shift | NSEventModifierFlags::Option,
                 126
+            ))
+        );
+        assert_eq!(
+            super::native_key_smoke_event("control-option-right"),
+            Some((
+                NSEventModifierFlags::Control | NSEventModifierFlags::Option,
+                124
             ))
         );
         assert_eq!(super::native_key_smoke_event("unknown"), None);

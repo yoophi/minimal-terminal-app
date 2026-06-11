@@ -580,6 +580,12 @@ run_case_with_native_key \
   "shift-option-up" \
   "native-shift-option-up-key:1b5b313b3441" \
   1500
+run_case_with_native_key \
+  "native-control-option-right-key" \
+  $'ready="native-key"; ready="${ready}-ready"; stty raw -echo; printf "\\n%s\\n" "$ready"; bytes="$(dd bs=1 count=6 2>/dev/null | od -An -tx1 | tr -d " \\n")"; stty sane; printf "\\nnative-control-option-right-key:%s\\n" "$bytes"\n' \
+  "control-option-right" \
+  "native-control-option-right-key:1b5b313b3743" \
+  1500
 ran=1
 
 run_case_with_mouse_report \
