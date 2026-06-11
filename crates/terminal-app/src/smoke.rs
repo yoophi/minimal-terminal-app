@@ -150,6 +150,20 @@ fn mouse_report_bytes(buffer: &Arc<Mutex<TerminalBuffer>>, report: &str) -> Opti
         return None;
     }
 
+    if let Some((row, col)) = parse_mouse_click(report) {
+        return Some(if modes.sgr_mouse {
+            vec![
+                mouse::sgr_mouse_report(mouse::LEFT_BUTTON, 0, row, col, false),
+                mouse::sgr_mouse_report(mouse::LEFT_BUTTON, 0, row, col, true),
+            ]
+        } else {
+            vec![
+                mouse::legacy_mouse_report(mouse::LEFT_BUTTON, 0, row, col, false),
+                mouse::legacy_mouse_report(mouse::LEFT_BUTTON, 0, row, col, true),
+            ]
+        });
+    }
+
     let bytes = match report {
         "left-press" if modes.sgr_mouse => {
             vec![mouse::sgr_mouse_report(mouse::LEFT_BUTTON, 0, 1, 2, false)]
@@ -200,6 +214,12 @@ fn mouse_report_bytes(buffer: &Arc<Mutex<TerminalBuffer>>, report: &str) -> Opti
     Some(bytes)
 }
 
+fn parse_mouse_click(report: &str) -> Option<(usize, usize)> {
+    let rest = report.strip_prefix("left-click:")?;
+    let (row, col) = rest.split_once(':')?;
+    Some((row.parse().ok()?, col.parse().ok()?))
+}
+
 fn env_u64(name: &str, default: u64) -> u64 {
     env::var(name)
         .ok()
@@ -229,5 +249,12 @@ mod tests {
         assert_eq!(super::parse_resize("24:80"), None);
         assert_eq!(super::parse_resize("0x80"), None);
         assert_eq!(super::parse_resize("24x0"), None);
+    }
+
+    #[test]
+    fn parse_mouse_click_accepts_zero_based_row_and_col() {
+        assert_eq!(super::parse_mouse_click("left-click:28:75"), Some((28, 75)));
+        assert_eq!(super::parse_mouse_click("left-click:bad:75"), None);
+        assert_eq!(super::parse_mouse_click("left-press"), None);
     }
 }

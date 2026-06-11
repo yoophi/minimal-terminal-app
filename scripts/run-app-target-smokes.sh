@@ -1263,6 +1263,13 @@ if command -v htop >/dev/null 2>&1; then
     "htop-f10-ok" \
     2000 \
     1200
+  run_case_with_mouse_report \
+    "htop-mouse-open-files" \
+    "${htop_path}"$'\n' \
+    "left-click:28:75" \
+    "Snapshot of files open in process" \
+    2000 \
+    1200
   run_case_with_followup \
     "htop-f1-help-quit" \
     "${htop_path}; printf \"htop-f1-ok\\n\""$'\n' \
