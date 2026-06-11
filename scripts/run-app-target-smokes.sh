@@ -678,6 +678,20 @@ run_case_with_native_key_required_markers \
   "native-control-option-navigation-family-key-page-up:1b5b353b377e" \
   "native-control-option-navigation-family-key-page-down:1b5b363b377e" \
   "native-control-option-navigation-family-key-delete:1b5b333b377e"
+run_case_with_native_key_required_markers \
+  "native-shift-control-navigation-family-key" \
+  $'ready="native-key"; ready="${ready}-ready"; stty raw -echo; printf "\\n%s\\n" "$ready"; for key in up down right left home end page-up page-down delete; do bytes="$(dd bs=1 count=6 2>/dev/null | od -An -tx1 | tr -d " \\n")"; printf "\\nnative-shift-control-navigation-family-key-${key}:%s\\n" "$bytes"; done; stty sane\n' \
+  "shift-control-up,shift-control-down,shift-control-right,shift-control-left,shift-control-home,shift-control-end,shift-control-page-up,shift-control-page-down,shift-control-delete" \
+  1500 \
+  "native-shift-control-navigation-family-key-up:1b5b313b3641" \
+  "native-shift-control-navigation-family-key-down:1b5b313b3642" \
+  "native-shift-control-navigation-family-key-right:1b5b313b3643" \
+  "native-shift-control-navigation-family-key-left:1b5b313b3644" \
+  "native-shift-control-navigation-family-key-home:1b5b313b3648" \
+  "native-shift-control-navigation-family-key-end:1b5b313b3646" \
+  "native-shift-control-navigation-family-key-page-up:1b5b353b367e" \
+  "native-shift-control-navigation-family-key-page-down:1b5b363b367e" \
+  "native-shift-control-navigation-family-key-delete:1b5b333b367e"
 ran=1
 
 run_case_with_mouse_report \
@@ -904,9 +918,39 @@ if command -v tmux >/dev/null 2>&1; then
     "tmux_socket=\"minimal-terminal-app-smoke-\$\$\"; ${tmux_path} -L \"\$tmux_socket\" new-session -d -s minimal-terminal-resize 'sleep 30'; ${tmux_path} -L \"\$tmux_socket\" split-window -v 'sleep 30'; ${tmux_path} -L \"\$tmux_socket\" select-pane -D; before=\"\$(${tmux_path} -L \"\$tmux_socket\" display-message -p '#{pane_height}')\"; ${tmux_path} -L \"\$tmux_socket\" resize-pane -D 2; after=\"\$(${tmux_path} -L \"\$tmux_socket\" display-message -p '#{pane_height}')\"; ${tmux_path} -L \"\$tmux_socket\" kill-server >/dev/null 2>&1 || true; if [ \"\$after\" -gt \"\$before\" ]; then printf \"tmux-pane-resize-ok:%s>%s\\n\" \"\$after\" \"\$before\"; else printf \"tmux-pane-resize-failed:%s<=%s\\n\" \"\$after\" \"\$before\"; exit 1; fi"$'\n' \
     "tmux-pane-resize-ok" \
     2500
+  tmux_copy_mode_script="$(pwd)/${LOG_DIR}/tmux-copy-mode-helper.sh"
+  cat >"${tmux_copy_mode_script}" <<'TMUX_COPY_MODE_SCRIPT'
+#!/usr/bin/env bash
+set -euo pipefail
+
+tmux_socket="minimal-terminal-app-smoke-$$"
+out="/tmp/minimal-terminal-tmux-copy-mode-$$.txt"
+rm -f "${out}"
+
+"${TMUX_PATH}" -L "${tmux_socket}" new-session -d -s minimal-terminal-copy 'printf "alpha\ntmux-copy-source\nsecond-line\n"; sleep 30'
+for _ in $(seq 1 30); do
+  "${TMUX_PATH}" -L "${tmux_socket}" capture-pane -p -t minimal-terminal-copy:0.0 | grep -Fq "tmux-copy-source" && break
+  sleep 0.1
+done
+
+"${TMUX_PATH}" -L "${tmux_socket}" copy-mode -t minimal-terminal-copy:0.0
+sleep 0.1
+"${TMUX_PATH}" -L "${tmux_socket}" send-keys -t minimal-terminal-copy:0.0 -X search-backward "tmux-copy-source"
+sleep 0.1
+"${TMUX_PATH}" -L "${tmux_socket}" send-keys -t minimal-terminal-copy:0.0 -X start-of-line
+"${TMUX_PATH}" -L "${tmux_socket}" send-keys -t minimal-terminal-copy:0.0 -X begin-selection
+"${TMUX_PATH}" -L "${tmux_socket}" send-keys -t minimal-terminal-copy:0.0 -X end-of-line
+"${TMUX_PATH}" -L "${tmux_socket}" send-keys -t minimal-terminal-copy:0.0 -X copy-selection-and-cancel
+sleep 0.1
+"${TMUX_PATH}" -L "${tmux_socket}" save-buffer "${out}" 2>/dev/null || true
+printf "tmux-copy-mode:%s\n" "$(cat "${out}" 2>/dev/null)"
+rm -f "${out}"
+"${TMUX_PATH}" -L "${tmux_socket}" kill-server >/dev/null 2>&1 || true
+TMUX_COPY_MODE_SCRIPT
+  chmod +x "${tmux_copy_mode_script}"
   run_case \
     "tmux-copy-mode" \
-    "tmux_socket=\"minimal-terminal-app-smoke-\$\$\"; out=\"/tmp/minimal-terminal-tmux-copy-mode-\$\$.txt\"; rm -f \"\$out\"; ${tmux_path} -L \"\$tmux_socket\" new-session -d -s minimal-terminal-copy 'printf \"alpha\\ntmux-copy-source\\nsecond-line\\n\"; sleep 30'; for i in \$(seq 1 30); do ${tmux_path} -L \"\$tmux_socket\" capture-pane -p -t minimal-terminal-copy:0.0 | grep -Fq \"tmux-copy-source\" && break; sleep 0.1; done; ${tmux_path} -L \"\$tmux_socket\" copy-mode -t minimal-terminal-copy:0.0; ${tmux_path} -L \"\$tmux_socket\" send-keys -t minimal-terminal-copy:0.0 -X search-backward \"tmux-copy-source\"; ${tmux_path} -L \"\$tmux_socket\" send-keys -t minimal-terminal-copy:0.0 -X start-of-line; ${tmux_path} -L \"\$tmux_socket\" send-keys -t minimal-terminal-copy:0.0 -X begin-selection; ${tmux_path} -L \"\$tmux_socket\" send-keys -t minimal-terminal-copy:0.0 -X end-of-line; ${tmux_path} -L \"\$tmux_socket\" send-keys -t minimal-terminal-copy:0.0 -X copy-selection-and-cancel; ${tmux_path} -L \"\$tmux_socket\" save-buffer \"\$out\" 2>/dev/null || true; printf \"tmux-copy-mode:%s\\n\" \"\$(cat \"\$out\" 2>/dev/null)\"; rm -f \"\$out\"; ${tmux_path} -L \"\$tmux_socket\" kill-server >/dev/null 2>&1 || true"$'\n' \
+    "TMUX_PATH=\"${tmux_path}\" \"${tmux_copy_mode_script}\""$'\n' \
     "tmux-copy-mode:tmux-copy-source" \
     7000
   run_case_with_mouse_report \
