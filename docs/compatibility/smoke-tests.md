@@ -235,6 +235,7 @@ scripts/run-app-target-smokes.sh
 - `htop-f5-tree`: `htop` 실행 후 follow-up F5 sequence로 tree view를 켜고 process tree marker `├─` 확인
 - `htop-f2-setup`: `htop` 실행 후 follow-up F2 sequence로 Setup 화면 `[Setup]` marker 확인
 - `htop-setup-save`: 임시 `HTOPRC` 경로로 `htop` 실행 후 F2 Setup, F10, `q` workflow가 clean exit에서 non-empty htoprc를 저장하는지 확인
+- `htop-setup-toggle-tree`: 임시 `HTOPRC` 경로로 `htop` 실행 후 F2 Setup 내부 `Tree view` 항목을 켜고 저장해 `tree_view=1` 또는 `.tree_view=1` 확인
 - `claude-version`: `claude --version`
 - `claude-help`: `claude --help` 출력 확인
 - `codex-cli-version`: `codex-cli --version`이 설치된 경우 실행

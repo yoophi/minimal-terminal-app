@@ -1298,6 +1298,13 @@ if command -v htop >/dev/null 2>&1; then
     "htop-setup-save-ok" \
     3000 \
     1200
+  run_case_with_followup \
+    "htop-setup-toggle-tree" \
+    "tmpdir=\"\$(mktemp -d /tmp/minimal-terminal-htop-toggle.XXXXXX)\"; rc=\"\$tmpdir/htoprc\"; HTOPRC=\"\$rc\" ${htop_path}; if grep -Eq '(^|[.])tree_view=1$' \"\$rc\"; then printf \"htop-setup-toggle-tree-ok\\n\"; else printf \"htop-setup-toggle-tree-missing\\n\"; cat \"\$rc\" 2>/dev/null; rm -rf \"\$tmpdir\"; exit 1; fi; rm -rf \"\$tmpdir\""$'\n' \
+    $'\eOQ\eOC\eOB \e[21~q' \
+    "htop-setup-toggle-tree-ok" \
+    3000 \
+    1200
   ran=1
 else
   echo "app target smoke skipped: htop not found"
