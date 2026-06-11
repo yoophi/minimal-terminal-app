@@ -1365,6 +1365,13 @@ if command -v vttest >/dev/null 2>&1; then
     "Double-width-and-height line" \
     1500 \
     1000
+  run_case_with_followup \
+    "vttest-dsr" \
+    "${vttest_path}"$'\n' \
+    $'6\r3\r' \
+    "Report is: <27> [ 5 ; 1 R  -- OK" \
+    2500 \
+    1000
   ran=1
 else
   echo "app target smoke skipped: vttest not found"
