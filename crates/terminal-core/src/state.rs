@@ -214,52 +214,64 @@ impl TerminalState {
                 LineClearMode::FromCursor if self.pending_wrap => self.pending_wrap = false,
                 LineClearMode::FromCursor => {
                     self.pending_wrap = false;
-                    self.grid.clear_line_from_cursor(self.cursor);
+                    self.grid
+                        .clear_line_from_cursor(self.cursor, self.current_style);
                 }
                 LineClearMode::ToCursor => {
                     self.pending_wrap = false;
-                    self.grid.clear_line_to_cursor(self.cursor);
+                    self.grid
+                        .clear_line_to_cursor(self.cursor, self.current_style);
                 }
                 LineClearMode::Entire => {
                     self.pending_wrap = false;
-                    self.grid.clear_entire_line(self.cursor.row);
+                    self.grid
+                        .clear_entire_line(self.cursor.row, self.current_style);
                 }
             },
             Action::ClearScreen(mode) => match mode {
                 ScreenClearMode::FromCursor => {
                     self.pending_wrap = false;
-                    self.grid.clear_screen_from_cursor(self.cursor);
+                    self.grid
+                        .clear_screen_from_cursor(self.cursor, self.current_style);
                 }
                 ScreenClearMode::ToCursor => {
                     self.pending_wrap = false;
-                    self.grid.clear_screen_to_cursor(self.cursor);
+                    self.grid
+                        .clear_screen_to_cursor(self.cursor, self.current_style);
                 }
                 ScreenClearMode::Entire => {
                     self.pending_wrap = false;
-                    self.grid.clear_screen(&mut self.cursor);
+                    self.grid.clear_screen(&mut self.cursor, self.current_style);
                 }
             },
             Action::InsertBlankChars(count) => {
                 self.pending_wrap = false;
-                self.grid.insert_blank_chars(self.cursor, count);
+                self.grid
+                    .insert_blank_chars(self.cursor, count, self.current_style);
             }
             Action::DeleteChars(count) => {
                 self.pending_wrap = false;
-                self.grid.delete_chars(self.cursor, count);
+                self.grid
+                    .delete_chars(self.cursor, count, self.current_style);
             }
             Action::EraseChars(count) => {
                 self.pending_wrap = false;
-                self.grid.erase_chars(self.cursor, count);
+                self.grid
+                    .erase_chars(self.cursor, count, self.current_style);
             }
             Action::InsertLines(count) => {
                 self.pending_wrap = false;
-                self.grid
-                    .insert_blank_lines(self.cursor, count, self.scroll_region)
+                self.grid.insert_blank_lines(
+                    self.cursor,
+                    count,
+                    self.scroll_region,
+                    self.current_style,
+                )
             }
             Action::DeleteLines(count) => {
                 self.pending_wrap = false;
                 self.grid
-                    .delete_lines(self.cursor, count, self.scroll_region)
+                    .delete_lines(self.cursor, count, self.scroll_region, self.current_style)
             }
             Action::SaveCursor => {
                 self.pending_wrap = false;
@@ -343,7 +355,7 @@ impl TerminalState {
 
     fn enter_alternate_screen(&mut self) {
         if self.main_screen.is_some() {
-            self.grid.clear_screen(&mut self.cursor);
+            self.grid.clear_screen(&mut self.cursor, self.current_style);
             return;
         }
 
@@ -692,6 +704,60 @@ mod tests {
         assert_eq!(snapshot.styled_lines[0].spans[0].text, "  ");
         assert_eq!(
             snapshot.styled_lines[0].spans[0].style.background,
+            Some(Color::Indexed(2))
+        );
+    }
+
+    #[test]
+    fn erase_and_blank_operations_preserve_current_background_style() {
+        let mut terminal = TerminalState::new(6, 8);
+        terminal.append_bytes(b"\x1b[48;5;2mabc\r\x1b[2C\x1b[K");
+
+        let snapshot = terminal.snapshot(6);
+        assert_eq!(snapshot.lines[0], "ab");
+        assert_eq!(snapshot.styled_lines[0].spans[0].text, "ab      ");
+        assert_eq!(
+            snapshot.styled_lines[0].spans[0].style.background,
+            Some(Color::Indexed(2))
+        );
+
+        terminal.append_bytes(b"\x1b[2;1Habcdefgh\r\x1b[2C\x1b[3X");
+        let snapshot = terminal.snapshot(6);
+        assert_eq!(snapshot.lines[1], "ab   fgh");
+        assert_eq!(
+            snapshot.styled_lines[1].spans[0].style.background,
+            Some(Color::Indexed(2))
+        );
+
+        terminal.append_bytes(b"\x1b[3;1Habcdefgh\r\x1b[2C\x1b[2@");
+        let snapshot = terminal.snapshot(6);
+        assert_eq!(snapshot.lines[2], "ab  cdef");
+        assert_eq!(
+            snapshot.styled_lines[2].spans[0].style.background,
+            Some(Color::Indexed(2))
+        );
+
+        terminal.append_bytes(b"\x1b[4;1Habcdefgh\r\x1b[2C\x1b[2P");
+        let snapshot = terminal.snapshot(6);
+        assert_eq!(snapshot.lines[3], "abefgh");
+        assert_eq!(
+            snapshot.styled_lines[3].spans[0].style.background,
+            Some(Color::Indexed(2))
+        );
+
+        terminal.append_bytes(b"\x1b[5;1H\x1b[L");
+        let snapshot = terminal.snapshot(6);
+        assert_eq!(snapshot.styled_lines[4].spans[0].text, "        ");
+        assert_eq!(
+            snapshot.styled_lines[4].spans[0].style.background,
+            Some(Color::Indexed(2))
+        );
+
+        terminal.append_bytes(b"\x1b[5;1H\x1b[M");
+        let snapshot = terminal.snapshot(6);
+        assert_eq!(snapshot.styled_lines[5].spans[0].text, "        ");
+        assert_eq!(
+            snapshot.styled_lines[5].spans[0].style.background,
             Some(Color::Indexed(2))
         );
     }

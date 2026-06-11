@@ -153,51 +153,51 @@ impl Grid {
         cursor.col = cursor.col.saturating_sub(count.max(1));
     }
 
-    pub(crate) fn clear_line_from_cursor(&mut self, cursor: Cursor) {
+    pub(crate) fn clear_line_from_cursor(&mut self, cursor: Cursor, style: Style) {
         for col in cursor.col..self.cols {
-            self.lines[cursor.row][col].clear();
+            self.lines[cursor.row][col].clear_with_style(style);
         }
     }
 
-    pub(crate) fn clear_line_to_cursor(&mut self, cursor: Cursor) {
+    pub(crate) fn clear_line_to_cursor(&mut self, cursor: Cursor, style: Style) {
         for col in 0..=cursor.col.min(self.cols - 1) {
-            self.lines[cursor.row][col].clear();
+            self.lines[cursor.row][col].clear_with_style(style);
         }
     }
 
-    pub(crate) fn clear_entire_line(&mut self, row: usize) {
+    pub(crate) fn clear_entire_line(&mut self, row: usize, style: Style) {
         let row = row.min(self.rows - 1);
         for col in 0..self.cols {
-            self.lines[row][col].clear();
+            self.lines[row][col].clear_with_style(style);
         }
     }
 
-    pub(crate) fn insert_blank_chars(&mut self, cursor: Cursor, count: usize) {
+    pub(crate) fn insert_blank_chars(&mut self, cursor: Cursor, count: usize, style: Style) {
         let row = cursor.row.min(self.rows - 1);
         let col = cursor.col.min(self.cols - 1);
         let count = count.max(1).min(self.cols - col);
         for _ in 0..count {
-            self.lines[row].insert(col, Cell::blank());
+            self.lines[row].insert(col, Cell::blank_with_style(style));
             self.lines[row].pop();
         }
     }
 
-    pub(crate) fn delete_chars(&mut self, cursor: Cursor, count: usize) {
+    pub(crate) fn delete_chars(&mut self, cursor: Cursor, count: usize, style: Style) {
         let row = cursor.row.min(self.rows - 1);
         let col = cursor.col.min(self.cols - 1);
         let count = count.max(1).min(self.cols - col);
         for _ in 0..count {
             self.lines[row].remove(col);
-            self.lines[row].push(Cell::blank());
+            self.lines[row].push(Cell::blank_with_style(style));
         }
     }
 
-    pub(crate) fn erase_chars(&mut self, cursor: Cursor, count: usize) {
+    pub(crate) fn erase_chars(&mut self, cursor: Cursor, count: usize, style: Style) {
         let row = cursor.row.min(self.rows - 1);
         let col = cursor.col.min(self.cols - 1);
         let end = (col + count.max(1)).min(self.cols);
         for cell in &mut self.lines[row][col..end] {
-            cell.clear();
+            cell.clear_with_style(style);
         }
     }
 
@@ -206,6 +206,7 @@ impl Grid {
         cursor: Cursor,
         count: usize,
         region: Option<(usize, usize)>,
+        style: Style,
     ) {
         let Some((top, bottom)) = normalized_region(region, self.rows) else {
             return;
@@ -216,7 +217,8 @@ impl Grid {
 
         let count = count.max(1).min(bottom - cursor.row + 1);
         for _ in 0..count {
-            self.lines.insert(cursor.row, blank_line(self.cols));
+            self.lines
+                .insert(cursor.row, blank_line_with_style(self.cols, style));
             self.lines.remove(bottom + 1);
         }
     }
@@ -226,6 +228,7 @@ impl Grid {
         cursor: Cursor,
         count: usize,
         region: Option<(usize, usize)>,
+        style: Style,
     ) {
         let Some((top, bottom)) = normalized_region(region, self.rows) else {
             return;
@@ -237,28 +240,29 @@ impl Grid {
         let count = count.max(1).min(bottom - cursor.row + 1);
         for _ in 0..count {
             self.lines.remove(cursor.row);
-            self.lines.insert(bottom, blank_line(self.cols));
+            self.lines
+                .insert(bottom, blank_line_with_style(self.cols, style));
         }
     }
 
-    pub(crate) fn clear_screen_from_cursor(&mut self, cursor: Cursor) {
-        self.clear_line_from_cursor(cursor);
+    pub(crate) fn clear_screen_from_cursor(&mut self, cursor: Cursor, style: Style) {
+        self.clear_line_from_cursor(cursor, style);
         for row in (cursor.row + 1)..self.rows {
-            self.clear_entire_line(row);
+            self.clear_entire_line(row, style);
         }
     }
 
-    pub(crate) fn clear_screen_to_cursor(&mut self, cursor: Cursor) {
+    pub(crate) fn clear_screen_to_cursor(&mut self, cursor: Cursor, style: Style) {
         for row in 0..cursor.row {
-            self.clear_entire_line(row);
+            self.clear_entire_line(row, style);
         }
-        self.clear_line_to_cursor(cursor);
+        self.clear_line_to_cursor(cursor, style);
     }
 
-    pub(crate) fn clear_screen(&mut self, cursor: &mut Cursor) {
+    pub(crate) fn clear_screen(&mut self, cursor: &mut Cursor, style: Style) {
         for line in &mut self.lines {
             for cell in line {
-                cell.clear();
+                cell.clear_with_style(style);
             }
         }
         *cursor = Cursor::default();
@@ -354,6 +358,10 @@ fn normalized_region(region: Option<(usize, usize)>, rows: usize) -> Option<(usi
 
 fn blank_line(cols: usize) -> Vec<Cell> {
     vec![Cell::blank(); cols]
+}
+
+fn blank_line_with_style(cols: usize, style: Style) -> Vec<Cell> {
+    vec![Cell::blank_with_style(style); cols]
 }
 
 fn resize_line(line: &mut Vec<Cell>, cols: usize) {
