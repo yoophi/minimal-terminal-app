@@ -1,18 +1,20 @@
 use std::cell::{Cell, OnceCell, RefCell};
+use std::env;
 use std::sync::{Arc, Mutex};
 
 use objc2::rc::{autoreleasepool, Retained};
 use objc2::runtime::{AnyObject, Sel};
 use objc2::{define_class, msg_send, sel, ClassType, DefinedClass, MainThreadOnly};
 use objc2_app_kit::{
-    NSApplication, NSBackgroundColorAttributeName, NSColor, NSEvent, NSEventModifierFlags, NSFont,
-    NSFontAttributeName, NSForegroundColorAttributeName, NSPasteboard, NSPasteboardTypeString,
-    NSRectFill, NSResponder, NSTextInputClient, NSUnderlineStyleAttributeName, NSView, NSWindow,
+    NSApplication, NSBackgroundColorAttributeName, NSColor, NSEvent, NSEventModifierFlags,
+    NSEventType, NSFont, NSFontAttributeName, NSForegroundColorAttributeName, NSPasteboard,
+    NSPasteboardTypeString, NSRectFill, NSResponder, NSTextInputClient,
+    NSUnderlineStyleAttributeName, NSView, NSWindow,
 };
 use objc2_foundation::{
-    MainThreadMarker, NSArray, NSAttributedString, NSAttributedStringKey, NSMutableDictionary,
-    NSNotFound, NSNumber, NSObjectProtocol, NSPoint, NSRange, NSRangePointer, NSRect, NSString,
-    NSTimer,
+    MainThreadMarker, NSArray, NSAttributedString, NSAttributedStringKey, NSInteger,
+    NSMutableDictionary, NSNotFound, NSNumber, NSObjectProtocol, NSPoint, NSRange, NSRangePointer,
+    NSRect, NSString, NSTimer,
 };
 use terminal_core::{Color, CursorStyle, Style, StyledLine, TerminalModes, TerminalSnapshot};
 
@@ -54,6 +56,7 @@ pub(crate) struct TerminalViewIvars {
     rows: Cell<usize>,
     cols: Cell<usize>,
     scrollback_offset: Cell<usize>,
+    native_mouse_smoke_sent: Cell<bool>,
     composition: RefCell<CompositionState>,
     selection: RefCell<SelectionState>,
 }
@@ -379,6 +382,7 @@ define_class!(
         fn redraw_timer_fired(&self, _timer: &NSTimer) {
             self.apply_pending_clipboard_writes();
             self.apply_pending_title_writes();
+            self.apply_native_mouse_smoke_if_requested();
             self.as_super().setNeedsDisplay(true);
         }
     }
@@ -399,6 +403,7 @@ impl TerminalView {
             rows: Cell::new(0),
             cols: Cell::new(0),
             scrollback_offset: Cell::new(0),
+            native_mouse_smoke_sent: Cell::new(false),
             composition: RefCell::new(CompositionState::default()),
             selection: RefCell::new(SelectionState::default()),
         });
@@ -494,6 +499,52 @@ impl TerminalView {
 
         window.setTitle(&NSString::from_str(title));
         logging::pty_info("terminal view applied OSC title update");
+    }
+
+    fn apply_native_mouse_smoke_if_requested(&self) {
+        if self.ivars().native_mouse_smoke_sent.get() {
+            return;
+        }
+        if env::var("MINIMAL_TERMINAL_SMOKE_NATIVE_MOUSE_REPORT")
+            .ok()
+            .as_deref()
+            != Some("left-press")
+        {
+            return;
+        }
+        if !self.current_modes().mouse_reporting {
+            return;
+        }
+
+        let Some(window) = self.as_super().window() else {
+            return;
+        };
+        let location = NSPoint::new(
+            PADDING_X + (terminal_cell_width() * 2.0),
+            PADDING_Y + LINE_HEIGHT,
+        );
+        let event: Option<Retained<NSEvent>> = unsafe {
+            msg_send![
+                NSEvent::class(),
+                mouseEventWithType: NSEventType::LeftMouseDown,
+                location: location,
+                modifierFlags: NSEventModifierFlags::empty(),
+                timestamp: 0.0,
+                windowNumber: window.windowNumber() as NSInteger,
+                context: Option::<&AnyObject>::None,
+                eventNumber: 0 as NSInteger,
+                clickCount: 1 as NSInteger,
+                pressure: 1.0f32
+            ]
+        };
+        let Some(event) = event else {
+            logging::pty_error("native mouse smoke skipped: failed to create NSEvent");
+            self.ivars().native_mouse_smoke_sent.set(true);
+            return;
+        };
+
+        self.ivars().native_mouse_smoke_sent.set(true);
+        let _: () = unsafe { msg_send![self, mouseDown: &*event] };
     }
 
     fn write_text_to_pty(&self, text: &str, source: &str) {

@@ -10,19 +10,20 @@
 
 예시:
 
-- native `NSEvent`에서 시작되는 end-to-end mouse workflow evidence
+- 실제 물리 mouse input에서 시작되는 end-to-end mouse workflow evidence
 
 중요한 이유:
 
 - `vim`, `less`, multiplexer 및 여러 TUI는 mouse selection, scrolling, pane interaction에 mouse reporting을 사용할 수 있다.
 - mouse reporting mode가 꺼져 있을 때 앱은 mouse drag를 native selection에 사용한다.
 - Phase 045에서 app 내부 PTY의 mode-gated SGR mouse report readback은 자동화했다.
+- Phase 124에서 synthetic `NSEvent`가 `TerminalView`의 `mouseDown:` selector를 지나 PTY로 SGR left press bytes를 보내는 workflow를 자동화했다.
 - Phase 100에서 app 내부 PTY의 clean `vim` mouse left press workflow를 smoke hook 기반 SGR mouse report로 자동화했다.
 - Phase 101에서 app 내부 PTY의 `less --mouse` wheel-down workflow를 smoke hook 기반 mouse report로 자동화했다.
 
 권장 다음 작업:
 
-- native `NSEvent`부터 PTY write까지 이어지는 end-to-end mouse workflow를 별도로 확인한다.
+- 실제 물리 mouse input 또는 OS-level event injection부터 PTY write까지 이어지는 end-to-end mouse workflow를 별도로 확인한다.
 
 ## Priority 2
 
@@ -232,7 +233,7 @@ Phase 026에서 Shift, Option, Control modifier bit를 legacy 및 SGR mouse repo
 
 상태: `partially supported`
 
-Phase 045에서 `scripts/run-app-target-smokes.sh`에 `mouse-sgr-report` target을 추가했다. local verification environment에서 app 내부 PTY로 mouse reporting mode와 SGR mouse mode를 켠 뒤 smoke hook이 terminal buffer mode를 확인하고 SGR left press report를 썼다. shell readback marker `mouse-sgr-report:1b5b3c303b333b324d`를 확인했다. Phase 100에서 `vim-mouse-left-press` target을 추가해 clean `vim`의 `<LeftMouse>` mapping이 smoke hook의 SGR left press를 받고 marker를 출력하는 workflow를 확인했다. Phase 101에서 `less-mouse-wheel-down` target을 추가해 `less --mouse --wheel-lines=10`에서 wheel-down reports 이후 `less-mouse-line-045`가 snapshot에 나타나는 workflow를 확인했다. GUI synthetic `NSEvent`에서 시작되는 end-to-end mouse workflow는 Mouse Reporting gap으로 계속 추적한다.
+Phase 045에서 `scripts/run-app-target-smokes.sh`에 `mouse-sgr-report` target을 추가했다. local verification environment에서 app 내부 PTY로 mouse reporting mode와 SGR mouse mode를 켠 뒤 smoke hook이 terminal buffer mode를 확인하고 SGR left press report를 썼다. shell readback marker `mouse-sgr-report:1b5b3c303b333b324d`를 확인했다. Phase 124에서 `native-mouse-sgr-report` target을 추가해 synthetic `NSEvent`가 `TerminalView`의 `mouseDown:` selector를 지나 PTY에 SGR left press bytes를 쓰는 workflow를 확인했다. Phase 100에서 `vim-mouse-left-press` target을 추가해 clean `vim`의 `<LeftMouse>` mapping이 smoke hook의 SGR left press를 받고 marker를 출력하는 workflow를 확인했다. Phase 101에서 `less-mouse-wheel-down` target을 추가해 `less --mouse --wheel-lines=10`에서 wheel-down reports 이후 `less-mouse-line-045`가 snapshot에 나타나는 workflow를 확인했다. 실제 물리 mouse input 또는 OS-level event injection에서 시작되는 end-to-end mouse workflow는 Mouse Reporting gap으로 계속 추적한다.
 
 ### OSC Title Update
 
