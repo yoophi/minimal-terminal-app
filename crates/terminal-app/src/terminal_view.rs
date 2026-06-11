@@ -29,8 +29,7 @@ const PADDING_X: f64 = 12.0;
 const PADDING_Y: f64 = 14.0;
 const FONT_SIZE: f64 = 14.0;
 const LINE_HEIGHT: f64 = 18.0;
-const CELL_WIDTH: f64 = 8.4;
-const CURSOR_WIDTH: f64 = 8.0;
+const FALLBACK_CELL_WIDTH: f64 = 8.4;
 const CURSOR_HEIGHT: f64 = 16.0;
 const KEY_RETURN: u16 = 36;
 const KEY_TAB: u16 = 48;
@@ -592,7 +591,8 @@ impl TerminalView {
             .as_super()
             .convertPoint_fromView(event.locationInWindow(), None);
         let row = ((point.y - PADDING_Y) / LINE_HEIGHT).floor().max(0.0) as usize;
-        let col = ((point.x - PADDING_X) / CELL_WIDTH).floor().max(0.0) as usize;
+        let cell_width = terminal_cell_width();
+        let col = ((point.x - PADDING_X) / cell_width).floor().max(0.0) as usize;
 
         GridPoint {
             row: row.min(self.ivars().rows.get().saturating_sub(1)),
@@ -798,9 +798,10 @@ fn draw_selection_highlights(snapshot: &TerminalSnapshot, range: Option<Selectio
             continue;
         }
 
-        let x = PADDING_X + (start_col as f64 * CELL_WIDTH);
+        let cell_width = terminal_cell_width();
+        let x = PADDING_X + (start_col as f64 * cell_width);
         let y = PADDING_Y + (row as f64 * LINE_HEIGHT);
-        let width = (end_col - start_col) as f64 * CELL_WIDTH;
+        let width = (end_col - start_col) as f64 * cell_width;
         NSRectFill(NSRect::new(
             NSPoint::new(x, y),
             objc2_foundation::NSSize::new(width, LINE_HEIGHT),
@@ -843,17 +844,19 @@ fn draw_plain_terminal_text(lines: &[String]) {
 
 fn draw_styled_line(line: &StyledLine, y: f64) {
     let mut x = PADDING_X;
+    let cell_width = terminal_cell_width();
 
     for span in &line.spans {
         let attributes = terminal_text_attributes(span.style);
         draw_text_cells_at(&span.text, x, y, &attributes);
-        x += display_width(&span.text) as f64 * CELL_WIDTH;
+        x += display_width(&span.text) as f64 * cell_width;
     }
 }
 
 fn draw_text_cells_at(text: &str, x: f64, y: f64, attributes: &NSMutableDictionary) {
     let mut current_x = x;
     let mut previous_x = x;
+    let cell_width = terminal_cell_width();
 
     for ch in text.chars() {
         let width = char_width(ch);
@@ -862,7 +865,7 @@ fn draw_text_cells_at(text: &str, x: f64, y: f64, attributes: &NSMutableDictiona
 
         if width > 0 {
             previous_x = current_x;
-            current_x += width as f64 * CELL_WIDTH;
+            current_x += width as f64 * cell_width;
         }
     }
 }
@@ -889,12 +892,13 @@ fn draw_cursor(snapshot: &TerminalSnapshot) {
 }
 
 fn cursor_rect(snapshot: &TerminalSnapshot) -> NSRect {
-    let x = PADDING_X + (snapshot.cursor.col as f64 * CELL_WIDTH);
+    let cell_width = terminal_cell_width();
+    let x = PADDING_X + (snapshot.cursor.col as f64 * cell_width);
     let y = PADDING_Y + (snapshot.cursor.row as f64 * LINE_HEIGHT) + 2.0;
     let (x, y, width, height) = match snapshot.modes.cursor_style {
-        CursorStyle::Block => (x, y, CURSOR_WIDTH, CURSOR_HEIGHT),
+        CursorStyle::Block => (x, y, cell_width, CURSOR_HEIGHT),
         CursorStyle::Bar => (x, y, 2.0, CURSOR_HEIGHT),
-        CursorStyle::Underline => (x, y + CURSOR_HEIGHT - 2.0, CURSOR_WIDTH, 2.0),
+        CursorStyle::Underline => (x, y + CURSOR_HEIGHT - 2.0, cell_width, 2.0),
     };
     NSRect::new(
         NSPoint::new(x, y),
@@ -973,6 +977,36 @@ fn terminal_font(bold: bool) -> Option<Retained<NSFont>> {
     }
 
     NSFont::userFixedPitchFontOfSize(FONT_SIZE)
+}
+
+fn terminal_cell_width() -> f64 {
+    let Some(font) = terminal_font(false) else {
+        return FALLBACK_CELL_WIDTH;
+    };
+
+    let attributes: Retained<NSMutableDictionary<NSAttributedStringKey, AnyObject>> =
+        NSMutableDictionary::new();
+    let font_object: &AnyObject = font.as_ref();
+    let _: () = unsafe {
+        msg_send![
+            &*attributes,
+            setObject: font_object,
+            forKey: &*NSFontAttributeName
+        ]
+    };
+
+    let string = NSString::from_str("M");
+    let size: objc2_foundation::NSSize = unsafe {
+        msg_send![
+            &*string,
+            sizeWithAttributes: Some(&*attributes)
+        ]
+    };
+    if size.width.is_finite() && size.width > 0.0 {
+        size.width
+    } else {
+        FALLBACK_CELL_WIDTH
+    }
 }
 
 fn terminal_foreground_color(style: Style) -> Retained<NSColor> {
@@ -1101,9 +1135,10 @@ fn is_wide_char(ch: char) -> bool {
 
 fn terminal_dimensions(bounds: NSRect) -> (usize, usize) {
     let available_height = (bounds.size.height - (PADDING_Y * 2.0)).max(LINE_HEIGHT);
-    let available_width = (bounds.size.width - (PADDING_X * 2.0)).max(CELL_WIDTH);
+    let cell_width = terminal_cell_width();
+    let available_width = (bounds.size.width - (PADDING_X * 2.0)).max(cell_width);
     let rows = (available_height / LINE_HEIGHT).floor().max(1.0) as usize;
-    let cols = (available_width / CELL_WIDTH).floor().max(1.0) as usize;
+    let cols = (available_width / cell_width).floor().max(1.0) as usize;
     (rows, cols)
 }
 

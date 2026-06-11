@@ -190,9 +190,10 @@ scripts/run-app-target-smokes.sh
 - `tmux-split-pane`: attached tmux session에서 vertical split pane 생성, active pane 입력, shell 복원 확인
 - `tmux-pane-resize`: detached tmux split pane에서 `resize-pane -D 2` 후 active pane height 증가 확인
 - `tmux-copy-mode`: detached tmux pane output에서 copy mode selection 후 tmux buffer 저장 확인
+- `tmux-mouse-wheel`: tmux mouse mode에서 smoke hook wheel reports로 pane history scroll 확인
 - `tmux-vim-edit-write-quit`: attached tmux session 안에서 clean vim 실행, write, quit, shell 복원 확인
 - `htop-version`: `htop --version`
-- `htop-runtime`: `htop` full-screen meter layout snapshot에서 `Tasks:` marker 확인
+- `htop-runtime`: `htop` full-screen meter layout snapshot에서 `Tasks:` marker 확인, 실제 AppKit 화면에서 meter/table이 고정 cell grid에 맞는지 확인
 - `htop-quit`: `htop` 실행 후 follow-up `q`로 종료 확인
 - `htop-f10-quit`: `htop` 실행 후 follow-up F10 sequence로 종료 확인
 - `htop-f1-help-quit`: `htop` 실행 후 follow-up F1 sequence와 `q q`로 help와 htop 종료 확인
