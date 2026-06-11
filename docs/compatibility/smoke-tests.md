@@ -195,7 +195,7 @@ scripts/run-app-target-smokes.sh
 - `tmux-vim-edit-write-quit`: attached tmux session 안에서 clean vim 실행, write, quit, shell 복원 확인
 - `tmux-split-vim-resize`: attached tmux split pane 안의 clean vim pane height 변경 후 edit/write/quit와 shell 복원 확인
 - `htop-version`: `htop --version`
-- `htop-runtime`: `htop` full-screen meter layout snapshot에서 `Tasks:` marker 확인, 실제 AppKit 화면에서 meter/table이 고정 cell grid에 맞는지 확인
+- `htop-runtime`: `htop` full-screen layout snapshot에서 `Tasks:`, `Load average:`, `PID USER`, `Command`, `F10Quit` marker를 모두 확인해 meter/status/table/function-key row가 유지되는지 확인
 - `htop-quit`: `htop` 실행 후 follow-up `q`로 종료 확인
 - `htop-f10-quit`: `htop` 실행 후 follow-up F10 sequence로 종료 확인
 - `htop-f1-help-quit`: `htop` 실행 후 follow-up F1 sequence와 `q q`로 help와 htop 종료 확인
