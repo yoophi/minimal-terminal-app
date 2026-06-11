@@ -1,0 +1,5 @@
+- [x] Start login shell in `$HOME` by default.
+- [x] Notify the user when the shell process exits.
+- [ ] Close the terminal window with `Cmd+W`.
+- [ ] Quit the app with `Cmd+Q`.
+- [ ] Open a new terminal window with `Cmd+N`.

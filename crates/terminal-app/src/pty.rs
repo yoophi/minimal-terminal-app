@@ -14,6 +14,7 @@ use crate::terminal_buffer::TerminalBuffer;
 const DEFAULT_PTY_ROWS: libc::c_ushort = 32;
 const DEFAULT_PTY_COLS: libc::c_ushort = 100;
 const PTY_PROGRESS_LOG_READ_INTERVAL: u64 = 4096;
+const SHELL_EXIT_NOTICE: &[u8] = b"\r\n[Shell process exited]\r\n";
 
 #[derive(Clone, Debug)]
 pub struct PtyWriter {
@@ -117,8 +118,25 @@ fn exec_login_shell(shell: &str, login_argv0: &str) -> ! {
 
     unsafe {
         libc::setenv(term_key.as_ptr(), term_value.as_ptr(), 1);
+        chdir_to_home();
         libc::execl(shell.as_ptr(), argv0.as_ptr(), ptr::null::<libc::c_char>());
         libc::_exit(127);
+    }
+}
+
+unsafe fn chdir_to_home() {
+    let Ok(home) = env::var("HOME") else {
+        return;
+    };
+    let Ok(home) = CString::new(home) else {
+        return;
+    };
+    let pwd_key = CString::new("PWD").unwrap();
+
+    unsafe {
+        if libc::chdir(home.as_ptr()) == 0 {
+            libc::setenv(pwd_key.as_ptr(), home.as_ptr(), 1);
+        }
     }
 }
 
@@ -179,5 +197,35 @@ fn start_reader_thread(
         logging::pty_info(&format!(
             "pty reader thread exiting: waitpid={waited} status={status}"
         ));
+        notify_shell_exited(&buffer);
     });
+}
+
+fn notify_shell_exited(buffer: &Arc<Mutex<TerminalBuffer>>) {
+    if let Ok(mut buffer) = buffer.lock() {
+        buffer.append_bytes(SHELL_EXIT_NOTICE);
+    } else {
+        logging::pty_error("shell exit notice skipped: terminal buffer lock poisoned");
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn shell_exit_notice_is_written_to_terminal_buffer() {
+        let buffer = Arc::new(Mutex::new(TerminalBuffer::new(2_000)));
+
+        notify_shell_exited(&buffer);
+
+        let snapshot = buffer
+            .lock()
+            .expect("buffer lock should be available")
+            .combined_snapshot(0, usize::MAX);
+        assert!(snapshot
+            .lines
+            .iter()
+            .any(|line| line.contains("[Shell process exited]")));
+    }
 }
