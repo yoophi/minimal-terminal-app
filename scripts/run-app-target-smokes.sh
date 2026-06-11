@@ -706,6 +706,20 @@ run_case_with_native_key_required_markers \
   "native-shift-option-navigation-family-key-page-up:1b5b353b347e" \
   "native-shift-option-navigation-family-key-page-down:1b5b363b347e" \
   "native-shift-option-navigation-family-key-delete:1b5b333b347e"
+run_case_with_native_key_required_markers \
+  "native-shift-control-option-navigation-family-key" \
+  $'ready="native-key"; ready="${ready}-ready"; stty raw -echo; printf "\\n%s\\n" "$ready"; for key in up down right left home end page-up page-down delete; do bytes="$(dd bs=1 count=6 2>/dev/null | od -An -tx1 | tr -d " \\n")"; printf "\\nnative-shift-control-option-navigation-family-key-${key}:%s\\n" "$bytes"; done; stty sane\n' \
+  "shift-control-option-up,shift-control-option-down,shift-control-option-right,shift-control-option-left,shift-control-option-home,shift-control-option-end,shift-control-option-page-up,shift-control-option-page-down,shift-control-option-delete" \
+  1500 \
+  "native-shift-control-option-navigation-family-key-up:1b5b313b3841" \
+  "native-shift-control-option-navigation-family-key-down:1b5b313b3842" \
+  "native-shift-control-option-navigation-family-key-right:1b5b313b3843" \
+  "native-shift-control-option-navigation-family-key-left:1b5b313b3844" \
+  "native-shift-control-option-navigation-family-key-home:1b5b313b3848" \
+  "native-shift-control-option-navigation-family-key-end:1b5b313b3846" \
+  "native-shift-control-option-navigation-family-key-page-up:1b5b353b387e" \
+  "native-shift-control-option-navigation-family-key-page-down:1b5b363b387e" \
+  "native-shift-control-option-navigation-family-key-delete:1b5b333b387e"
 ran=1
 
 run_case_with_mouse_report \

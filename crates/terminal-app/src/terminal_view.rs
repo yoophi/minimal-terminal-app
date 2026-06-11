@@ -1626,6 +1626,15 @@ mod tests {
             ))
         );
         assert_eq!(
+            super::native_key_smoke_event("shift-control-option-page-down"),
+            Some((
+                NSEventModifierFlags::Shift
+                    | NSEventModifierFlags::Control
+                    | NSEventModifierFlags::Option,
+                121
+            ))
+        );
+        assert_eq!(
             super::native_key_smoke_event("shift-delete"),
             Some((NSEventModifierFlags::Shift, 117))
         );
