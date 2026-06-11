@@ -399,6 +399,18 @@ run_case_with_mouse_report() {
 
 ran=0
 
+run_case \
+  "shell-home" \
+  $'printf "shell-home:%s\\n" "$PWD"\n' \
+  "shell-home:${HOME}" \
+  1500
+run_case \
+  "shell-exit-notice" \
+  $'exit\n' \
+  "[Shell process exited]" \
+  1500
+ran=1
+
 run_case_with_mouse_report \
   "mouse-sgr-report" \
   $'stty raw -echo; printf "\\033[?1000h\\033[?1006h"; bytes="$(dd bs=1 count=9 2>/dev/null | od -An -tx1 | tr -d " \\n")"; stty sane; printf "\\nmouse-sgr-report:%s\\n" "$bytes"\n' \

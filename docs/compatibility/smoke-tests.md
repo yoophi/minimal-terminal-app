@@ -163,6 +163,8 @@ scripts/run-app-target-smokes.sh
 
 현재 자동 target:
 
+- `shell-home`: app 내부 login shell이 `$HOME`에서 시작하는지 확인
+- `shell-exit-notice`: app 내부 login shell 종료 뒤 `[Shell process exited]` notice가 표시되는지 확인
 - `mouse-sgr-report`: mouse reporting / SGR mouse mode enable 뒤 app smoke hook이 보낸 SGR left press bytes 확인
 - `fzf-filter`: `printf 'alpha\nbeta\n' | fzf --filter alpha`
 - `fzf-interactive`: `printf 'alpha\nbeta\n' | fzf` 실행 후 query input `b`로 interactive redraw 확인
@@ -195,7 +197,7 @@ scripts/run-app-target-smokes.sh
 - `tmux-vim-edit-write-quit`: attached tmux session 안에서 clean vim 실행, write, quit, shell 복원 확인
 - `tmux-split-vim-resize`: absolute helper script로 attached tmux split pane 안의 clean vim pane height 변경 후 edit/write/quit와 shell 복원 확인
 - `htop-version`: `htop --version`
-- `htop-runtime`: `htop` full-screen layout snapshot에서 `Tasks:`, `Load average:`, `PID USER`, `Command`, `F10Quit` marker를 모두 확인해 meter/status/table/function-key row가 유지되는지 확인
+- `htop-runtime`: `htop` full-screen layout snapshot에서 `Tasks:`, `Load average:`, `PID USER`, `Command`, `F10Quit` marker를 모두 확인해 meter/status/table/function-key row가 유지되는지 확인. Phase 119 이후 styled cell background rendering은 core styled snapshot test와 AppKit span background draw path로 보강한다.
 - `htop-quit`: `htop` 실행 후 follow-up `q`로 종료 확인
 - `htop-f10-quit`: `htop` 실행 후 follow-up F10 sequence로 종료 확인
 - `htop-f1-help-quit`: `htop` 실행 후 follow-up F1 sequence와 `q q`로 help와 htop 종료 확인
