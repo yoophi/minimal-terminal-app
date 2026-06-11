@@ -76,6 +76,7 @@
 - Phase 113에서 app 내부 `tmux` split pane 안의 clean `vim` pane resize 후 edit/write/quit workflow를 자동화했다.
 - Phase 117에서 app 내부 login shell이 home directory에서 시작해도 generated helper script를 absolute path로 실행하도록 `tmux-split-vim-resize` target을 안정화했다.
 - Phase 120에서 긴 follow-up 입력과 snapshot delay를 함께 쓰는 target이 기본 종료 제한에 걸리지 않도록 app target smoke 기본 wait budget을 12초로 늘렸다.
+- Phase 126에서 AppKit `NSWindow` content size 변경이 `drawRect`와 PTY resize 경로를 지나 shell `stty size`에 반영되는 `native-window-resize` target을 자동화했다.
 - Phase 060에서 app 내부 direct `less` basic quit workflow를 자동화했다.
 - Phase 105에서 app 내부 direct `less` search workflow를 자동화했다.
 - Phase 106에서 app 내부 direct `less +F` follow mode append workflow를 자동화했다.
@@ -130,9 +131,9 @@
 
 대상:
 
-- `vim`: clean vim edit/write/quit, mouse left press, window split key chord, PTY/grid resize redraw workflow smoke는 통과했다.
+- `vim`: clean vim edit/write/quit, mouse left press, window split key chord, PTY/grid resize redraw workflow, native AppKit window resize -> PTY size smoke는 통과했다.
 - `emacs -nw`: local verification environment의 PATH에서 `emacs`를 찾지 못했다.
-- `tmux`: `tmux 3.6b` version smoke, attached session workflow smoke, split-pane workflow smoke, pane resize smoke, copy mode buffer smoke, mouse wheel smoke, split pane 내부 nested vim resize workflow는 통과했다.
+- `tmux`: `tmux 3.6b` version smoke, attached session workflow smoke, split-pane workflow smoke, pane resize smoke, copy mode buffer smoke, mouse wheel smoke, split pane 내부 nested vim resize workflow, native AppKit window resize -> PTY size smoke는 통과했다.
 - `tmux` 안의 `vim`: clean nested edit/write/quit workflow와 split pane 내부 resize 후 edit/write/quit workflow smoke는 통과했다.
 - `claude` 또는 `claude-code`: `2.1.170 (Claude Code)` version smoke와 help output smoke는 통과했다.
 - `codex` / `codex-cli`: `codex-cli 0.139.0` version smoke와 help output smoke는 통과했다.
@@ -144,6 +145,7 @@
 - `tmux`와 editor, agent-style CLI는 DSR/DA, key encoding, resize, alternate screen, paste, mouse reporting 같은 여러 기능을 조합해서 사용한다.
 - Phase 107에서 app 내부 clean Vim의 `<C-W>s` window split key chord workflow를 자동화했다.
 - Phase 114에서 app 내부 clean Vim 실행 중 PTY/grid resize 후 redraw/input workflow를 자동화했다.
+- Phase 126에서 AppKit window content size 변경이 app resize path를 통해 PTY size로 반영되는지 자동화했다.
 
 권장 다음 작업:
 

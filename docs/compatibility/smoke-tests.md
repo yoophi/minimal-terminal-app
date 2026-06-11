@@ -167,6 +167,7 @@ scripts/run-app-target-smokes.sh
 
 - `shell-home`: app 내부 login shell이 `$HOME`에서 시작하는지 확인
 - `shell-exit-notice`: app 내부 login shell 종료 뒤 `[Shell process exited]` notice가 표시되는지 확인
+- `native-window-resize`: AppKit `NSWindow` content size를 smoke hook으로 `24x80`에 맞게 변경한 뒤 shell의 `stty size`가 `24 80`으로 갱신되는지 확인
 - `mouse-sgr-report`: mouse reporting / SGR mouse mode enable 뒤 app smoke hook이 보낸 SGR left press bytes 확인
 - `native-mouse-sgr-report`: mouse reporting / SGR mouse mode enable 뒤 synthetic `NSEvent`가 `TerminalView`의 `mouseDown:` path를 통해 보낸 SGR left press bytes 확인
 - `fzf-filter`: `printf 'alpha\nbeta\n' | fzf --filter alpha`

@@ -14,7 +14,7 @@ use objc2_app_kit::{
 use objc2_foundation::{
     MainThreadMarker, NSArray, NSAttributedString, NSAttributedStringKey, NSInteger,
     NSMutableDictionary, NSNotFound, NSNumber, NSObjectProtocol, NSPoint, NSRange, NSRangePointer,
-    NSRect, NSString, NSTimer,
+    NSRect, NSSize, NSString, NSTimer,
 };
 use terminal_core::{Color, CursorStyle, Style, StyledLine, TerminalModes, TerminalSnapshot};
 
@@ -57,6 +57,7 @@ pub(crate) struct TerminalViewIvars {
     cols: Cell<usize>,
     scrollback_offset: Cell<usize>,
     native_mouse_smoke_sent: Cell<bool>,
+    native_window_resize_smoke_sent: Cell<bool>,
     composition: RefCell<CompositionState>,
     selection: RefCell<SelectionState>,
 }
@@ -383,6 +384,7 @@ define_class!(
             self.apply_pending_clipboard_writes();
             self.apply_pending_title_writes();
             self.apply_native_mouse_smoke_if_requested();
+            self.apply_native_window_resize_smoke_if_requested();
             self.as_super().setNeedsDisplay(true);
         }
     }
@@ -404,6 +406,7 @@ impl TerminalView {
             cols: Cell::new(0),
             scrollback_offset: Cell::new(0),
             native_mouse_smoke_sent: Cell::new(false),
+            native_window_resize_smoke_sent: Cell::new(false),
             composition: RefCell::new(CompositionState::default()),
             selection: RefCell::new(SelectionState::default()),
         });
@@ -545,6 +548,29 @@ impl TerminalView {
 
         self.ivars().native_mouse_smoke_sent.set(true);
         let _: () = unsafe { msg_send![self, mouseDown: &*event] };
+    }
+
+    fn apply_native_window_resize_smoke_if_requested(&self) {
+        if self.ivars().native_window_resize_smoke_sent.get() {
+            return;
+        }
+        let Some((rows, cols)) = env::var("MINIMAL_TERMINAL_SMOKE_NATIVE_WINDOW_RESIZE")
+            .ok()
+            .and_then(|value| parse_rows_by_cols(&value))
+        else {
+            return;
+        };
+        let Some(window) = self.as_super().window() else {
+            return;
+        };
+
+        let content_width = (PADDING_X * 2.0) + (cols as f64 * terminal_cell_width());
+        let content_height = (PADDING_Y * 2.0) + (rows as f64 * LINE_HEIGHT);
+        window.setContentSize(NSSize::new(content_width, content_height));
+        self.ivars().native_window_resize_smoke_sent.set(true);
+        logging::pty_info(&format!(
+            "native window resize smoke applied: rows={rows} cols={cols}"
+        ));
     }
 
     fn write_text_to_pty(&self, text: &str, source: &str) {
@@ -1270,6 +1296,16 @@ fn terminal_dimensions(bounds: NSRect) -> (usize, usize) {
     (rows, cols)
 }
 
+fn parse_rows_by_cols(value: &str) -> Option<(usize, usize)> {
+    let (rows, cols) = value.split_once('x')?;
+    let rows = rows.parse().ok()?;
+    let cols = cols.parse().ok()?;
+    if rows == 0 || cols == 0 {
+        return None;
+    }
+    Some((rows, cols))
+}
+
 fn text_from_input_object(
     object: &AnyObject,
     pool: objc2::rc::AutoreleasePool<'_>,
@@ -1338,6 +1374,18 @@ mod tests {
             NSEventModifierFlags::Command | NSEventModifierFlags::Control,
             super::KEY_N
         ));
+    }
+
+    #[test]
+    fn parse_rows_by_cols_accepts_valid_terminal_size() {
+        assert_eq!(super::parse_rows_by_cols("24x80"), Some((24, 80)));
+    }
+
+    #[test]
+    fn parse_rows_by_cols_rejects_invalid_terminal_size() {
+        assert_eq!(super::parse_rows_by_cols("24:80"), None);
+        assert_eq!(super::parse_rows_by_cols("0x80"), None);
+        assert_eq!(super::parse_rows_by_cols("24x0"), None);
     }
 
     #[test]
