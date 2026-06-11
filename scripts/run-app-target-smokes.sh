@@ -1344,6 +1344,13 @@ if command -v vttest >/dev/null 2>&1; then
     "The screen should be cleared" \
     1500 \
     1000
+  run_case_with_followup \
+    "vttest-screen-features" \
+    "${vttest_path}"$'\n' \
+    $'2\r' \
+    "Test of WRAP AROUND mode setting" \
+    1500 \
+    1000
   ran=1
 else
   echo "app target smoke skipped: vttest not found"
