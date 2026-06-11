@@ -503,7 +503,7 @@ if command -v tmux >/dev/null 2>&1; then
     3500
   run_case_with_mouse_report \
     "tmux-mouse-wheel" \
-    "tmux_socket=\"minimal-terminal-app-smoke-\$\$\"; ${tmux_path} -L \"\$tmux_socket\" new-session -s minimal-terminal-mouse 'for i in \$(seq 1 120); do if [ \"\$i\" -ge 50 ] && [ \"\$i\" -le 80 ]; then printf \"tmux-mouse-line-%03d tmux-mouse-scroll-marker\\n\" \"\$i\"; else printf \"tmux-mouse-line-%03d\\n\" \"\$i\"; fi; done; sleep 30' \\; set-option -g destroy-unattached on \\; set-option -g mouse on"$'\n' \
+    "tmux_socket=\"minimal-terminal-app-smoke-\$\$\"; ${tmux_path} -L \"\$tmux_socket\" new-session -s minimal-terminal-mouse 'for i in \$(seq 1 120); do if [ \"\$i\" -ge 80 ] && [ \"\$i\" -le 93 ]; then printf \"tmux-mouse-line-%03d tmux-mouse-scroll-marker\\n\" \"\$i\"; else printf \"tmux-mouse-line-%03d\\n\" \"\$i\"; fi; done; sleep 30' \\; set-option -g destroy-unattached on \\; set-option -g mouse on"$'\n' \
     "wheel-down-20" \
     "tmux-mouse-scroll-marker" \
     3500 \
