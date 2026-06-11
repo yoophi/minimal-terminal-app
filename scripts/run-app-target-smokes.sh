@@ -797,6 +797,28 @@ run_case_with_native_key_required_markers \
   "native-control-option-function-f5-f12-key-f11:1b5b32333b377e" \
   "native-control-option-function-f5-f12-key-f12:1b5b32343b377e"
 run_case_with_native_key_required_markers \
+  "native-shift-control-option-function-f1-f4-key" \
+  $'ready="native-key"; ready="${ready}-ready"; stty raw -echo; printf "\\n%s\\n" "$ready"; for key in f1 f2 f3 f4; do bytes="$(dd bs=1 count=6 2>/dev/null | od -An -tx1 | tr -d " \\n")"; printf "\\nnative-shift-control-option-function-f1-f4-key-${key}:%s\\n" "$bytes"; done; stty sane\n' \
+  "shift-control-option-f1,shift-control-option-f2,shift-control-option-f3,shift-control-option-f4" \
+  1500 \
+  "native-shift-control-option-function-f1-f4-key-f1:1b5b313b3850" \
+  "native-shift-control-option-function-f1-f4-key-f2:1b5b313b3851" \
+  "native-shift-control-option-function-f1-f4-key-f3:1b5b313b3852" \
+  "native-shift-control-option-function-f1-f4-key-f4:1b5b313b3853"
+run_case_with_native_key_required_markers \
+  "native-shift-control-option-function-f5-f12-key" \
+  $'ready="native-key"; ready="${ready}-ready"; stty raw -echo; printf "\\n%s\\n" "$ready"; for key in f5 f6 f7 f8 f9 f10 f11 f12; do bytes="$(dd bs=1 count=7 2>/dev/null | od -An -tx1 | tr -d " \\n")"; printf "\\nnative-shift-control-option-function-f5-f12-key-${key}:%s\\n" "$bytes"; done; stty sane\n' \
+  "shift-control-option-f5,shift-control-option-f6,shift-control-option-f7,shift-control-option-f8,shift-control-option-f9,shift-control-option-f10,shift-control-option-f11,shift-control-option-f12" \
+  1500 \
+  "native-shift-control-option-function-f5-f12-key-f5:1b5b31353b387e" \
+  "native-shift-control-option-function-f5-f12-key-f6:1b5b31373b387e" \
+  "native-shift-control-option-function-f5-f12-key-f7:1b5b31383b387e" \
+  "native-shift-control-option-function-f5-f12-key-f8:1b5b31393b387e" \
+  "native-shift-control-option-function-f5-f12-key-f9:1b5b32303b387e" \
+  "native-shift-control-option-function-f5-f12-key-f10:1b5b32313b387e" \
+  "native-shift-control-option-function-f5-f12-key-f11:1b5b32333b387e" \
+  "native-shift-control-option-function-f5-f12-key-f12:1b5b32343b387e"
+run_case_with_native_key_required_markers \
   "native-control-option-navigation-family-key" \
   $'ready="native-key"; ready="${ready}-ready"; stty raw -echo; printf "\\n%s\\n" "$ready"; for key in up down right left home end page-up page-down delete; do bytes="$(dd bs=1 count=6 2>/dev/null | od -An -tx1 | tr -d " \\n")"; printf "\\nnative-control-option-navigation-family-key-${key}:%s\\n" "$bytes"; done; stty sane\n' \
   "control-option-up,control-option-down,control-option-right,control-option-left,control-option-home,control-option-end,control-option-page-up,control-option-page-down,control-option-delete" \

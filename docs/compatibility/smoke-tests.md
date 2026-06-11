@@ -185,6 +185,8 @@ scripts/run-app-target-smokes.sh
 - `native-shift-control-function-f5-f12-key`: synthetic Shift+Control+F5-F12 `NSEvent` 8개가 modified function key bytes를 쓰는지 확인
 - `native-control-option-function-f1-f4-key`: synthetic Control+Option+F1-F4 `NSEvent` 4개가 modified function key bytes를 쓰는지 확인
 - `native-control-option-function-f5-f12-key`: synthetic Control+Option+F5-F12 `NSEvent` 8개가 modified function key bytes를 쓰는지 확인
+- `native-shift-control-option-function-f1-f4-key`: synthetic Shift+Control+Option+F1-F4 `NSEvent` 4개가 modified function key bytes를 쓰는지 확인
+- `native-shift-control-option-function-f5-f12-key`: synthetic Shift+Control+Option+F5-F12 `NSEvent` 8개가 modified function key bytes를 쓰는지 확인
 - `native-control-option-navigation-family-key`: synthetic Control+Option navigation key `NSEvent` 9개가 Up/Down/Right/Left/Home/End/PageUp/PageDown/Delete modified navigation key bytes를 쓰는지 확인
 - `native-shift-control-navigation-family-key`: synthetic Shift+Control navigation key `NSEvent` 9개가 Up/Down/Right/Left/Home/End/PageUp/PageDown/Delete modified navigation key bytes를 쓰는지 확인
 - `native-shift-option-navigation-family-key`: synthetic Shift+Option navigation key `NSEvent` 9개가 Up/Down/Right/Left/Home/End/PageUp/PageDown/Delete modified navigation key bytes를 쓰는지 확인
