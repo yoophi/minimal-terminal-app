@@ -1602,6 +1602,10 @@ mod tests {
             Some((NSEventModifierFlags::Shift, 111))
         );
         assert_eq!(
+            super::native_key_smoke_event("control-f12"),
+            Some((NSEventModifierFlags::Control, 111))
+        );
+        assert_eq!(
             super::native_key_smoke_event("shift-option-up"),
             Some((
                 NSEventModifierFlags::Shift | NSEventModifierFlags::Option,

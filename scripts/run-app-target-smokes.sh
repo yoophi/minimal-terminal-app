@@ -687,6 +687,28 @@ run_case_with_native_key_required_markers \
   "native-shift-function-f5-f12-key-f11:1b5b32333b327e" \
   "native-shift-function-f5-f12-key-f12:1b5b32343b327e"
 run_case_with_native_key_required_markers \
+  "native-control-function-f1-f4-key" \
+  $'ready="native-key"; ready="${ready}-ready"; stty raw -echo; printf "\\n%s\\n" "$ready"; for key in f1 f2 f3 f4; do bytes="$(dd bs=1 count=6 2>/dev/null | od -An -tx1 | tr -d " \\n")"; printf "\\nnative-control-function-f1-f4-key-${key}:%s\\n" "$bytes"; done; stty sane\n' \
+  "control-f1,control-f2,control-f3,control-f4" \
+  1500 \
+  "native-control-function-f1-f4-key-f1:1b5b313b3550" \
+  "native-control-function-f1-f4-key-f2:1b5b313b3551" \
+  "native-control-function-f1-f4-key-f3:1b5b313b3552" \
+  "native-control-function-f1-f4-key-f4:1b5b313b3553"
+run_case_with_native_key_required_markers \
+  "native-control-function-f5-f12-key" \
+  $'ready="native-key"; ready="${ready}-ready"; stty raw -echo; printf "\\n%s\\n" "$ready"; for key in f5 f6 f7 f8 f9 f10 f11 f12; do bytes="$(dd bs=1 count=7 2>/dev/null | od -An -tx1 | tr -d " \\n")"; printf "\\nnative-control-function-f5-f12-key-${key}:%s\\n" "$bytes"; done; stty sane\n' \
+  "control-f5,control-f6,control-f7,control-f8,control-f9,control-f10,control-f11,control-f12" \
+  1500 \
+  "native-control-function-f5-f12-key-f5:1b5b31353b357e" \
+  "native-control-function-f5-f12-key-f6:1b5b31373b357e" \
+  "native-control-function-f5-f12-key-f7:1b5b31383b357e" \
+  "native-control-function-f5-f12-key-f8:1b5b31393b357e" \
+  "native-control-function-f5-f12-key-f9:1b5b32303b357e" \
+  "native-control-function-f5-f12-key-f10:1b5b32313b357e" \
+  "native-control-function-f5-f12-key-f11:1b5b32333b357e" \
+  "native-control-function-f5-f12-key-f12:1b5b32343b357e"
+run_case_with_native_key_required_markers \
   "native-control-option-navigation-family-key" \
   $'ready="native-key"; ready="${ready}-ready"; stty raw -echo; printf "\\n%s\\n" "$ready"; for key in up down right left home end page-up page-down delete; do bytes="$(dd bs=1 count=6 2>/dev/null | od -An -tx1 | tr -d " \\n")"; printf "\\nnative-control-option-navigation-family-key-${key}:%s\\n" "$bytes"; done; stty sane\n' \
   "control-option-up,control-option-down,control-option-right,control-option-left,control-option-home,control-option-end,control-option-page-up,control-option-page-down,control-option-delete" \
