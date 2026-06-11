@@ -199,8 +199,30 @@ impl TerminalState {
             }
             Action::Newline => {
                 self.pending_wrap = false;
+                self.grid.newline_in_region(
+                    &mut self.cursor,
+                    self.scroll_region,
+                    self.current_style,
+                );
+            }
+            Action::Index => {
+                self.pending_wrap = false;
                 self.grid
-                    .newline_in_region(&mut self.cursor, self.scroll_region);
+                    .index_in_region(&mut self.cursor, self.scroll_region, self.current_style);
+            }
+            Action::NextLine => {
+                self.pending_wrap = false;
+                self.grid.carriage_return(&mut self.cursor);
+                self.grid
+                    .index_in_region(&mut self.cursor, self.scroll_region, self.current_style);
+            }
+            Action::ReverseIndex => {
+                self.pending_wrap = false;
+                self.grid.reverse_index_in_region(
+                    &mut self.cursor,
+                    self.scroll_region,
+                    self.current_style,
+                );
             }
             Action::Backspace => {
                 self.pending_wrap = false;
@@ -274,6 +296,16 @@ impl TerminalState {
                 self.pending_wrap = false;
                 self.grid
                     .delete_lines(self.cursor, count, self.scroll_region, self.current_style)
+            }
+            Action::ScrollUp(count) => {
+                self.pending_wrap = false;
+                self.grid
+                    .scroll_up_lines(count, self.scroll_region, self.current_style)
+            }
+            Action::ScrollDown(count) => {
+                self.pending_wrap = false;
+                self.grid
+                    .scroll_down_lines(count, self.scroll_region, self.current_style)
             }
             Action::SaveCursor => {
                 self.pending_wrap = false;
@@ -411,8 +443,11 @@ impl TerminalState {
     fn print_char(&mut self, ch: char) {
         if self.pending_wrap {
             if self.modes.autowrap {
-                self.grid
-                    .newline_in_region(&mut self.cursor, self.scroll_region);
+                self.grid.newline_in_region(
+                    &mut self.cursor,
+                    self.scroll_region,
+                    self.current_style,
+                );
             }
             self.pending_wrap = false;
         }
@@ -674,6 +709,41 @@ mod tests {
 
         let snapshot = terminal.snapshot(5);
         assert_eq!(snapshot.lines, vec!["0", "2", "3", "x", "4"]);
+    }
+
+    #[test]
+    fn handles_vt_index_sequences_in_scroll_region() {
+        let mut terminal = TerminalState::new(5, 12);
+        terminal.append_bytes(b"0\n1\n2\n3\n4");
+        terminal.append_bytes(b"\x1b[2;4r\x1b[2;3H\x1bMx");
+
+        let snapshot = terminal.snapshot(5);
+        assert_eq!(snapshot.lines, vec!["0", "  x", "1", "2", "4"]);
+        assert_eq!(snapshot.cursor, Cursor::new(1, 3));
+
+        terminal.append_bytes(b"\x1b[4;3H\x1bDy");
+        let snapshot = terminal.snapshot(5);
+        assert_eq!(snapshot.lines, vec!["0", "1", "2", "  y", "4"]);
+        assert_eq!(snapshot.cursor, Cursor::new(3, 3));
+
+        terminal.append_bytes(b"\x1b[2;5H\x1bEz");
+        let snapshot = terminal.snapshot(5);
+        assert_eq!(snapshot.lines, vec!["0", "1", "z", "  y", "4"]);
+        assert_eq!(snapshot.cursor, Cursor::new(2, 1));
+    }
+
+    #[test]
+    fn handles_csi_scroll_up_and_down_in_scroll_region() {
+        let mut terminal = TerminalState::new(5, 12);
+        terminal.append_bytes(b"0\n1\n2\n3\n4");
+        terminal.append_bytes(b"\x1b[2;4r\x1b[1S");
+
+        let snapshot = terminal.snapshot(5);
+        assert_eq!(snapshot.lines, vec!["0", "2", "3", "", "4"]);
+
+        terminal.append_bytes(b"\x1b[1T");
+        let snapshot = terminal.snapshot(5);
+        assert_eq!(snapshot.lines, vec!["0", "", "2", "3", "4"]);
     }
 
     #[test]

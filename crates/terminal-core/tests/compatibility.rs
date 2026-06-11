@@ -155,6 +155,21 @@ fn tui_private_modes_and_editing_sequences_have_core_evidence() {
 }
 
 #[test]
+fn vt_index_and_scroll_sequences_have_core_evidence() {
+    let mut terminal = TerminalState::new(5, 16);
+
+    terminal.append_bytes(b"0\n1\n2\n3\n4");
+    terminal.append_bytes(b"\x1b[2;4r\x1b[2;3H\x1bMx\x1b[1S\x1b[1T");
+
+    assert_eq!(terminal.snapshot(5).lines, vec!["0", "", "1", "2", "4"]);
+
+    terminal.append_bytes(b"\x1b[3;4H\x1bD!\x1b[2;8H\x1bEz");
+
+    assert_eq!(terminal.snapshot(5).lines, vec!["0", "", "z", "2  !", "4"]);
+    assert_eq!(terminal.snapshot(5).cursor, Cursor::new(2, 1));
+}
+
+#[test]
 fn autowrap_private_mode_has_core_evidence() {
     let mut terminal = TerminalState::new(2, 6);
 

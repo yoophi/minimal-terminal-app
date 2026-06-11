@@ -80,6 +80,9 @@ pub(crate) enum Action {
     Print(char),
     CarriageReturn,
     Newline,
+    Index,
+    NextLine,
+    ReverseIndex,
     Backspace,
     Tab,
     ClearLine(LineClearMode),
@@ -89,6 +92,8 @@ pub(crate) enum Action {
     EraseChars(usize),
     InsertLines(usize),
     DeleteLines(usize),
+    ScrollUp(usize),
+    ScrollDown(usize),
     SaveCursor,
     RestoreCursor,
     EnterAlternateScreen,
@@ -384,6 +389,9 @@ impl vte::Perform for ActionCollector {
         let action = match (intermediates, byte) {
             ([], b'7') => Action::SaveCursor,
             ([], b'8') => Action::RestoreCursor,
+            ([], b'D') => Action::Index,
+            ([], b'E') => Action::NextLine,
+            ([], b'M') => Action::ReverseIndex,
             ([], b'=') => Action::SetApplicationKeypad(true),
             ([], b'>') => Action::SetApplicationKeypad(false),
             ([], b'n') => {
@@ -1788,6 +1796,8 @@ fn parse_csi(numbers: &[usize], intermediates: &[u8], final_byte: char) -> Actio
             _ => Action::Ignore,
         },
         'P' => Action::DeleteChars(first_or_default(&numbers, 1)),
+        'S' => Action::ScrollUp(first_or_default(&numbers, 1)),
+        'T' => Action::ScrollDown(first_or_default(&numbers, 1)),
         'X' => Action::EraseChars(first_or_default(&numbers, 1)),
         'r' => parse_scroll_region(&numbers),
         's' => Action::SaveCursor,
@@ -3177,6 +3187,14 @@ mod tests {
     }
 
     #[test]
+    fn parses_vt_index_sequences() {
+        let mut parser = Parser::default();
+        assert_eq!(parser.advance_bytes(b"\x1bD"), vec![Action::Index]);
+        assert_eq!(parser.advance_bytes(b"\x1bE"), vec![Action::NextLine]);
+        assert_eq!(parser.advance_bytes(b"\x1bM"), vec![Action::ReverseIndex]);
+    }
+
+    #[test]
     fn parses_application_keypad_modes() {
         let mut parser = Parser::default();
         assert_eq!(
@@ -3298,6 +3316,11 @@ mod tests {
         assert_eq!(
             parser.advance_bytes(b"\x1b[2M"),
             vec![Action::DeleteLines(2)]
+        );
+        assert_eq!(parser.advance_bytes(b"\x1b[2S"), vec![Action::ScrollUp(2)]);
+        assert_eq!(
+            parser.advance_bytes(b"\x1b[2T"),
+            vec![Action::ScrollDown(2)]
         );
         assert_eq!(
             parser.advance_bytes(b"\x1b[2;4r"),

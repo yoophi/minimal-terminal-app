@@ -101,6 +101,7 @@ impl Grid {
         &mut self,
         cursor: &mut Cursor,
         region: Option<(usize, usize)>,
+        style: Style,
     ) {
         let Some(region) = region else {
             self.newline(cursor);
@@ -113,11 +114,51 @@ impl Grid {
 
         cursor.col = 0;
         if cursor.row == bottom {
-            self.scroll_up_region(top, bottom);
+            self.scroll_up_region(top, bottom, style);
         } else if cursor.row >= top && cursor.row < bottom {
             cursor.row += 1;
         } else {
             self.newline(cursor);
+        }
+    }
+
+    pub(crate) fn index_in_region(
+        &mut self,
+        cursor: &mut Cursor,
+        region: Option<(usize, usize)>,
+        style: Style,
+    ) {
+        let Some((top, bottom)) = normalized_region(region, self.rows) else {
+            self.index(cursor, style);
+            return;
+        };
+
+        if cursor.row == bottom {
+            self.scroll_up_region(top, bottom, style);
+        } else if cursor.row >= top && cursor.row < bottom {
+            cursor.row += 1;
+        } else {
+            self.index(cursor, style);
+        }
+    }
+
+    pub(crate) fn reverse_index_in_region(
+        &mut self,
+        cursor: &mut Cursor,
+        region: Option<(usize, usize)>,
+        style: Style,
+    ) {
+        let Some((top, bottom)) = normalized_region(region, self.rows) else {
+            self.reverse_index(cursor, style);
+            return;
+        };
+
+        if cursor.row == top {
+            self.scroll_down_region(top, bottom, style);
+        } else if cursor.row > top && cursor.row <= bottom {
+            cursor.row -= 1;
+        } else {
+            self.reverse_index(cursor, style);
         }
     }
 
@@ -245,6 +286,34 @@ impl Grid {
         }
     }
 
+    pub(crate) fn scroll_up_lines(
+        &mut self,
+        count: usize,
+        region: Option<(usize, usize)>,
+        style: Style,
+    ) {
+        let Some((top, bottom)) = normalized_region(region, self.rows) else {
+            return;
+        };
+        for _ in 0..count.max(1).min(bottom - top + 1) {
+            self.scroll_up_region(top, bottom, style);
+        }
+    }
+
+    pub(crate) fn scroll_down_lines(
+        &mut self,
+        count: usize,
+        region: Option<(usize, usize)>,
+        style: Style,
+    ) {
+        let Some((top, bottom)) = normalized_region(region, self.rows) else {
+            return;
+        };
+        for _ in 0..count.max(1).min(bottom - top + 1) {
+            self.scroll_down_region(top, bottom, style);
+        }
+    }
+
     pub(crate) fn clear_screen_from_cursor(&mut self, cursor: Cursor, style: Style) {
         self.clear_line_from_cursor(cursor, style);
         for row in (cursor.row + 1)..self.rows {
@@ -332,9 +401,38 @@ impl Grid {
         self.lines.push(blank_line(self.cols));
     }
 
-    fn scroll_up_region(&mut self, top: usize, bottom: usize) {
+    fn index(&mut self, cursor: &mut Cursor, style: Style) {
+        if cursor.row + 1 >= self.rows {
+            self.scroll_up_with_style(style);
+        } else {
+            cursor.row += 1;
+        }
+    }
+
+    fn reverse_index(&mut self, cursor: &mut Cursor, style: Style) {
+        if cursor.row == 0 {
+            self.scroll_down_region(0, self.rows - 1, style);
+        } else {
+            cursor.row -= 1;
+        }
+    }
+
+    fn scroll_up_with_style(&mut self, style: Style) {
+        let line = self.lines.remove(0);
+        self.push_scrollback(line);
+        self.lines.push(blank_line_with_style(self.cols, style));
+    }
+
+    fn scroll_up_region(&mut self, top: usize, bottom: usize, style: Style) {
         self.lines.remove(top);
-        self.lines.insert(bottom, blank_line(self.cols));
+        self.lines
+            .insert(bottom, blank_line_with_style(self.cols, style));
+    }
+
+    fn scroll_down_region(&mut self, top: usize, bottom: usize, style: Style) {
+        self.lines.remove(bottom);
+        self.lines
+            .insert(top, blank_line_with_style(self.cols, style));
     }
 
     fn push_scrollback(&mut self, line: Vec<Cell>) {
