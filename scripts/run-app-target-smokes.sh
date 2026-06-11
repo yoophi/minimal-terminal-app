@@ -430,13 +430,11 @@ if command -v fzf >/dev/null 2>&1; then
     "▌ beta" \
     1500 \
     1000
-  run_case_with_followup \
+  run_case \
     "fzf-preview" \
-    "printf \"alpha\\nbeta\\n\" | ${fzf_path} --preview \"printf preview:{}\""$'\n' \
-    "b" \
+    "printf \"alpha\\nbeta\\n\" | ${fzf_path} --query beta --preview \"printf preview:{}\""$'\n' \
     "preview:beta" \
-    2500 \
-    2000
+    2500
   run_case_with_two_followups \
     "fzf-select" \
     "selected=\"\$(printf \"alpha\\nbeta\\n\" | ${fzf_path})\"; printf \"fzf-select:%s\\n\" \"\$selected\""$'\n' \
@@ -640,8 +638,8 @@ if command -v tmux >/dev/null 2>&1; then
     3500
   run_case_with_mouse_report \
     "tmux-mouse-wheel" \
-    "tmux_socket=\"minimal-terminal-app-smoke-\$\$\"; ${tmux_path} -L \"\$tmux_socket\" new-session -s minimal-terminal-mouse 'for i in \$(seq 1 120); do if [ \"\$i\" -ge 80 ] && [ \"\$i\" -le 93 ]; then printf \"tmux-mouse-line-%03d tmux-mouse-scroll-marker\\n\" \"\$i\"; else printf \"tmux-mouse-line-%03d\\n\" \"\$i\"; fi; done; sleep 30' \\; set-option -g destroy-unattached on \\; set-option -g mouse on"$'\n' \
-    "wheel-down-20" \
+    "tmux_socket=\"minimal-terminal-app-smoke-\$\$\"; ${tmux_path} -L \"\$tmux_socket\" new-session -s minimal-terminal-mouse 'for i in \$(seq 1 120); do if [ \"\$i\" -le 20 ]; then printf \"tmux-mouse-line-%03d tmux-mouse-scroll-marker\\n\" \"\$i\"; else printf \"tmux-mouse-line-%03d\\n\" \"\$i\"; fi; done; sleep 30' \\; set-option -g destroy-unattached on \\; set-option -g mouse on"$'\n' \
+    "wheel-up-20" \
     "tmux-mouse-scroll-marker" \
     3500 \
     1800

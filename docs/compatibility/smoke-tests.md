@@ -170,7 +170,7 @@ scripts/run-app-target-smokes.sh
 - `mouse-sgr-report`: mouse reporting / SGR mouse mode enable 뒤 app smoke hook이 보낸 SGR left press bytes 확인
 - `fzf-filter`: `printf 'alpha\nbeta\n' | fzf --filter alpha`
 - `fzf-interactive`: `printf 'alpha\nbeta\n' | fzf` 실행 후 query input `b`로 interactive redraw 확인
-- `fzf-preview`: `printf 'alpha\nbeta\n' | fzf --preview ...` 실행 후 query input `b`로 preview pane 갱신 확인
+- `fzf-preview`: `printf 'alpha\nbeta\n' | fzf --query beta --preview ...` 실행 후 preview pane 갱신 확인
 - `fzf-select`: `printf 'alpha\nbeta\n' | fzf` 실행 후 query input `b`와 Enter로 선택 결과 확인
 - `fzf-multi-select`: `printf 'alpha\nbeta\n' | fzf -m` 실행 후 query input `b`, Tab, Enter로 multi-select 결과 확인
 - `fzf-shell-ctrl-t`: zsh fzf key binding source 후 Ctrl-T widget으로 파일 경로를 command line에 삽입하고 실행 확인
@@ -195,7 +195,7 @@ scripts/run-app-target-smokes.sh
 - `tmux-split-pane`: attached tmux session에서 vertical split pane 생성, active pane 입력, shell 복원 확인
 - `tmux-pane-resize`: detached tmux split pane에서 `resize-pane -D 2` 후 active pane height 증가 확인
 - `tmux-copy-mode`: detached tmux pane output에서 copy mode selection 후 tmux buffer 저장 확인
-- `tmux-mouse-wheel`: tmux mouse mode에서 smoke hook wheel reports로 pane history scroll 확인
+- `tmux-mouse-wheel`: tmux mouse mode에서 smoke hook `wheel-up-20` reports로 pane history scroll 확인
 - `tmux-vim-edit-write-quit`: attached tmux session 안에서 clean vim 실행, write, quit, shell 복원 확인
 - `tmux-split-vim-resize`: absolute helper script로 attached tmux split pane 안의 clean vim pane height 변경 후 edit/write/quit와 shell 복원 확인
 - `htop-version`: `htop --version`

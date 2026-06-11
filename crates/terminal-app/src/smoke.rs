@@ -171,6 +171,12 @@ fn mouse_report_bytes(buffer: &Arc<Mutex<TerminalBuffer>>, report: &str) -> Opti
             2,
             false,
         )],
+        "wheel-up-20" if modes.sgr_mouse => (0..20)
+            .map(|_| mouse::sgr_mouse_report(mouse::WHEEL_UP, 0, 1, 2, false))
+            .collect(),
+        "wheel-up-20" => (0..20)
+            .map(|_| mouse::legacy_mouse_report(mouse::WHEEL_UP, 0, 1, 2, false))
+            .collect(),
         "wheel-down-5" if modes.sgr_mouse => (0..5)
             .map(|_| mouse::sgr_mouse_report(mouse::WHEEL_DOWN, 0, 1, 2, false))
             .collect(),
