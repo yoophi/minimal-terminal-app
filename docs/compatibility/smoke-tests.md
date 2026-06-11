@@ -175,6 +175,7 @@ scripts/run-app-target-smokes.sh
 - `native-f5-modifier-matrix-key`: synthetic F5 key `NSEvent` 7개가 Shift/Option/Control 전체 modifier 조합별 modified function key bytes `ESC [ 15 ; 2 ~`부터 `ESC [ 15 ; 8 ~`까지 쓰는지 확인
 - `native-control-option-navigation-family-key`: synthetic Control+Option navigation key `NSEvent` 9개가 Up/Down/Right/Left/Home/End/PageUp/PageDown/Delete modified navigation key bytes를 쓰는지 확인
 - `native-shift-control-navigation-family-key`: synthetic Shift+Control navigation key `NSEvent` 9개가 Up/Down/Right/Left/Home/End/PageUp/PageDown/Delete modified navigation key bytes를 쓰는지 확인
+- `native-shift-option-navigation-family-key`: synthetic Shift+Option navigation key `NSEvent` 9개가 Up/Down/Right/Left/Home/End/PageUp/PageDown/Delete modified navigation key bytes를 쓰는지 확인
 - `mouse-sgr-report`: mouse reporting / SGR mouse mode enable 뒤 app smoke hook이 보낸 SGR left press bytes 확인
 - `native-mouse-sgr-report`: mouse reporting / SGR mouse mode enable 뒤 synthetic `NSEvent`가 `TerminalView`의 `mouseDown:` path를 통해 보낸 SGR left press bytes 확인
 - `fzf-filter`: `printf 'alpha\nbeta\n' | fzf --filter alpha`
