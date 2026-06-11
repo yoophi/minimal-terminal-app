@@ -58,6 +58,7 @@ pub(crate) struct TerminalViewIvars {
     scrollback_offset: Cell<usize>,
     native_mouse_smoke_sent: Cell<bool>,
     native_window_resize_smoke_sent: Cell<bool>,
+    native_key_smoke_sent: Cell<bool>,
     composition: RefCell<CompositionState>,
     selection: RefCell<SelectionState>,
 }
@@ -385,6 +386,7 @@ define_class!(
             self.apply_pending_title_writes();
             self.apply_native_mouse_smoke_if_requested();
             self.apply_native_window_resize_smoke_if_requested();
+            self.apply_native_key_smoke_if_requested();
             self.as_super().setNeedsDisplay(true);
         }
     }
@@ -407,6 +409,7 @@ impl TerminalView {
             scrollback_offset: Cell::new(0),
             native_mouse_smoke_sent: Cell::new(false),
             native_window_resize_smoke_sent: Cell::new(false),
+            native_key_smoke_sent: Cell::new(false),
             composition: RefCell::new(CompositionState::default()),
             selection: RefCell::new(SelectionState::default()),
         });
@@ -571,6 +574,64 @@ impl TerminalView {
         logging::pty_info(&format!(
             "native window resize smoke applied: rows={rows} cols={cols}"
         ));
+    }
+
+    fn apply_native_key_smoke_if_requested(&self) {
+        if self.ivars().native_key_smoke_sent.get() {
+            return;
+        }
+        if env::var("MINIMAL_TERMINAL_SMOKE_NATIVE_KEY")
+            .ok()
+            .as_deref()
+            != Some("control-f5")
+        {
+            return;
+        }
+        if !self.snapshot_contains_text("native-key-ready") {
+            return;
+        }
+
+        let Some(window) = self.as_super().window() else {
+            return;
+        };
+        let empty = NSString::from_str("");
+        let event: Option<Retained<NSEvent>> = unsafe {
+            msg_send![
+                NSEvent::class(),
+                keyEventWithType: NSEventType::KeyDown,
+                location: NSPoint::new(0.0, 0.0),
+                modifierFlags: NSEventModifierFlags::Control,
+                timestamp: 0.0,
+                windowNumber: window.windowNumber() as NSInteger,
+                context: Option::<&AnyObject>::None,
+                characters: &*empty,
+                charactersIgnoringModifiers: &*empty,
+                isARepeat: false,
+                keyCode: 96_u16
+            ]
+        };
+        let Some(event) = event else {
+            logging::pty_error("native key smoke skipped: failed to create NSEvent");
+            self.ivars().native_key_smoke_sent.set(true);
+            return;
+        };
+
+        self.ivars().native_key_smoke_sent.set(true);
+        let _: () = unsafe { msg_send![self, keyDown: &*event] };
+    }
+
+    fn snapshot_contains_text(&self, needle: &str) -> bool {
+        self.ivars()
+            .buffer
+            .lock()
+            .map(|buffer| {
+                buffer
+                    .combined_snapshot(0, usize::MAX)
+                    .lines
+                    .iter()
+                    .any(|line| line.contains(needle))
+            })
+            .unwrap_or(false)
     }
 
     fn write_text_to_pty(&self, text: &str, source: &str) {

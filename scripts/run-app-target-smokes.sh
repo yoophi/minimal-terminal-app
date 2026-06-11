@@ -499,6 +499,57 @@ run_case_with_native_mouse_report() {
   echo "app target smoke passed: ${name}"
 }
 
+run_case_with_native_key() {
+  local name="$1"
+  local input="$2"
+  local native_key="$3"
+  local marker="$4"
+  local snapshot_delay_ms="${5:-2500}"
+  local case_dir="${LOG_DIR}/${name}"
+  local snapshot_path="${case_dir}/snapshot.txt"
+  local stdout_path="${case_dir}/stdout.log"
+  local stderr_path="${case_dir}/stderr.log"
+
+  mkdir -p "${case_dir}"
+  rm -f "${snapshot_path}" "${stdout_path}" "${stderr_path}"
+
+  MINIMAL_TERMINAL_SMOKE_INPUT="${input}" \
+  MINIMAL_TERMINAL_SMOKE_NATIVE_KEY="${native_key}" \
+  MINIMAL_TERMINAL_SMOKE_SNAPSHOT_PATH="${snapshot_path}" \
+  MINIMAL_TERMINAL_SMOKE_INPUT_DELAY_MS=500 \
+  MINIMAL_TERMINAL_SMOKE_SNAPSHOT_DELAY_MS="${snapshot_delay_ms}" \
+  MINIMAL_TERMINAL_SMOKE_EXIT=1 \
+  "${APP_BINARY}" >"${stdout_path}" 2>"${stderr_path}" &
+  local pid=$!
+
+  local deadline=$((SECONDS + WAIT_SECONDS))
+  while kill -0 "${pid}" >/dev/null 2>&1 && [[ "${SECONDS}" -lt "${deadline}" ]]; do
+    sleep 0.2
+  done
+
+  if kill -0 "${pid}" >/dev/null 2>&1; then
+    kill "${pid}" >/dev/null 2>&1 || true
+    wait "${pid}" >/dev/null 2>&1 || true
+    echo "app target smoke failed: ${name} did not exit within ${WAIT_SECONDS}s" >&2
+    exit 1
+  fi
+
+  wait "${pid}"
+
+  if [[ ! -f "${snapshot_path}" ]]; then
+    echo "app target smoke failed: ${name} missing snapshot ${snapshot_path}" >&2
+    exit 1
+  fi
+
+  if ! grep -Fq "${marker}" "${snapshot_path}"; then
+    echo "app target smoke failed: ${name} marker not found: ${marker}" >&2
+    echo "snapshot: ${snapshot_path}" >&2
+    exit 1
+  fi
+
+  echo "app target smoke passed: ${name}"
+}
+
 ran=0
 
 run_case \
@@ -517,6 +568,12 @@ run_case_with_native_window_resize \
   "24x80" \
   "native-window-resize-after:24 80" \
   3500
+run_case_with_native_key \
+  "native-control-f5-key" \
+  $'ready="native-key"; ready="${ready}-ready"; stty raw -echo; printf "\\n%s\\n" "$ready"; bytes="$(dd bs=1 count=7 2>/dev/null | od -An -tx1 | tr -d " \\n")"; stty sane; printf "\\nnative-control-f5-key:%s\\n" "$bytes"\n' \
+  "control-f5" \
+  "native-control-f5-key:1b5b31353b357e" \
+  1500
 ran=1
 
 run_case_with_mouse_report \

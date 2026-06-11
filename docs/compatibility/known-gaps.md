@@ -101,7 +101,7 @@
 
 권장 다음 작업:
 
-- code-level로 검증된 modifier key variants를 앱별 runtime smoke로 검증한다.
+- code-level로 검증된 modifier key variants 중 Control+F5 외 나머지 조합을 앱별 runtime smoke로 검증한다.
 - 기타 NRCS/locale-specific charset 같은 charset 동작을 별도 검토한다.
 - 새로 지원하는 sequence마다 작은 parser/grid fixture를 우선 추가한다.
 
@@ -179,6 +179,12 @@ Phase 097에서 8-bit C1 `0x8E` SS2와 `0x8F` SS3가 기존 `ESC N`, `ESC O` sin
 상태: `supported`
 
 Phase 098에서 8-bit C1 `0x9D` OSC introducer와 `0x9C` ST terminator가 기존 `ESC ]` 및 `ESC \` 경로와 같은 OSC title, OSC 52 query-deny 처리를 사용하도록 구현하고 자동 evidence를 추가했다. 다른 C1 control family 전체 지원은 full xterm compatibility gap으로 남긴다.
+
+### Native Modified Function Key Runtime Evidence
+
+상태: `partially supported`
+
+Phase 127에서 `native-control-f5-key` app target smoke를 추가했다. synthetic Control+F5 `NSEvent`가 `TerminalView keyDown:` path를 지나 xterm-style modified function key sequence `ESC [ 15 ; 5 ~`로 PTY에 전달되는 것을 shell raw readback marker `native-control-f5-key:1b5b31353b357e`로 확인했다. Shift/Option/Control 전체 조합은 code-level test가 있으며, 전체 runtime matrix는 Full xterm Compatibility Coverage gap으로 계속 추적한다.
 
 ### Cursor Style Sequence
 
