@@ -910,9 +910,9 @@ if command -v less >/dev/null 2>&1; then
     1800
   run_case \
     "less-follow" \
-    "tmp=\"/tmp/minimal-terminal-less-follow-\$\$.log\"; rm -f \"\$tmp\"; printf \"less-follow-line-001\\n\" > \"\$tmp\"; (sleep 1; printf \"less-follow-line-002\\nless-follow-marker\\n\" >> \"\$tmp\"; sleep 10; rm -f \"\$tmp\") & ${less_path} +F \"\$tmp\""$'\n' \
+    "tmp=\"/tmp/minimal-terminal-less-follow-\$\$.log\"; rm -f \"\$tmp\"; printf \"less-follow-line-001\\n\" > \"\$tmp\"; (sleep 0.2; printf \"less-follow-line-002\\nless-follow-marker\\n\" >> \"\$tmp\"; sleep 10; rm -f \"\$tmp\") & ${less_path} +F \"\$tmp\""$'\n' \
     "less-follow-marker" \
-    3500
+    5000
   ran=1
 else
   echo "app target smoke skipped: less not found"

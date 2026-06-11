@@ -81,6 +81,7 @@
 - Phase 060에서 app 내부 direct `less` basic quit workflow를 자동화했다.
 - Phase 105에서 app 내부 direct `less` search workflow를 자동화했다.
 - Phase 106에서 app 내부 direct `less +F` follow mode append workflow를 자동화했다.
+- Phase 140에서 `less-follow` target의 append/snapshot timing을 안정화했다.
 - interactive key workflow는 아직 남아 있다.
 
 권장 다음 작업:
